@@ -1,7 +1,7 @@
 import { Router } from "express";
 import swaggerUi from "swagger-ui-express";
 
-import { openApiDocument, openApiYaml } from "../openapi/openapi.js";
+import { openApiDocument, openApiYaml } from "../../openapi/openapi.js";
 
 export class DocsRouter {
   readonly router: Router;

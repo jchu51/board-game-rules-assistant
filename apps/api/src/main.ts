@@ -1,12 +1,12 @@
 import { createApp } from "./app.js";
 import { config } from "./config/config.js";
-import { HealthRouter } from "./routes/health.js";
+import { HealthRouter } from "./modules/health/health-router.js";
 
 const healthRouter = new HealthRouter();
 const routers = [healthRouter.router];
 
 if (config.nodeEnv === "local") {
-  const { DocsRouter } = await import("./routes/docs.js");
+  const { DocsRouter } = await import("./modules/docs/docs-router.js");
   const docsRouter = new DocsRouter();
   routers.push(docsRouter.router);
 }

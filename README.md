@@ -28,6 +28,8 @@ backend rulebook processing and question-answering flow is still planned.
 board-game-rules-assistant/
   apps/
     api/                 # Express API app
+      src/
+        modules/         # API feature modules and routers
     web/                 # React frontend app
       src/
         assets/svgs/     # reusable SVG icon components
