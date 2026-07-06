@@ -27,6 +27,7 @@ backend rulebook processing and question-answering flow is still planned.
 ```text
 board-game-rules-assistant/
   apps/
+    api/                 # Express API app
     web/                 # React frontend app
       src/
         assets/svgs/     # reusable SVG icon components
@@ -49,10 +50,16 @@ With Docker Compose:
 ./scripts/docker.sh
 ```
 
-Then open:
+Then open the web app:
 
 ```text
 http://localhost:5173
+```
+
+The API health endpoint is available at:
+
+```text
+http://127.0.0.1:8000/health
 ```
 
 Or run it locally with Node:
@@ -69,6 +76,26 @@ Then open the local URL printed by Vite, usually:
 http://localhost:5173
 ```
 
+## Start The API
+
+```bash
+cd apps/api
+npm install
+npm run dev
+```
+
+The API starts on:
+
+```text
+http://127.0.0.1:8000
+```
+
+Health check:
+
+```bash
+curl http://127.0.0.1:8000/health
+```
+
 ## Useful Commands
 
 Run from `apps/web`:
@@ -80,10 +107,19 @@ npm run lint     # run oxlint
 npm run preview  # preview the production build
 ```
 
+Run from `apps/api`:
+
+```bash
+npm run dev        # start API with nodemon + tsx
+npm run build      # compile TypeScript to dist
+npm run start      # run compiled API
+npm run typecheck  # type-check without emitting files
+```
+
 Run Docker Compose from the project root:
 
 ```bash
-./scripts/docker.sh          # start web app with docker compose
+./scripts/docker.sh          # start web and api with docker compose
 ./scripts/docker.sh down     # stop containers
 ./scripts/docker.sh logs     # follow container logs
 ./scripts/docker.sh restart  # rebuild and restart
