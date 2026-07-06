@@ -96,6 +96,17 @@ Health check:
 curl http://127.0.0.1:8000/health
 ```
 
+API docs:
+
+```text
+http://127.0.0.1:8000/docs
+http://127.0.0.1:8000/openapi.json
+http://127.0.0.1:8000/openapi.yml
+```
+
+Swagger docs are only mounted when the API runs with `NODE_ENV=local`. They are
+not exposed in `development`, `test`, or `production`.
+
 ## Useful Commands
 
 Run from `apps/web`:

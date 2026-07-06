@@ -1,0 +1,35 @@
+openapi: 3.1.0
+info:
+  title: Board Game Rules Assistant API
+  version: 1.0.0
+  description: API for rulebook upload, indexing, and rules Q&A.
+servers:
+  - url: http://127.0.0.1:8000
+    description: Local development
+tags:
+  - name: Health
+    description: API health checks
+paths:
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Health check
+      description: Returns a basic status response for the API.
+      responses:
+        "200":
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - status
+                  - service
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  service:
+                    type: string
+                    example: board-game-rules-assistant-api

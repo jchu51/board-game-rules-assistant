@@ -1,9 +1,14 @@
 import cors from "cors";
-import express from "express";
+import express, { type Router } from "express";
 
-import { config } from "./config/config.js";
+import type { Config } from "./config/config.js";
 
-export const createApp = () => {
+type CreateAppOptions = {
+  config: Config;
+  routers: Router[];
+};
+
+export const createApp = ({ config, routers }: CreateAppOptions) => {
   const app = express();
 
   app.use(
@@ -13,12 +18,9 @@ export const createApp = () => {
   );
   app.use(express.json());
 
-  app.get("/health", (_request, response) => {
-    response.json({
-      status: "ok",
-      service: "board-game-rules-assistant-api",
-    });
-  });
+  for (const router of routers) {
+    app.use(router);
+  }
 
   return app;
 };
