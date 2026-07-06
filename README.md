@@ -43,6 +43,20 @@ board-game-rules-assistant/
 
 ## Start The Web App
 
+With Docker Compose:
+
+```bash
+./scripts/docker.sh
+```
+
+Then open:
+
+```text
+http://localhost:5173
+```
+
+Or run it locally with Node:
+
 ```bash
 cd apps/web
 npm install
@@ -64,6 +78,15 @@ npm run dev      # start local development server
 npm run build    # type-check and build production assets
 npm run lint     # run oxlint
 npm run preview  # preview the production build
+```
+
+Run Docker Compose from the project root:
+
+```bash
+./scripts/docker.sh          # start web app with docker compose
+./scripts/docker.sh down     # stop containers
+./scripts/docker.sh logs     # follow container logs
+./scripts/docker.sh restart  # rebuild and restart
 ```
 
 ## Notes
