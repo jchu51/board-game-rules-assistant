@@ -1,34 +1,39 @@
-# React + TypeScript + Vite
+# Web App
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+React frontend for the Board Game Rules Assistant.
 
-Currently, two official plugins are available:
+## Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- React
+- Vite
+- TypeScript
+- Tailwind CSS v4
+- shadcn-style local UI components
+- Oxlint
 
-## React Compiler
+## Start
 
-The React Compiler is enabled on this template. See [this documentation](https://react.dev/learn/react-compiler) for more information.
-
-Note: This will impact Vite dev & build performances.
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm install
+npm run dev
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+## Commands
+
+```bash
+npm run dev      # local dev server
+npm run build    # TypeScript build + Vite build
+npm run lint     # oxlint
+npm run preview  # preview production build
+```
+
+## Source Layout
+
+```text
+src/
+  assets/svgs/                 # reusable SVG icons
+  components/ui/               # local shadcn-style primitives
+  components/rulebook-upload/  # upload-page feature components
+  domain/                      # app domain types and constants
+  pages/                       # route pages
+```
