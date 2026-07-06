@@ -1,8 +1,10 @@
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import YAML from "yaml";
 
-const openApiFile = join(process.cwd(), "openapi.yml");
+const currentDirectory = dirname(fileURLToPath(import.meta.url));
+const openApiFile = join(currentDirectory, "../../openapi.yml");
 
 export const openApiYaml = readFileSync(openApiFile, "utf8");
 

@@ -1,7 +1,7 @@
 import cors from "cors";
 import express, { type Router } from "express";
-
 import type { Config } from "./config/config.js";
+import { errorMiddleware } from "./shared/http/error-middleware.js";
 
 type CreateAppOptions = {
   config: Config;
@@ -21,6 +21,8 @@ export const createApp = ({ config, routers }: CreateAppOptions) => {
   for (const router of routers) {
     app.use(router);
   }
+
+  app.use(errorMiddleware);
 
   return app;
 };
