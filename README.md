@@ -26,10 +26,13 @@ backend rulebook processing and question-answering flow is still planned.
 
 ```text
 board-game-rules-assistant/
+  package.json          # npm workspace root
   apps/
     api/                 # Express API app
       src/
         modules/         # API feature modules and routers
+    packages/
+      rag-core/          # reusable RAG primitives shared by app code
     web/                 # React frontend app
       src/
         assets/svgs/     # reusable SVG icon components
@@ -45,6 +48,12 @@ board-game-rules-assistant/
 - npm
 
 ## Start The Web App
+
+Install dependencies from the project root:
+
+```bash
+npm install
+```
 
 With Docker Compose:
 
@@ -67,9 +76,7 @@ http://127.0.0.1:8000/health
 Or run it locally with Node:
 
 ```bash
-cd apps/web
-npm install
-npm run dev
+npm run dev:web
 ```
 
 Then open the local URL printed by Vite, usually:
@@ -81,9 +88,7 @@ http://localhost:5173
 ## Start The API
 
 ```bash
-cd apps/api
-npm install
-npm run dev
+npm run dev:api
 ```
 
 The API starts on:
@@ -111,22 +116,39 @@ not exposed in `development`, `test`, or `production`.
 
 ## Useful Commands
 
-Run from `apps/web`:
+Run from the project root:
 
 ```bash
-npm run dev      # start local development server
-npm run build    # type-check and build production assets
-npm run lint     # run oxlint
-npm run preview  # preview the production build
+npm run dev:web     # start the frontend workspace
+npm run dev:api     # start the API workspace
+npm run typecheck   # type-check all workspaces that expose typecheck
+npm run build       # build all workspaces that expose build
 ```
 
-Run from `apps/api`:
+Run a specific workspace command:
 
 ```bash
-npm run dev        # start API with nodemon + tsx
-npm run build      # compile TypeScript to dist
-npm run start      # run compiled API
-npm run typecheck  # type-check without emitting files
+npm run build -w web
+npm run build -w api
+npm run build -w @board-game-rules-assistant/rag-core
+```
+
+Frontend workspace scripts:
+
+```bash
+npm run dev -w web      # start local development server
+npm run build -w web    # type-check and build production assets
+npm run lint -w web     # run oxlint
+npm run preview -w web  # preview the production build
+```
+
+API workspace scripts:
+
+```bash
+npm run dev -w api        # start API with nodemon + tsx
+npm run build -w api      # compile TypeScript to dist
+npm run start -w api      # run compiled API
+npm run typecheck -w api  # type-check without emitting files
 ```
 
 Run Docker Compose from the project root:

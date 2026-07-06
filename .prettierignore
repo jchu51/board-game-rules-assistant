@@ -1,0 +1,4 @@
+node_modules
+dist
+apps/packages/rag-core/dist
+package-lock.json
