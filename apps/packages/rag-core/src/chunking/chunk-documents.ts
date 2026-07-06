@@ -4,8 +4,6 @@ import {
 } from "@langchain/textsplitters";
 import type { RulebookDocument } from "../documents/rulebook-document.js";
 
-export type ChunkDocumentsOptions = RecursiveCharacterTextSplitterParams;
-
 export const chunkDocuments = async (
   docs: RulebookDocument[],
   fields?: Partial<RecursiveCharacterTextSplitterParams>,

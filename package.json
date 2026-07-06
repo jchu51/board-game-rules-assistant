@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "workspaces": [
+    "apps/packages/*",
     "apps/api",
-    "apps/web",
-    "apps/packages/*"
+    "apps/web"
   ],
   "scripts": {
     "dev:api": "npm run dev -w api",

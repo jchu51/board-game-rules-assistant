@@ -9,12 +9,6 @@ import type {
   VectorStoreSimilaritySearchInput,
 } from "./vector-store.js";
 
-export const createLangChainMemoryVectorStore = (
-  embeddings: EmbeddingsInterface,
-): MemoryVectorStore => {
-  return new MemoryVectorStore(embeddings);
-};
-
 export class LangchainMemoryVectorStore implements VectorStore {
   readonly vectorStore: MemoryVectorStore;
 
