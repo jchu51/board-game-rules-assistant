@@ -1,0 +1,6 @@
+export { AlertIcon } from './alert-icon'
+export { BookIcon } from './book-icon'
+export { FileIcon } from './file-icon'
+export { TrashIcon } from './trash-icon'
+export { UploadIcon } from './upload-icon'
+export { XIcon } from './x-icon'
