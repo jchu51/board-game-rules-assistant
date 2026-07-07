@@ -1,5 +1,10 @@
-import { useRef, useState } from "react";
-import { uploadRulebookPdf } from "@/api/rulebook-api";
+import { useEffect, useRef, useState } from "react";
+import { v4 as uuidv4 } from "uuid";
+import {
+  deleteRulebook,
+  listRulebooks,
+  uploadRulebookPdf,
+} from "@/api/rulebook-api";
 import { AlertIcon, BookIcon } from "@/assets/svgs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -27,10 +32,24 @@ import {
 import {
   MAX_RULEBOOK_PDF_BYTES,
   type RulebookDocument,
+  type RulebookSummary,
 } from "@/domain/rulebook";
 
 const getErrorMessage = (error: unknown, fallback: string) =>
   error instanceof Error ? error.message : fallback;
+
+const createRulebookDocument = (
+  rulebook: RulebookSummary,
+): RulebookDocument => ({
+  id: rulebook.id,
+  gameName: rulebook.gameName,
+  pdfName: rulebook.pdfName,
+  size: rulebook.fileSize,
+  isPersisted: true,
+  status: "ready",
+  pages: null,
+  progress: 100,
+});
 
 export function UploadPage() {
   const [gameName, setGameName] = useState("");
@@ -40,6 +59,26 @@ export function UploadPage() {
   const [error, setError] = useState("");
   const [documents, setDocuments] = useState<RulebookDocument[]>([]);
   const inputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    void listRulebooks()
+      .then(({ rulebooks }) => {
+        if (!isMounted) return;
+
+        setDocuments(rulebooks.map(createRulebookDocument));
+      })
+      .catch((loadError: unknown) => {
+        if (!isMounted) return;
+
+        setError(getErrorMessage(loadError, "Failed to load rulebooks"));
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const updateDocument = (id: string, patch: Partial<RulebookDocument>) => {
     setDocuments((currentDocuments) =>
@@ -51,13 +90,28 @@ export function UploadPage() {
     );
   };
 
-  const runUpload = async (id: string, file: File): Promise<boolean> => {
+  const runUpload = async (
+    id: string,
+    file: File,
+    rulebookGameName: string,
+  ): Promise<boolean> => {
     setError("");
     setIsSubmitting(true);
 
     try {
-      await uploadRulebookPdf({ file });
-      updateDocument(id, { status: "ready", progress: 100 });
+      const uploadedRulebook = await uploadRulebookPdf({
+        file,
+        gameName: rulebookGameName,
+      });
+      updateDocument(id, {
+        id: uploadedRulebook.id,
+        gameName: uploadedRulebook.gameName,
+        pdfName: uploadedRulebook.pdfName,
+        size: uploadedRulebook.fileSize,
+        isPersisted: true,
+        status: "ready",
+        progress: 100,
+      });
       return true;
     } catch (uploadError) {
       updateDocument(id, { status: "error", progress: 100 });
@@ -97,13 +151,14 @@ export function UploadPage() {
 
     if (!selectedFile || !trimmedGameName || isSubmitting) return;
 
-    const id = crypto.randomUUID();
+    const id = uuidv4();
 
     const document: RulebookDocument = {
       id,
-      game: trimmedGameName,
-      name: selectedFile.name,
+      gameName: trimmedGameName,
+      pdfName: selectedFile.name,
       size: selectedFile.size,
+      isPersisted: false,
       status: "processing",
       pages: null,
       progress: 30,
@@ -112,7 +167,7 @@ export function UploadPage() {
 
     setDocuments((currentDocuments) => [document, ...currentDocuments]);
 
-    const succeeded = await runUpload(id, selectedFile);
+    const succeeded = await runUpload(id, selectedFile, trimmedGameName);
 
     if (succeeded) {
       setSelectedFile(null);
@@ -120,10 +175,24 @@ export function UploadPage() {
     }
   };
 
-  const removeDocument = (id: string) => {
+  const removeDocument = async (id: string) => {
+    const removedDocument = documents.find((document) => document.id === id);
+
     setDocuments((currentDocuments) =>
       currentDocuments.filter((document) => document.id !== id),
     );
+
+    if (!removedDocument?.isPersisted) return;
+
+    try {
+      await deleteRulebook(id);
+    } catch (deleteError) {
+      setDocuments((currentDocuments) => [
+        removedDocument,
+        ...currentDocuments,
+      ]);
+      setError(getErrorMessage(deleteError, "Failed to delete rulebook"));
+    }
   };
 
   const retryDocument = async (id: string) => {
@@ -131,11 +200,11 @@ export function UploadPage() {
       (currentDocument) => currentDocument.id === id,
     );
 
-    if (!document || isSubmitting) return;
+    if (!document || !document.file || isSubmitting) return;
 
     updateDocument(id, { status: "processing", progress: 30 });
 
-    await runUpload(id, document.file);
+    await runUpload(id, document.file, document.gameName);
   };
 
   const canSubmit =

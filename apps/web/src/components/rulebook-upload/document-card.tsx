@@ -21,6 +21,7 @@ export function DocumentCard({
   onRetry,
 }: DocumentCardProps) {
   const metaParts = [
+    document.pdfName,
     formatSize(document.size),
     document.status === "ready" && document.pages
       ? `${document.pages} pages`
@@ -45,7 +46,7 @@ export function DocumentCard({
           <div className="min-w-0 flex-1">
             <div className="flex min-w-0 items-center gap-2">
               <span className="truncate text-sm font-semibold">
-                {document.game}
+                {document.gameName}
               </span>
             </div>
             <div className="truncate text-sm text-muted-foreground">
@@ -59,7 +60,7 @@ export function DocumentCard({
               type="button"
               variant="ghost"
               size="icon-sm"
-              aria-label={`Remove ${document.game}`}
+              aria-label={`Remove ${document.gameName}`}
               onClick={() => onRemove(document.id)}
             >
               <TrashIcon />
