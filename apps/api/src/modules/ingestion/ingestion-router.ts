@@ -1,17 +1,28 @@
-import express, { type NextFunction, type Response, Router } from "express";
-import { HttpStatus } from "../../shared/http/http-status.js";
+import express, { type NextFunction, Router } from "express";
+import { HttpStatus } from "../../shared/http/http-status";
 import {
   IngestionFileTooLargeError,
   InvalidIngestionFilePathError,
-} from "./ingestion-errors.js";
-import { IngestionService } from "./ingestion-service.js";
-import type { TypedRequestBody } from "../../shared/http/http-types.js";
+} from "./ingestion-errors";
+import { IngestionService } from "./ingestion-service";
+import type {
+  ErrorResponseBody,
+  TypedRequestBody,
+  TypedResponse,
+} from "../../shared/http/http-types";
 import {
   UploadPdfsRequestSchema,
   UploadPdfsResponseSchema,
-} from "./ingestion-types.js";
+} from "./ingestion-schema";
+import type {
+  UploadPdfsRawRequestBody,
+  UploadPdfsResponseBody,
+} from "./ingestion-types";
 
-type UploadPdfsRequest = TypedRequestBody<unknown>;
+type UploadPdfsRequest = TypedRequestBody<UploadPdfsRawRequestBody>;
+type UploadPdfsResponse = TypedResponse<
+  UploadPdfsResponseBody | ErrorResponseBody
+>;
 
 export class IngestionRouter {
   readonly router: Router;
@@ -27,7 +38,7 @@ export class IngestionRouter {
 
   private uploadPdfs = async (
     request: UploadPdfsRequest,
-    response: Response,
+    response: UploadPdfsResponse,
     next: NextFunction,
   ) => {
     try {

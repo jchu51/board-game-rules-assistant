@@ -1,29 +1,26 @@
 import type { ErrorRequestHandler } from "express";
 
-import { config } from "../../config/config.js";
-import { HttpStatus } from "./http-status.js";
+import type { Config } from "../../config/config-types";
+import { HttpStatus } from "./http-status";
 
-export const errorMiddleware: ErrorRequestHandler = (
-  error,
-  _request,
-  response,
-  next,
-) => {
-  console.error(error);
+export const createErrorMiddleware =
+  (config: Config): ErrorRequestHandler =>
+  (error, _request, response, next) => {
+    console.error(error);
 
-  if (response.headersSent) {
-    return next(error);
-  }
+    if (response.headersSent) {
+      return next(error);
+    }
 
-  if (config.nodeEnv === "production") {
+    if (config.nodeEnv === "production") {
+      response.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+        error: "Internal Server Error",
+      });
+      return;
+    }
+
     response.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
-      error: "Internal Server Error",
+      error: error instanceof Error ? error.message : "Internal Server Error",
+      stack: error instanceof Error ? error.stack : undefined,
     });
-    return;
-  }
-
-  response.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
-    error: error instanceof Error ? error.message : "Internal Server Error",
-    stack: error instanceof Error ? error.stack : undefined,
-  });
-};
+  };

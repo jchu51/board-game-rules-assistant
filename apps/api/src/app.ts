@@ -1,7 +1,7 @@
 import cors from "cors";
 import express, { type Router } from "express";
-import type { Config } from "./config/config.js";
-import { errorMiddleware } from "./shared/http/error-middleware.js";
+import type { Config } from "./config/config-types";
+import { createErrorMiddleware } from "./shared/http/error-middleware";
 
 type CreateAppOptions = {
   config: Config;
@@ -22,7 +22,7 @@ export const createApp = ({ config, routers }: CreateAppOptions) => {
     app.use(router);
   }
 
-  app.use(errorMiddleware);
+  app.use(createErrorMiddleware(config));
 
   return app;
 };

@@ -3,11 +3,11 @@ import {
   LangchainMemoryVectorStore,
 } from "@board-game-rules-assistant/rag-core";
 
-import { createApp } from "./app.js";
-import { config } from "./config/config.js";
-import { HealthRouter } from "./modules/health/health-router.js";
-import { IngestionRouter } from "./modules/ingestion/ingestion-router.js";
-import { IngestionService } from "./modules/ingestion/ingestion-service.js";
+import { createApp } from "./app";
+import { config } from "./config/config";
+import { HealthRouter } from "./modules/health/health-router";
+import { IngestionRouter } from "./modules/ingestion/ingestion-router";
+import { IngestionService } from "./modules/ingestion/ingestion-service";
 
 // Services
 const embeddings = createOpenAIEmbeddings(config.ingestion.embeddingModel, {
@@ -29,7 +29,7 @@ const ingestionRouter = new IngestionRouter(ingestionService);
 const routers = [healthRouter.router, ingestionRouter.router];
 
 if (config.nodeEnv === "local") {
-  const { DocsRouter } = await import("./modules/docs/docs-router.js");
+  const { DocsRouter } = await import("./modules/docs/docs-router");
   const docsRouter = new DocsRouter();
   routers.push(docsRouter.router);
 }

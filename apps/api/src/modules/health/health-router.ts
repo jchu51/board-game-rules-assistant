@@ -1,10 +1,9 @@
 import express, { Router } from "express";
-import { z } from "zod";
+import type { TypedResponse } from "../../shared/http/http-types";
+import { HealthResponseSchema } from "./health-schema";
+import type { HealthResponseBody } from "./health-types";
 
-const HealthResponseSchema = z.object({
-  status: z.literal("ok"),
-  service: z.literal("board-game-rules-assistant-api"),
-});
+type HealthResponse = TypedResponse<HealthResponseBody>;
 
 export class HealthRouter {
   readonly router: Router;
@@ -13,7 +12,7 @@ export class HealthRouter {
     const router = Router();
     router.use(express.json());
 
-    router.get("/health", (_request, response) => {
+    router.get("/health", (_request, response: HealthResponse) => {
       const responseBody = HealthResponseSchema.parse({
         status: "ok",
         service: "board-game-rules-assistant-api",

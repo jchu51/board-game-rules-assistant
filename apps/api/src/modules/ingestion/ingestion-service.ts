@@ -4,16 +4,16 @@ import {
   loadPdfDocuments,
   type VectorStore,
 } from "@board-game-rules-assistant/rag-core";
-import { resolveContainedPath } from "../../shared/files/resolve-contained-path.js";
+import { resolveContainedPath } from "../../shared/files/resolve-contained-path";
 import {
   IngestionFileTooLargeError,
   InvalidIngestionFilePathError,
-} from "./ingestion-errors.js";
+} from "./ingestion-errors";
 import type {
   IngestPdfInput,
   IngestionResult,
   IngestionServiceOptions,
-} from "./ingestion-types.js";
+} from "./ingestion-types";
 
 export class IngestionService {
   constructor(
