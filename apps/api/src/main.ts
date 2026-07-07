@@ -5,6 +5,7 @@ import {
 
 import { createApp } from "./app";
 import { config } from "./config/config";
+import { InMemoryRulebookRepository } from "./db/rulebook-repository/in-memory-rulebook-repository";
 import { HealthRouter } from "./modules/health/health-router";
 import { IngestionRouter } from "./modules/ingestion/ingestion-router";
 import { IngestionService } from "./modules/ingestion/ingestion-service";
@@ -14,6 +15,7 @@ const embeddings = createOpenAIEmbeddings(config.ingestion.embeddingModel, {
   apiKey: config.ingestion.openAiApiKey,
 });
 const vectorStore = new LangchainMemoryVectorStore(embeddings);
+const rulebookRepository = new InMemoryRulebookRepository();
 const ingestionService = new IngestionService(vectorStore, {
   defaultSplitterParams: {
     chunkSize: config.ingestion.defaultChunkSize,
@@ -23,11 +25,15 @@ const ingestionService = new IngestionService(vectorStore, {
 
 //Routers
 const healthRouter = new HealthRouter();
-const ingestionRouter = new IngestionRouter(ingestionService, {
-  uploadDirectory: config.ingestion.uploadDirectory,
-  maxUploadSizeBytes: config.ingestion.maxUploadSizeBytes,
-  isProduction: config.nodeEnv === "production",
-});
+const ingestionRouter = new IngestionRouter(
+  ingestionService,
+  rulebookRepository,
+  {
+    uploadDirectory: config.ingestion.uploadDirectory,
+    maxUploadSizeBytes: config.ingestion.maxUploadSizeBytes,
+    isProduction: config.nodeEnv === "production",
+  },
+);
 const routers = [healthRouter.router, ingestionRouter.router];
 
 if (config.nodeEnv === "local") {

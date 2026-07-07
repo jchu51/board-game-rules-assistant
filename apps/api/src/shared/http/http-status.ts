@@ -1,7 +1,9 @@
 export enum HttpStatus {
   OK = 200,
   ACCEPTED = 202,
+  NO_CONTENT = 204,
   BAD_REQUEST = 400,
+  NOT_FOUND = 404,
   PAYLOAD_TOO_LARGE = 413,
   INTERNAL_SERVER_ERROR = 500,
 }

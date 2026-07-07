@@ -9,6 +9,8 @@ servers:
 tags:
   - name: Health
     description: API health checks
+  - name: Ingestion
+    description: Rulebook upload and indexing
 paths:
   /health:
     get:
@@ -33,3 +35,130 @@ paths:
                   service:
                     type: string
                     example: board-game-rules-assistant-api
+  /rulebooks:
+    post:
+      tags:
+        - Ingestion
+      summary: Create a rulebook from an uploaded PDF
+      description: Uploads a PDF rulebook, indexes its extracted text, and creates an in-memory rulebook record for the current API process.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - gameName
+                - file
+              properties:
+                gameName:
+                  type: string
+                  minLength: 1
+                  example: Catan
+                file:
+                  type: string
+                  format: binary
+                chunkSize:
+                  type: integer
+                  minimum: 1
+                chunkOverlap:
+                  type: integer
+                  minimum: 0
+      responses:
+        "200":
+          description: Rulebook indexed
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - id
+                  - gameName
+                  - pdfName
+                  - fileSize
+                  - status
+                  - documentCount
+                  - chunkCount
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  gameName:
+                    type: string
+                    example: Catan
+                  pdfName:
+                    type: string
+                    example: catan-rulebook.pdf
+                  fileSize:
+                    type: integer
+                    minimum: 0
+                    example: 1840000
+                  status:
+                    type: string
+                    const: completed
+                  documentCount:
+                    type: integer
+                    minimum: 0
+                  chunkCount:
+                    type: integer
+                    minimum: 0
+        "400":
+          description: Invalid upload request
+        "413":
+          description: File exceeds upload size limit
+    get:
+      tags:
+        - Ingestion
+      summary: List indexed rulebooks
+      description: Returns the in-memory rulebook records created by successful uploads during the current API process.
+      responses:
+        "200":
+          description: Indexed rulebooks
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - rulebooks
+                properties:
+                  rulebooks:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                        - id
+                        - gameName
+                        - pdfName
+                        - fileSize
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        gameName:
+                          type: string
+                          example: Catan
+                        pdfName:
+                          type: string
+                          example: catan-rulebook.pdf
+                        fileSize:
+                          type: integer
+                          minimum: 0
+                          example: 1840000
+  /rulebooks/{id}:
+    delete:
+      tags:
+        - Ingestion
+      summary: Delete an indexed rulebook from the list
+      description: Removes the in-memory rulebook record. Vector-store deletion is not implemented yet.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Rulebook deleted
+        "404":
+          description: Rulebook not found

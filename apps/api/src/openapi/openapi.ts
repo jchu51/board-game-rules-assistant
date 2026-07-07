@@ -5,7 +5,11 @@ import YAML from "yaml";
 
 const currentDirectory = dirname(fileURLToPath(import.meta.url));
 
-const candidatePaths = [join(currentDirectory, "../../openapi.yml")];
+const candidatePaths = [
+  join(currentDirectory, "openapi.yml"),
+  join(currentDirectory, "../openapi.yml"),
+  join(currentDirectory, "../../openapi.yml"),
+];
 
 const openApiFile = candidatePaths.find((path) => existsSync(path));
 

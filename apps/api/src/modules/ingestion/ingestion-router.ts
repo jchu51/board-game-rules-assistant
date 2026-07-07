@@ -1,14 +1,10 @@
 import { rm } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import { extname } from "node:path";
-import type {
-  NextFunction,
-  Request,
-  RequestHandler,
-  Router as ExpressRouter,
-} from "express";
+import type { NextFunction, Request, RequestHandler, Response } from "express";
 import { Router } from "express";
 import multer, { MulterError } from "multer";
+import type { RulebookRepository } from "../../db/rulebook-repository/rulebook-repository";
 import { getErrorMessage } from "../../shared/http/get-error-message";
 import { HttpStatus } from "../../shared/http/http-status";
 import { InvalidSplitterParamsError } from "./ingestion-errors";
@@ -18,24 +14,29 @@ import type {
   TypedResponse,
 } from "../../shared/http/http-types";
 import {
+  ListRulebooksResponseSchema,
   UploadPdfsRequestSchema,
   UploadPdfsResponseSchema,
 } from "./ingestion-schema";
 import type {
   IngestionRouterOptions,
+  ListRulebooksResponseBody,
   UploadPdfsResponseBody,
 } from "./ingestion-types";
 
 type UploadPdfsResponse = TypedResponse<
   UploadPdfsResponseBody | ErrorResponseBody
 >;
+type ListRulebooksResponse = TypedResponse<ListRulebooksResponseBody>;
+type DeleteRulebookResponse = TypedResponse<ErrorResponseBody | undefined>;
 
 export class IngestionRouter {
-  readonly router: ExpressRouter;
+  readonly router: Router;
   private readonly isProduction: boolean;
 
   constructor(
     private readonly ingestionService: IngestionService,
+    private readonly rulebookRepository: RulebookRepository,
     {
       uploadDirectory,
       maxUploadSizeBytes,
@@ -69,19 +70,18 @@ export class IngestionRouter {
     const router = Router();
 
     router.post(
-      "/upload-pdfs",
+      "/rulebooks",
       this.handleUpload(upload.single("file")),
       this.uploadPdfs,
     );
+    router.get("/rulebooks", this.listRulebooks);
+    router.delete("/rulebooks/:id", this.deleteRulebook);
 
     this.router = router;
   }
 
-  private sendError = (
-    response: UploadPdfsResponse,
-    status: HttpStatus,
-    error: string,
-  ) => response.status(status).json({ error });
+  private sendError = (response: Response, status: HttpStatus, error: string) =>
+    response.status(status).json({ error });
 
   private handleUpload =
     (middleware: RequestHandler) =>
@@ -135,15 +135,24 @@ export class IngestionRouter {
         );
       }
 
-      const { splitterParams } = parseResult.data;
+      const { gameName, splitterParams } = parseResult.data;
+      const id = randomUUID();
+      const pdfName = request.file.originalname;
+      const fileSize = request.file.size;
 
       const result = await this.ingestionService.ingestPdf({
         filePath: request.file.path,
         splitterParams,
       });
 
+      this.rulebookRepository.create({ id, gameName, pdfName, fileSize });
+
       const responseBody = UploadPdfsResponseSchema.parse({
         ...result,
+        id,
+        gameName,
+        pdfName,
+        fileSize,
         status: "completed",
       });
 
@@ -157,5 +166,33 @@ export class IngestionRouter {
     } finally {
       await rm(request.file.path, { force: true });
     }
+  };
+
+  private listRulebooks = (
+    _request: Request,
+    response: ListRulebooksResponse,
+  ) => {
+    const responseBody = ListRulebooksResponseSchema.parse({
+      rulebooks: this.rulebookRepository.list(),
+    });
+
+    return response.status(HttpStatus.OK).json(responseBody);
+  };
+
+  private deleteRulebook = (
+    request: Request<{ id: string }>,
+    response: DeleteRulebookResponse,
+  ) => {
+    const deleted = this.rulebookRepository.deleteById(request.params.id);
+
+    if (!deleted) {
+      return this.sendError(
+        response,
+        HttpStatus.NOT_FOUND,
+        "Rulebook not found",
+      );
+    }
+
+    return response.status(HttpStatus.NO_CONTENT).send();
   };
 }
