@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
+import { uploadRulebookPdf } from "@/api/rulebook-api";
 import { AlertIcon, BookIcon } from "@/assets/svgs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -25,67 +26,47 @@ import {
 } from "@/components/rulebook-upload";
 import {
   MAX_RULEBOOK_PDF_BYTES,
-  SAMPLE_RULEBOOK_DOCUMENTS,
   type RulebookDocument,
-  type SelectedRulebookFile,
 } from "@/domain/rulebook";
+
+const getErrorMessage = (error: unknown, fallback: string) =>
+  error instanceof Error ? error.message : fallback;
 
 export function UploadPage() {
   const [gameName, setGameName] = useState("");
   const [isDragging, setIsDragging] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<SelectedRulebookFile | null>(
-    null,
-  );
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
-  const [documents, setDocuments] = useState(SAMPLE_RULEBOOK_DOCUMENTS);
+  const [documents, setDocuments] = useState<RulebookDocument[]>([]);
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const timersRef = useRef<Record<number, number>>({});
-  const nextIdRef = useRef(2);
 
-  const startProcessing = useCallback((id: number) => {
-    window.clearInterval(timersRef.current[id]);
+  const updateDocument = (id: string, patch: Partial<RulebookDocument>) => {
+    setDocuments((currentDocuments) =>
+      currentDocuments.map((currentDocument) =>
+        currentDocument.id === id
+          ? { ...currentDocument, ...patch }
+          : currentDocument,
+      ),
+    );
+  };
 
-    timersRef.current[id] = window.setInterval(() => {
-      setDocuments((currentDocuments) =>
-        currentDocuments.map((document) => {
-          if (document.id !== id || document.status !== "processing") {
-            return document;
-          }
+  const runUpload = async (id: string, file: File): Promise<boolean> => {
+    setError("");
+    setIsSubmitting(true);
 
-          const nextProgress = Math.min(
-            100,
-            document.progress + Math.random() * 16 + 6,
-          );
-
-          if (nextProgress >= 100) {
-            window.clearInterval(timersRef.current[id]);
-            delete timersRef.current[id];
-
-            return {
-              ...document,
-              progress: 100,
-              status: "ready",
-              pages: Math.floor(Math.random() * 40) + 16,
-            };
-          }
-
-          return { ...document, progress: nextProgress };
-        }),
-      );
-    }, 700);
-  }, []);
-
-  useEffect(() => {
-    SAMPLE_RULEBOOK_DOCUMENTS.filter(
-      (document) => document.status === "processing",
-    ).forEach((document) => startProcessing(document.id));
-
-    const timers = timersRef.current;
-
-    return () => {
-      Object.values(timers).forEach(window.clearInterval);
-    };
-  }, [startProcessing]);
+    try {
+      await uploadRulebookPdf({ file });
+      updateDocument(id, { status: "ready", progress: 100 });
+      return true;
+    } catch (uploadError) {
+      updateDocument(id, { status: "error", progress: 100 });
+      setError(getErrorMessage(uploadError, "Failed to upload rulebook PDF"));
+      return false;
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const acceptFile = (file: File | undefined) => {
     if (!file) return;
@@ -106,18 +87,17 @@ export function UploadPage() {
       return;
     }
 
-    setSelectedFile({ name: file.name, size: file.size });
+    setSelectedFile(file);
     setError("");
     setIsDragging(false);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const trimmedGameName = gameName.trim();
 
-    if (!selectedFile || !trimmedGameName) return;
+    if (!selectedFile || !trimmedGameName || isSubmitting) return;
 
-    const id = nextIdRef.current;
-    nextIdRef.current += 1;
+    const id = crypto.randomUUID();
 
     const document: RulebookDocument = {
       id,
@@ -126,37 +106,40 @@ export function UploadPage() {
       size: selectedFile.size,
       status: "processing",
       pages: null,
-      progress: 4,
+      progress: 30,
+      file: selectedFile,
     };
 
     setDocuments((currentDocuments) => [document, ...currentDocuments]);
-    setSelectedFile(null);
-    setGameName("");
-    setError("");
-    startProcessing(id);
+
+    const succeeded = await runUpload(id, selectedFile);
+
+    if (succeeded) {
+      setSelectedFile(null);
+      setGameName("");
+    }
   };
 
-  const removeDocument = (id: number) => {
-    window.clearInterval(timersRef.current[id]);
-    delete timersRef.current[id];
-
+  const removeDocument = (id: string) => {
     setDocuments((currentDocuments) =>
       currentDocuments.filter((document) => document.id !== id),
     );
   };
 
-  const retryDocument = (id: number) => {
-    setDocuments((currentDocuments) =>
-      currentDocuments.map((document) =>
-        document.id === id
-          ? { ...document, status: "processing", progress: 4 }
-          : document,
-      ),
+  const retryDocument = async (id: string) => {
+    const document = documents.find(
+      (currentDocument) => currentDocument.id === id,
     );
-    startProcessing(id);
+
+    if (!document || isSubmitting) return;
+
+    updateDocument(id, { status: "processing", progress: 30 });
+
+    await runUpload(id, document.file);
   };
 
-  const canSubmit = selectedFile !== null && gameName.trim().length > 0;
+  const canSubmit =
+    selectedFile !== null && gameName.trim().length > 0 && !isSubmitting;
 
   return (
     <main className="min-h-svh bg-muted/30 px-4 py-10 text-foreground sm:px-6">
@@ -233,7 +216,7 @@ export function UploadPage() {
           </CardContent>
           <CardFooter className="justify-end">
             <Button type="button" disabled={!canSubmit} onClick={handleSubmit}>
-              Upload &amp; index
+              {isSubmitting ? "Indexing..." : "Upload & index"}
             </Button>
           </CardFooter>
         </Card>

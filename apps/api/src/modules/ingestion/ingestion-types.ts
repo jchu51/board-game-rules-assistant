@@ -13,8 +13,6 @@ export type IngestionSplitterParams = z.infer<
 
 export type IngestionServiceOptions = {
   defaultSplitterParams: IngestionSplitterParams;
-  uploadDirectory: string;
-  maxUploadSizeBytes: number;
 };
 
 export type IngestPdfInput = {
@@ -29,3 +27,9 @@ export type UploadPdfsRequestBody = z.output<typeof UploadPdfsRequestSchema>;
 export type IngestionResult = z.infer<typeof IngestionResultSchema>;
 
 export type UploadPdfsResponseBody = z.infer<typeof UploadPdfsResponseSchema>;
+
+export type IngestionRouterOptions = {
+  uploadDirectory: string;
+  maxUploadSizeBytes: number;
+  isProduction: boolean;
+};

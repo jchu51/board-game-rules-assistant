@@ -1,4 +1,4 @@
-import express, { Router } from "express";
+import { Router } from "express";
 import type { TypedResponse } from "../../shared/http/http-types";
 import { HealthResponseSchema } from "./health-schema";
 import type { HealthResponseBody } from "./health-types";
@@ -10,7 +10,6 @@ export class HealthRouter {
 
   constructor() {
     const router = Router();
-    router.use(express.json());
 
     router.get("/health", (_request, response: HealthResponse) => {
       const responseBody = HealthResponseSchema.parse({

@@ -11,8 +11,8 @@ import { StatusBadge } from "./status-badge";
 
 type DocumentCardProps = {
   document: RulebookDocument;
-  onRemove: (id: number) => void;
-  onRetry: (id: number) => void;
+  onRemove: (id: string) => void;
+  onRetry: (id: string) => void;
 };
 
 export function DocumentCard({

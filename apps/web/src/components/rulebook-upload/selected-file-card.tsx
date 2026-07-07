@@ -1,12 +1,11 @@
 import { FileIcon, XIcon } from "@/assets/svgs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import type { SelectedRulebookFile } from "@/domain/rulebook";
 
 import { formatSize } from "./format-size";
 
 type SelectedFileCardProps = {
-  file: SelectedRulebookFile;
+  file: File;
   onClear: () => void;
 };
 

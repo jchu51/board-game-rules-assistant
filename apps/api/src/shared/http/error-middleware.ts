@@ -1,6 +1,7 @@
 import type { ErrorRequestHandler } from "express";
 
 import type { Config } from "../../config/config-types";
+import { getErrorMessage } from "./get-error-message";
 import { HttpStatus } from "./http-status";
 
 export const createErrorMiddleware =
@@ -20,7 +21,7 @@ export const createErrorMiddleware =
     }
 
     response.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
-      error: error instanceof Error ? error.message : "Internal Server Error",
+      error: getErrorMessage(error, "Internal Server Error"),
       stack: error instanceof Error ? error.stack : undefined,
     });
   };

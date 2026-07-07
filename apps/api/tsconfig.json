@@ -2,8 +2,8 @@
   "compilerOptions": {
     "ignoreDeprecations": "6.0",
     "target": "es2025",
-    "module": "CommonJs",
-    "moduleResolution": "node",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
     "rootDir": "src",
     "outDir": "dist",
     "strict": true,

@@ -1,13 +1,20 @@
-import express, { type NextFunction, Router } from "express";
+import { rm } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
+import { extname } from "node:path";
+import type {
+  NextFunction,
+  Request,
+  RequestHandler,
+  Router as ExpressRouter,
+} from "express";
+import { Router } from "express";
+import multer, { MulterError } from "multer";
+import { getErrorMessage } from "../../shared/http/get-error-message";
 import { HttpStatus } from "../../shared/http/http-status";
-import {
-  IngestionFileTooLargeError,
-  InvalidIngestionFilePathError,
-} from "./ingestion-errors";
+import { InvalidSplitterParamsError } from "./ingestion-errors";
 import { IngestionService } from "./ingestion-service";
 import type {
   ErrorResponseBody,
-  TypedRequestBody,
   TypedResponse,
 } from "../../shared/http/http-types";
 import {
@@ -15,45 +22,123 @@ import {
   UploadPdfsResponseSchema,
 } from "./ingestion-schema";
 import type {
-  UploadPdfsRawRequestBody,
+  IngestionRouterOptions,
   UploadPdfsResponseBody,
 } from "./ingestion-types";
 
-type UploadPdfsRequest = TypedRequestBody<UploadPdfsRawRequestBody>;
 type UploadPdfsResponse = TypedResponse<
   UploadPdfsResponseBody | ErrorResponseBody
 >;
 
 export class IngestionRouter {
-  readonly router: Router;
+  readonly router: ExpressRouter;
+  private readonly isProduction: boolean;
 
-  constructor(private readonly ingestionService: IngestionService) {
+  constructor(
+    private readonly ingestionService: IngestionService,
+    {
+      uploadDirectory,
+      maxUploadSizeBytes,
+      isProduction,
+    }: IngestionRouterOptions,
+  ) {
+    this.isProduction = isProduction;
+
+    const upload = multer({
+      storage: multer.diskStorage({
+        destination: uploadDirectory,
+        filename: (_request, _file, callback) => {
+          callback(null, `${randomUUID()}.pdf`);
+        },
+      }),
+      limits: { fileSize: maxUploadSizeBytes },
+      fileFilter: (_request, file, callback) => {
+        const hasPdfExtension =
+          extname(file.originalname).toLowerCase() === ".pdf";
+        const hasPdfMimeType = file.mimetype === "application/pdf";
+
+        if (!hasPdfExtension || !hasPdfMimeType) {
+          callback(new Error("Only PDF files are allowed"));
+          return;
+        }
+
+        callback(null, true);
+      },
+    });
+
     const router = Router();
-    router.use(express.json());
 
-    router.post("/upload-pdfs", this.uploadPdfs);
+    router.post(
+      "/upload-pdfs",
+      this.handleUpload(upload.single("file")),
+      this.uploadPdfs,
+    );
 
     this.router = router;
   }
 
+  private sendError = (
+    response: UploadPdfsResponse,
+    status: HttpStatus,
+    error: string,
+  ) => response.status(status).json({ error });
+
+  private handleUpload =
+    (middleware: RequestHandler) =>
+    (request: Request, response: UploadPdfsResponse, next: NextFunction) => {
+      middleware(request, response, (error: unknown) => {
+        if (error instanceof MulterError && error.code === "LIMIT_FILE_SIZE") {
+          this.sendError(
+            response,
+            HttpStatus.PAYLOAD_TOO_LARGE,
+            "File exceeds the upload size limit",
+          );
+          return;
+        }
+
+        if (error) {
+          this.sendError(
+            response,
+            HttpStatus.BAD_REQUEST,
+            this.isProduction
+              ? "Upload failed"
+              : getErrorMessage(error, "Upload failed"),
+          );
+          return;
+        }
+
+        next();
+      });
+    };
+
   private uploadPdfs = async (
-    request: UploadPdfsRequest,
+    request: Request,
     response: UploadPdfsResponse,
     next: NextFunction,
   ) => {
+    if (!request.file) {
+      return this.sendError(
+        response,
+        HttpStatus.BAD_REQUEST,
+        "file is required",
+      );
+    }
+
     try {
       const parseResult = UploadPdfsRequestSchema.safeParse(request.body);
 
       if (!parseResult.success) {
-        return response.status(HttpStatus.BAD_REQUEST).json({
-          error: parseResult.error.issues[0]?.message ?? "Invalid request body",
-        });
+        return this.sendError(
+          response,
+          HttpStatus.BAD_REQUEST,
+          parseResult.error.issues[0]?.message ?? "Invalid request body",
+        );
       }
 
-      const { filePath, splitterParams } = parseResult.data;
+      const { splitterParams } = parseResult.data;
 
       const result = await this.ingestionService.ingestPdf({
-        filePath,
+        filePath: request.file.path,
         splitterParams,
       });
 
@@ -64,19 +149,13 @@ export class IngestionRouter {
 
       return response.status(HttpStatus.OK).json(responseBody);
     } catch (error) {
-      if (error instanceof InvalidIngestionFilePathError) {
-        return response.status(HttpStatus.BAD_REQUEST).json({
-          error: "filePath must be a PDF inside the upload directory",
-        });
-      }
-
-      if (error instanceof IngestionFileTooLargeError) {
-        return response.status(HttpStatus.PAYLOAD_TOO_LARGE).json({
-          error: `File is ${error.fileSizeBytes} bytes, exceeding the ${error.maxSizeBytes}-byte limit`,
-        });
+      if (error instanceof InvalidSplitterParamsError) {
+        return this.sendError(response, HttpStatus.BAD_REQUEST, error.message);
       }
 
       next(error);
+    } finally {
+      await rm(request.file.path, { force: true });
     }
   };
 }

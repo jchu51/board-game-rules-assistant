@@ -19,13 +19,15 @@ const ingestionService = new IngestionService(vectorStore, {
     chunkSize: config.ingestion.defaultChunkSize,
     chunkOverlap: config.ingestion.defaultChunkOverlap,
   },
-  uploadDirectory: config.ingestion.uploadDirectory,
-  maxUploadSizeBytes: config.ingestion.maxUploadSizeBytes,
 });
 
 //Routers
 const healthRouter = new HealthRouter();
-const ingestionRouter = new IngestionRouter(ingestionService);
+const ingestionRouter = new IngestionRouter(ingestionService, {
+  uploadDirectory: config.ingestion.uploadDirectory,
+  maxUploadSizeBytes: config.ingestion.maxUploadSizeBytes,
+  isProduction: config.nodeEnv === "production",
+});
 const routers = [healthRouter.router, ingestionRouter.router];
 
 if (config.nodeEnv === "local") {

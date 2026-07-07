@@ -1,18 +1,8 @@
-export class InvalidIngestionFilePathError extends Error {
-  constructor() {
-    super("Invalid ingestion file path.");
-    this.name = "InvalidIngestionFilePathError";
-  }
-}
-
-export class IngestionFileTooLargeError extends Error {
-  constructor(
-    readonly fileSizeBytes: number,
-    readonly maxSizeBytes: number,
-  ) {
+export class InvalidSplitterParamsError extends Error {
+  constructor(chunkSize: number, chunkOverlap: number) {
     super(
-      `Ingestion file is ${fileSizeBytes} bytes, exceeding the ${maxSizeBytes}-byte limit.`,
+      `chunkOverlap (${chunkOverlap}) must be less than chunkSize (${chunkSize}).`,
     );
-    this.name = "IngestionFileTooLargeError";
+    this.name = "InvalidSplitterParamsError";
   }
 }
