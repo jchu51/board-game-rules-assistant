@@ -11,6 +11,7 @@ const SplitterParamsInputSchema = z
     chunkSize: z.coerce.number().int().positive().optional(),
     chunkOverlap: z.coerce.number().int().nonnegative().optional(),
   })
+  .strict()
   .refine(
     (params) =>
       params.chunkSize === undefined ||

@@ -1,53 +1,98 @@
 # Board Game Rules Assistant
 
-A board-game rules assistant for uploading rulebook PDFs and eventually asking
-rules questions with source-backed citations.
+A full-stack TypeScript app for uploading board-game rulebook PDFs and building
+toward source-backed rules Q&A.
 
-The current app is the first frontend slice: a rulebook upload screen where a
-user can enter a game name, select a PDF, and see indexed rulebooks in a simple
-library list.
-
-## Project Status
-
-This project is early-stage. The frontend upload experience exists, while the
-backend rulebook processing and question-answering flow is still planned.
+The current slice lets a user enter a game name, upload a PDF rulebook, send it
+to the API for ingestion, and view/delete indexed rulebooks from the frontend.
+The RAG primitives live in a shared package so the API can grow from upload and
+indexing into retrieval, citations, and answer generation without tying those
+pieces directly to Express.
 
 ## Current Features
 
-- Upload-page UI for rulebook PDFs
-- PDF validation by file type and size
-- Simulated indexing progress
-- Rulebook library list with ready, indexing, and failed states
-- React + Vite frontend
-- shadcn-style local UI components
-- Tailwind CSS v4 styling
+- React upload page for board-game rulebooks
+- Express API with health, rulebook upload, list, and delete endpoints
+- Multipart PDF upload with file type and size validation
+- PDF loading, chunking, embeddings, and in-memory vector-store indexing
+- In-memory rulebook repository for the current API process
+- Local Swagger UI for API exploration
+- Docker Compose setup for running web and API together
 
-## Project Structure
+## Architecture
 
 ```text
 board-game-rules-assistant/
-  package.json          # npm workspace root
+  package.json
+  docker-compose.yml
+  scripts/
+    docker.sh
   apps/
-    api/                 # Express API app
+    api/
       src/
-        modules/         # API feature modules and routers
+        config/                  # environment parsing and typed app config
+        db/rulebook-repository/   # repository interface and in-memory store
+        modules/                  # feature routers and services
+        openapi/                  # OpenAPI document loading
+        shared/http/              # HTTP status, response, and error helpers
     packages/
-      rag-core/          # reusable RAG primitives shared by app code
-    web/                 # React frontend app
+      rag-core/
+        src/
+          chunking/               # document splitting
+          documents/              # shared document types
+          embeddings/             # embedding model factories
+          loaders/                # PDF loading
+          vector-store/           # vector-store interface/adapters
+    web/
       src/
-        assets/svgs/     # reusable SVG icon components
-        components/      # shared UI and feature components
-        domain/          # frontend domain types and constants
-        pages/           # route-level pages
-  docs/                  # product and architecture notes
+        api/                      # browser API clients
+        assets/svgs/              # reusable SVG icon components
+        components/               # shared UI and feature components
+        domain/                   # frontend domain types
+        pages/                    # route-level pages
+  docs/
+    tech-reviews/
+      000-phase-0-single-pdf-rag-agent/
+        high-level-design.md
+        diagrams/
+          phase-0-flow.puml
+          phase-0-flow.png
 ```
+
+See the [Phase 0 flow](docs/tech-reviews/000-phase-0-single-pdf-rag-agent/diagrams/phase-0-flow.png).
 
 ## Requirements
 
-- Node.js 20+
+- Node.js 22+
 - npm
+- OpenAI API key for ingestion embeddings
+- Docker, optional
 
-## Start The Web App
+## Environment
+
+Copy the API example environment file:
+
+```bash
+cp apps/api/.env.example apps/api/.env
+```
+
+Important values:
+
+```bash
+NODE_ENV=local
+HOST=127.0.0.1
+PORT=8000
+CORS_ORIGIN=http://localhost:5173
+OPENAI_API_KEY=your_api_key
+INGESTION_EMBEDDING_MODEL=text-embedding-3-large
+INGESTION_UPLOAD_DIRECTORY=../../storage/uploads
+INGESTION_MAX_UPLOAD_SIZE_BYTES=20971520
+```
+
+For the web app, the default API URL is `http://127.0.0.1:8000`. Override it
+with `VITE_API_BASE_URL` if needed.
+
+## Start Locally
 
 Install dependencies from the project root:
 
@@ -55,55 +100,64 @@ Install dependencies from the project root:
 npm install
 ```
 
-With Docker Compose:
-
-```bash
-./scripts/docker.sh
-```
-
-Then open the web app:
-
-```text
-http://localhost:5173
-```
-
-The API health endpoint is available at:
-
-```text
-http://127.0.0.1:8000/health
-```
-
-Or run it locally with Node:
-
-```bash
-npm run dev:web
-```
-
-Then open the local URL printed by Vite, usually:
-
-```text
-http://localhost:5173
-```
-
-## Start The API
+Start the API:
 
 ```bash
 npm run dev:api
 ```
 
-The API starts on:
+Start the web app in another terminal:
+
+```bash
+npm run dev:web
+```
+
+Open:
+
+```text
+http://localhost:5173
+```
+
+## Start With Docker
+
+```bash
+./scripts/docker.sh
+```
+
+Useful Docker commands:
+
+```bash
+./scripts/docker.sh down
+./scripts/docker.sh logs
+./scripts/docker.sh restart
+```
+
+## API
+
+Base URL:
 
 ```text
 http://127.0.0.1:8000
 ```
 
-Health check:
+Endpoints:
 
-```bash
-curl http://127.0.0.1:8000/health
+```text
+GET    /health
+POST   /rulebooks
+GET    /rulebooks
+DELETE /rulebooks/:id
 ```
 
-API docs:
+Example upload:
+
+```bash
+curl -X POST http://127.0.0.1:8000/rulebooks \
+  -F "gameName=Catan" \
+  -F "file=@/path/to/catan-rulebook.pdf"
+```
+
+Local API docs:
 
 ```text
 http://127.0.0.1:8000/docs
@@ -111,57 +165,33 @@ http://127.0.0.1:8000/openapi.json
 http://127.0.0.1:8000/openapi.yml
 ```
 
-Swagger docs are only mounted when the API runs with `NODE_ENV=local`. They are
-not exposed in `development`, `test`, or `production`.
+Swagger docs are only mounted when the API runs with `NODE_ENV=local`.
 
 ## Useful Commands
 
 Run from the project root:
 
 ```bash
-npm run dev:web     # start the frontend workspace
-npm run dev:api     # start the API workspace
-npm run typecheck   # type-check all workspaces that expose typecheck
-npm run build       # build all workspaces that expose build
+npm run dev:web
+npm run dev:api
+npm run typecheck
+npm run build
 ```
 
-Run a specific workspace command:
+Workspace commands:
 
 ```bash
 npm run build -w web
 npm run build -w api
 npm run build -w @board-game-rules-assistant/rag-core
+npm run typecheck -w api
+npm run typecheck -w @board-game-rules-assistant/rag-core
 ```
 
-Frontend workspace scripts:
+## Current Limitations
 
-```bash
-npm run dev -w web      # start local development server
-npm run build -w web    # type-check and build production assets
-npm run lint -w web     # run oxlint
-npm run preview -w web  # preview the production build
-```
-
-API workspace scripts:
-
-```bash
-npm run dev -w api        # start API with nodemon + tsx
-npm run build -w api      # compile TypeScript to dist
-npm run start -w api      # run compiled API
-npm run typecheck -w api  # type-check without emitting files
-```
-
-Run Docker Compose from the project root:
-
-```bash
-./scripts/docker.sh          # start web and api with docker compose
-./scripts/docker.sh down     # stop containers
-./scripts/docker.sh logs     # follow container logs
-./scripts/docker.sh restart  # rebuild and restart
-```
-
-## Notes
-
-The upload/indexing behavior is currently mocked in the frontend. A future
-backend should handle PDF extraction, chunking, embedding, retrieval, citation
-verification, and answer generation.
+- Rulebook records are stored in memory and reset when the API process restarts.
+- Uploaded PDF files are removed after ingestion.
+- Vector-store deletion is not implemented yet.
+- Retrieval, answer generation, citation verification, auth, and persistence are
+  planned future work.

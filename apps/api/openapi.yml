@@ -24,17 +24,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                required:
-                  - status
-                  - service
-                properties:
-                  status:
-                    type: string
-                    example: ok
-                  service:
-                    type: string
-                    example: board-game-rules-assistant-api
+                $ref: "#/components/schemas/HealthResponse"
   /rulebooks:
     post:
       tags:
@@ -46,66 +36,46 @@ paths:
         content:
           multipart/form-data:
             schema:
-              type: object
-              required:
-                - gameName
-                - file
-              properties:
-                gameName:
-                  type: string
-                  minLength: 1
-                  example: Catan
-                file:
-                  type: string
-                  format: binary
-                chunkSize:
-                  type: integer
-                  minimum: 1
-                chunkOverlap:
-                  type: integer
-                  minimum: 0
+              $ref: "#/components/schemas/UploadRulebookRequest"
       responses:
         "200":
           description: Rulebook indexed
           content:
             application/json:
               schema:
-                type: object
-                required:
-                  - id
-                  - gameName
-                  - pdfName
-                  - fileSize
-                  - status
-                  - documentCount
-                  - chunkCount
-                properties:
-                  id:
-                    type: string
-                    format: uuid
-                  gameName:
-                    type: string
-                    example: Catan
-                  pdfName:
-                    type: string
-                    example: catan-rulebook.pdf
-                  fileSize:
-                    type: integer
-                    minimum: 0
-                    example: 1840000
-                  status:
-                    type: string
-                    const: completed
-                  documentCount:
-                    type: integer
-                    minimum: 0
-                  chunkCount:
-                    type: integer
-                    minimum: 0
+                $ref: "#/components/schemas/UploadRulebookResponse"
         "400":
           description: Invalid upload request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                missingFile:
+                  value:
+                    error: file is required
+                invalidFileType:
+                  value:
+                    error: Only PDF files are allowed
+                invalidSplitterParams:
+                  value:
+                    error: chunkOverlap must be less than chunkSize
         "413":
           description: File exceeds upload size limit
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                fileTooLarge:
+                  value:
+                    error: File exceeds the upload size limit
+        "500":
+          description: Unexpected ingestion failure
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
     get:
       tags:
         - Ingestion
@@ -117,33 +87,13 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                required:
-                  - rulebooks
-                properties:
-                  rulebooks:
-                    type: array
-                    items:
-                      type: object
-                      required:
-                        - id
-                        - gameName
-                        - pdfName
-                        - fileSize
-                      properties:
-                        id:
-                          type: string
-                          format: uuid
-                        gameName:
-                          type: string
-                          example: Catan
-                        pdfName:
-                          type: string
-                          example: catan-rulebook.pdf
-                        fileSize:
-                          type: integer
-                          minimum: 0
-                          example: 1840000
+                $ref: "#/components/schemas/ListRulebooksResponse"
+        "500":
+          description: Unexpected list failure
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /rulebooks/{id}:
     delete:
       tags:
@@ -162,3 +112,152 @@ paths:
           description: Rulebook deleted
         "404":
           description: Rulebook not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                notFound:
+                  value:
+                    error: Rulebook not found
+        "500":
+          description: Unexpected delete failure
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+components:
+  schemas:
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Human-readable error message.
+        stack:
+          type: string
+          description: Development-only stack trace for unhandled errors.
+      additionalProperties: false
+    HealthResponse:
+      type: object
+      required:
+        - status
+        - service
+      properties:
+        status:
+          type: string
+          const: ok
+        service:
+          type: string
+          const: board-game-rules-assistant-api
+      additionalProperties: false
+    UploadRulebookRequest:
+      type: object
+      required:
+        - gameName
+        - file
+      properties:
+        gameName:
+          type: string
+          minLength: 1
+          description: Board game name associated with the uploaded PDF.
+          example: Catan
+        file:
+          type: string
+          format: binary
+          description: PDF rulebook file. The API accepts only `.pdf` files with `application/pdf` MIME type.
+        chunkSize:
+          type: integer
+          minimum: 1
+          description: Optional override for text splitter chunk size.
+          example: 1000
+        chunkOverlap:
+          type: integer
+          minimum: 0
+          description: Optional override for text splitter chunk overlap. Must be less than `chunkSize` when both are provided.
+          example: 150
+      additionalProperties: false
+    RulebookSummary:
+      type: object
+      required:
+        - id
+        - gameName
+        - pdfName
+        - fileSize
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Server-generated rulebook identifier.
+        gameName:
+          type: string
+          minLength: 1
+          description: Board game name provided at upload time.
+          example: Catan
+        pdfName:
+          type: string
+          minLength: 1
+          description: Original PDF filename.
+          example: catan-rulebook.pdf
+        fileSize:
+          type: integer
+          minimum: 0
+          description: Uploaded file size in bytes.
+          example: 1840000
+      additionalProperties: false
+    UploadRulebookResponse:
+      type: object
+      required:
+        - id
+        - gameName
+        - pdfName
+        - fileSize
+        - status
+        - documentCount
+        - chunkCount
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Server-generated rulebook identifier.
+        gameName:
+          type: string
+          minLength: 1
+          description: Board game name provided at upload time.
+          example: Catan
+        pdfName:
+          type: string
+          minLength: 1
+          description: Original PDF filename.
+          example: catan-rulebook.pdf
+        fileSize:
+          type: integer
+          minimum: 0
+          description: Uploaded file size in bytes.
+          example: 1840000
+        status:
+          type: string
+          const: completed
+          description: Ingestion status for this synchronous upload request.
+        documentCount:
+          type: integer
+          minimum: 0
+          description: Number of page-level documents extracted from the PDF.
+        chunkCount:
+          type: integer
+          minimum: 0
+          description: Number of chunks indexed into the in-memory vector store.
+      additionalProperties: false
+    ListRulebooksResponse:
+      type: object
+      required:
+        - rulebooks
+      properties:
+        rulebooks:
+          type: array
+          description: Rulebooks indexed during the current API process lifetime.
+          items:
+            $ref: "#/components/schemas/RulebookSummary"
+      additionalProperties: false

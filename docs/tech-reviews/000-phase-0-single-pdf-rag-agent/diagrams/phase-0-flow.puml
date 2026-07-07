@@ -1,0 +1,59 @@
+@startuml phase-0-flow
+!theme plain
+top to bottom direction
+
+skinparam backgroundColor #FEFEFE
+skinparam shadowing false
+skinparam componentStyle rectangle
+skinparam defaultFontSize 11
+skinparam linetype polyline
+skinparam nodesep 70
+skinparam ranksep 60
+
+title Phase 0 — Single PDF RAG Upload + Simple Agent
+
+package "Browser" as browser #E0F7FA {
+  rectangle "**Upload Page**\nSelect one PDF\nEnter game name\nAsk rules question" as upload_page #FFFFFF
+}
+
+package "apps/api" as api #E8EAF6 {
+  rectangle "**IngestionRouter**\nPOST /rulebooks\nGET /rulebooks" as ingestion_router #FFFFFF
+  rectangle "**IngestionService**\nLoad PDF\nChunk text\nIndex chunks" as ingestion_service #FFFFFF
+  rectangle "**AskRouter**\nPOST /ask" as ask_router #FFFFFF
+  rectangle "**RulesAgentService**\nLangChain chat model\nRetrieval tool\nGrounded response" as agent_service #FFFFFF
+}
+
+package "apps/packages/rag-core" as rag_core #E8F5E9 {
+  rectangle "**PDF Loader**\nPage-aware documents" as pdf_loader #FFFFFF
+  rectangle "**Chunker**\nRecursive text split" as chunker #FFFFFF
+  rectangle "**Embeddings Factory**\nOpenAI embeddings" as embeddings #FFFFFF
+  rectangle "**Memory Vector Store**\nLangChain similarity search" as vector_store #FFFFFF
+}
+
+cloud "**OpenAI APIs**\nEmbeddings + chat completion" as openai #FFFDE7
+
+upload_page -down-> ingestion_router : upload PDF
+ingestion_router -down-> ingestion_service : ingestPdf(filePath)
+ingestion_service -down-> pdf_loader : extract pages
+pdf_loader -down-> chunker : page documents
+chunker -down-> vector_store : chunks
+vector_store -right-> embeddings : embed chunks
+embeddings -right-> openai : embedding request
+
+upload_page -down-> ask_router : ask question
+ask_router -down-> agent_service : answer(question)
+agent_service -down-> vector_store : similaritySearch(topK)
+vector_store -right-> embeddings : embed query
+agent_service -right-> openai : answer from retrieved chunks
+agent_service -up-> ask_router : answer + sources
+ask_router -up-> upload_page : cited answer
+
+legend right
+|= Color |= Boundary |
+| <#E0F7FA> | Web UI |
+| <#E8EAF6> | API modules |
+| <#E8F5E9> | Shared RAG primitives |
+| <#FFFDE7> | External model provider |
+endlegend
+
+@enduml
