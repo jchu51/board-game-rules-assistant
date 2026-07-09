@@ -35,7 +35,7 @@ INGESTION_EMBEDDING_MODEL=text-embedding-3-large
 INGESTION_CHUNK_SIZE=500
 INGESTION_CHUNK_OVERLAP=100
 INGESTION_UPLOAD_DIRECTORY=../../storage/uploads
-INGESTION_MAX_UPLOAD_SIZE_BYTES=20971520
+INGESTION_MAX_UPLOAD_SIZE_BYTES=41943040
 ```
 
 `NODE_ENV=local` enables Swagger UI. Docs are not mounted in `development`,
@@ -68,6 +68,7 @@ GET    /health
 POST   /rulebooks
 GET    /rulebooks
 DELETE /rulebooks/:id
+POST   /retrieval/search
 ```
 
 Upload example:
@@ -117,4 +118,4 @@ src/
 - Rulebook metadata is stored in memory only.
 - Vector-store deletion is not implemented yet.
 - Uploaded PDF files are deleted after ingestion.
-- Retrieval and answer-generation endpoints are future work.
+- Answer generation is not implemented yet.

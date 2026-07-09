@@ -11,6 +11,8 @@ tags:
     description: API health checks
   - name: Ingestion
     description: Rulebook upload and indexing
+  - name: Retrieval
+    description: Similarity search over indexed rulebook chunks
 paths:
   /health:
     get:
@@ -122,6 +124,41 @@ paths:
                     error: Rulebook not found
         "500":
           description: Unexpected delete failure
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /retrieval/search:
+    post:
+      tags:
+        - Retrieval
+      summary: Search indexed rulebook chunks
+      description: Runs vector similarity search against the API process-local in-memory vector store.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RetrievalSearchRequest"
+      responses:
+        "200":
+          description: Matching rulebook chunks
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RetrievalSearchResponse"
+        "400":
+          description: Invalid search request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                missingQuery:
+                  value:
+                    error: query is required
+        "500":
+          description: Unexpected retrieval failure
           content:
             application/json:
               schema:
@@ -260,4 +297,64 @@ components:
           description: Rulebooks indexed during the current API process lifetime.
           items:
             $ref: "#/components/schemas/RulebookSummary"
+      additionalProperties: false
+    RetrievalSearchRequest:
+      type: object
+      required:
+        - query
+      properties:
+        query:
+          type: string
+          minLength: 1
+          description: Natural-language search query.
+          example: How many resources does a city produce?
+        rulebookId:
+          type: string
+          format: uuid
+          description: Optional rulebook id filter. When omitted, all chunks in memory are searched.
+        topK:
+          type: integer
+          minimum: 1
+          maximum: 20
+          default: 5
+          description: Maximum number of chunks to return.
+          example: 5
+      additionalProperties: false
+    RetrievalMatchMetadata:
+      type: object
+      properties:
+        documentId:
+          type: string
+          format: uuid
+          description: Rulebook id attached during upload.
+        pageNumber:
+          type: integer
+          minimum: 1
+          description: Source PDF page number when available.
+        source:
+          type: string
+          description: Source PDF filename when available.
+          example: catan-rulebook.pdf
+      additionalProperties: false
+    RetrievalMatch:
+      type: object
+      required:
+        - content
+        - metadata
+      properties:
+        content:
+          type: string
+          description: Retrieved chunk text.
+        metadata:
+          $ref: "#/components/schemas/RetrievalMatchMetadata"
+      additionalProperties: false
+    RetrievalSearchResponse:
+      type: object
+      required:
+        - matches
+      properties:
+        matches:
+          type: array
+          items:
+            $ref: "#/components/schemas/RetrievalMatch"
       additionalProperties: false

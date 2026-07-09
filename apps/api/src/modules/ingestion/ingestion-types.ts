@@ -1,4 +1,5 @@
 import type { z } from "zod";
+import type { RulebookChunkMetadata } from "@board-game-rules-assistant/rag-core";
 
 import type {
   IngestionResultSchema,
@@ -19,6 +20,8 @@ export type IngestionServiceOptions = {
 
 export type IngestPdfInput = {
   filePath: string;
+  metadata?: Partial<RulebookChunkMetadata>;
+  source?: string;
   splitterParams?: Partial<IngestionSplitterParams>;
 };
 

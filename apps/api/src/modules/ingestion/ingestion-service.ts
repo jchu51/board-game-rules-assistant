@@ -18,6 +18,8 @@ export class IngestionService {
 
   async ingestPdf({
     filePath,
+    metadata,
+    source,
     splitterParams,
   }: IngestPdfInput): Promise<IngestionResult> {
     const mergedSplitterParams = {
@@ -32,7 +34,17 @@ export class IngestionService {
       );
     }
 
-    const documents = await loadPdfDocuments(filePath);
+    const documents = await loadPdfDocuments(filePath, { source });
+
+    if (metadata) {
+      for (const document of documents) {
+        document.metadata = {
+          ...document.metadata,
+          ...metadata,
+        };
+      }
+    }
+
     const chunks = await chunkDocuments(documents, mergedSplitterParams);
 
     await this.vectorStore.upsert(chunks);

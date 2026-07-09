@@ -142,6 +142,10 @@ export class IngestionRouter {
 
       const result = await this.ingestionService.ingestPdf({
         filePath: request.file.path,
+        metadata: {
+          documentId: id,
+        },
+        source: pdfName,
         splitterParams,
       });
 

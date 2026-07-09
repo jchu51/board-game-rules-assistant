@@ -9,6 +9,8 @@ import { InMemoryRulebookRepository } from "./db/rulebook-repository/in-memory-r
 import { HealthRouter } from "./modules/health/health-router";
 import { IngestionRouter } from "./modules/ingestion/ingestion-router";
 import { IngestionService } from "./modules/ingestion/ingestion-service";
+import { RetrievalRouter } from "./modules/retrieval/retrieval-router";
+import { RetrievalService } from "./modules/retrieval/retrieval-service";
 
 // Services
 const embeddings = createOpenAIEmbeddings(config.ingestion.embeddingModel, {
@@ -22,6 +24,7 @@ const ingestionService = new IngestionService(vectorStore, {
     chunkOverlap: config.ingestion.defaultChunkOverlap,
   },
 });
+const retrievalService = new RetrievalService(vectorStore);
 
 //Routers
 const healthRouter = new HealthRouter();
@@ -34,7 +37,12 @@ const ingestionRouter = new IngestionRouter(
     isProduction: config.nodeEnv === "production",
   },
 );
-const routers = [healthRouter.router, ingestionRouter.router];
+const retrievalRouter = new RetrievalRouter(retrievalService);
+const routers = [
+  healthRouter.router,
+  ingestionRouter.router,
+  retrievalRouter.router,
+];
 
 if (config.nodeEnv === "local") {
   const { DocsRouter } = await import("./modules/docs/docs-router");

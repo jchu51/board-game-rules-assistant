@@ -40,7 +40,7 @@ export const EnvSchema = z.object({
     z.number().int().nonnegative(),
   ),
   INGESTION_UPLOAD_DIRECTORY: withDefault("../../storage/uploads"),
-  INGESTION_MAX_UPLOAD_SIZE_BYTES: numberWithDefault(20 * 1024 * 1024).pipe(
+  INGESTION_MAX_UPLOAD_SIZE_BYTES: numberWithDefault(40 * 1024 * 1024).pipe(
     z.number().int().positive(),
   ),
 });
