@@ -7,12 +7,30 @@ type StatusBadgeProps = {
 
 export function StatusBadge({ status }: StatusBadgeProps) {
   if (status === "error") {
-    return <Badge variant="destructive">Failed</Badge>;
+    return (
+      <Badge className="rounded-full px-3 py-0.5 text-sm" variant="destructive">
+        Failed
+      </Badge>
+    );
   }
 
   if (status === "processing") {
-    return <Badge variant="outline">Indexing</Badge>;
+    return (
+      <Badge
+        className="rounded-full bg-muted px-3 py-0.5 text-sm"
+        variant="secondary"
+      >
+        Indexing
+      </Badge>
+    );
   }
 
-  return <Badge variant="secondary">Ready</Badge>;
+  return (
+    <Badge
+      className="rounded-full bg-muted px-3 py-0.5 text-sm font-medium"
+      variant="secondary"
+    >
+      Ready
+    </Badge>
+  );
 }

@@ -1,11 +1,18 @@
-import { Routes, Route } from "react-router";
-import { UploadPage } from "./pages/upload-page";
+import { Navigate, Route, Routes } from "react-router";
+import { AppShell } from "./components/app-shell";
+import { AskPage } from "./pages/ask-page";
+import { LibraryPage } from "./pages/library-page";
 import "./App.css";
 
 function App() {
   return (
     <Routes>
-      <Route path="/" element={<UploadPage />} />
+      <Route element={<AppShell />}>
+        <Route index element={<Navigate to="/ask" replace />} />
+        <Route path="ask" element={<AskPage />} />
+        <Route path="library" element={<LibraryPage />} />
+        <Route path="*" element={<Navigate to="/ask" replace />} />
+      </Route>
     </Routes>
   );
 }

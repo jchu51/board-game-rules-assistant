@@ -2,8 +2,8 @@
 
 React frontend for the Board Game Rules Assistant.
 
-The current screen lets a user enter a game name, choose a PDF rulebook, upload
-it to the API, and manage the indexed rulebook list.
+The app includes an Ask screen for rules questions and a Library screen for
+uploading and managing indexed PDF rulebooks.
 
 ## Stack
 
@@ -66,21 +66,23 @@ src/
     rulebook-api.ts              # fetch client for /rulebooks endpoints
   assets/svgs/                   # reusable SVG icon components
   components/
+    app-shell.tsx                # sidebar shell and route outlet
     rulebook-upload/             # upload page components
     ui/                          # local shadcn-style primitives
   domain/
     rulebook.ts                  # frontend rulebook types
   pages/
-    upload-page.tsx              # route-level upload page
+    ask-page.tsx                 # route-level Ask page
+    upload-page.tsx              # route-level Library page
 ```
 
 ## User Flow
 
-1. User enters a game name.
-2. User selects a PDF file.
-3. The page posts `multipart/form-data` to `POST /rulebooks`.
+1. User opens `/ask` to ask a board-game rules question.
+2. User opens `/library` to enter a game name and select a PDF file.
+3. The Library page posts `multipart/form-data` to `POST /rulebooks`.
 4. The API returns the indexed rulebook summary.
-5. The page refreshes the rulebook list from `GET /rulebooks`.
+5. The Library page refreshes the rulebook list from `GET /rulebooks`.
 6. A rulebook can be removed with `DELETE /rulebooks/:id`.
 
 ## Notes

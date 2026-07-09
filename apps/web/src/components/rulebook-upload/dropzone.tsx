@@ -33,9 +33,11 @@ export function Dropzone({
 
   return (
     <button
+      id="library-rulebook-dropzone-btn"
+      data-testid="library-rulebook-dropzone-btn"
       type="button"
       className={cn(
-        "flex min-h-40 w-full cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border border-dashed bg-background p-8 text-center transition-colors outline-none hover:bg-muted/50 focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-3",
+        "flex min-h-[208px] w-full cursor-pointer flex-col items-center justify-center gap-4 rounded-2xl border border-dashed bg-background p-8 text-center transition-colors outline-none hover:bg-muted/40 focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-3",
         isDragging && "border-primary bg-primary/5",
       )}
       onClick={onBrowse}
@@ -45,16 +47,16 @@ export function Dropzone({
     >
       <span
         className={cn(
-          "flex size-12 items-center justify-center rounded-xl bg-muted text-muted-foreground transition-colors",
+          "flex size-14 items-center justify-center rounded-2xl bg-muted text-muted-foreground transition-colors",
           isDragging && "bg-primary text-primary-foreground",
         )}
       >
         <UploadIcon stroke="currentColor" />
       </span>
-      <span className="text-sm font-medium">
+      <span className="text-base font-medium">
         {isDragging ? "Drop to upload" : "Drag a PDF here, or click to browse"}
       </span>
-      <span className="text-sm text-muted-foreground">PDF up to 40 MB</span>
+      <span className="text-base text-muted-foreground">PDF up to 40 MB</span>
     </button>
   );
 }

@@ -5,7 +5,7 @@ import {
   listRulebooks,
   uploadRulebookPdf,
 } from "@/api/rulebook-api";
-import { AlertIcon, BookIcon } from "@/assets/svgs";
+import { AlertIcon } from "@/assets/svgs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -51,7 +51,7 @@ const createRulebookDocument = (
   progress: 100,
 });
 
-export function UploadPage() {
+export function LibraryPage() {
   const [gameName, setGameName] = useState("");
   const [isDragging, setIsDragging] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -59,6 +59,14 @@ export function UploadPage() {
   const [error, setError] = useState("");
   const [documents, setDocuments] = useState<RulebookDocument[]>([]);
   const inputRef = useRef<HTMLInputElement | null>(null);
+
+  const clearSelectedFile = () => {
+    setSelectedFile(null);
+
+    if (inputRef.current) {
+      inputRef.current.value = "";
+    }
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -129,14 +137,14 @@ export function UploadPage() {
 
     if (!isPdf) {
       setError("That file isn't a PDF. Please upload a .pdf rulebook.");
-      setSelectedFile(null);
+      clearSelectedFile();
       setIsDragging(false);
       return;
     }
 
     if (file.size > MAX_RULEBOOK_PDF_BYTES) {
       setError("That file is over the 40 MB limit.");
-      setSelectedFile(null);
+      clearSelectedFile();
       setIsDragging(false);
       return;
     }
@@ -170,7 +178,7 @@ export function UploadPage() {
     const succeeded = await runUpload(id, selectedFile, trimmedGameName);
 
     if (succeeded) {
-      setSelectedFile(null);
+      clearSelectedFile();
       setGameName("");
     }
   };
@@ -211,39 +219,42 @@ export function UploadPage() {
     selectedFile !== null && gameName.trim().length > 0 && !isSubmitting;
 
   return (
-    <main className="min-h-svh bg-muted/30 px-4 py-10 text-foreground sm:px-6">
-      <div className="mx-auto flex max-w-3xl flex-col gap-7">
+    <main className="min-h-full overflow-y-auto bg-background px-6 py-12 text-foreground sm:px-8">
+      <div className="mx-auto flex w-full max-w-[784px] flex-col gap-8">
         <header className="flex flex-col gap-3">
-          <div className="flex items-center gap-2">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <BookIcon stroke="currentColor" />
-            </div>
-            <span className="text-sm font-semibold">Rulebook Library</span>
-          </div>
-          <div className="flex flex-col gap-2">
-            <h1 className="text-3xl font-semibold tracking-tight">
-              Upload a rulebook
-            </h1>
-            <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-              Add a PDF rulebook. We extract the text, keep page numbers intact,
-              and index it so answers can be cited back to the source.
-            </p>
-          </div>
+          <h1 className="text-[38px] leading-[1.1] font-bold tracking-normal">
+            Upload a rulebook
+          </h1>
+          <p className="max-w-3xl text-[17px] leading-7 text-muted-foreground">
+            Add a PDF rulebook. We extract the text, keep page numbers intact,
+            and index it so answers can be cited back to the source.
+          </p>
         </header>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Rulebook details</CardTitle>
-            <CardDescription>
+        <Card className="rounded-2xl border-border shadow-[0_1px_3px_rgb(0_0_0_/0.08)]">
+          <CardHeader className="p-7 pb-5">
+            <CardTitle className="text-xl leading-7 font-bold">
+              Rulebook details
+            </CardTitle>
+            <CardDescription className="text-base leading-6">
               Add the game name and upload the PDF you want to index.
             </CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-col gap-5">
+          <CardContent className="flex flex-col gap-6 px-7 pb-5">
             <FieldGroup>
               <Field>
-                <FieldLabel htmlFor="game-name">Game name</FieldLabel>
+                <FieldLabel
+                  id="library-game-name-label"
+                  data-testid="library-game-name-label"
+                  htmlFor="library-game-name-input"
+                  className="text-base font-medium"
+                >
+                  Game name
+                </FieldLabel>
                 <Input
-                  id="game-name"
+                  id="library-game-name-input"
+                  data-testid="library-game-name-input"
+                  className="h-11 rounded-xl px-4 text-base"
                   value={gameName}
                   onChange={(event) => setGameName(event.target.value)}
                   placeholder="e.g. Catan"
@@ -255,7 +266,7 @@ export function UploadPage() {
               <SelectedFileCard
                 file={selectedFile}
                 onClear={() => {
-                  setSelectedFile(null);
+                  clearSelectedFile();
                   setError("");
                 }}
               />
@@ -269,6 +280,8 @@ export function UploadPage() {
             )}
 
             <input
+              id="library-rulebook-file-input"
+              data-testid="library-rulebook-file-input"
               ref={inputRef}
               type="file"
               accept="application/pdf,.pdf"
@@ -283,20 +296,27 @@ export function UploadPage() {
               </Alert>
             ) : null}
           </CardContent>
-          <CardFooter className="justify-end">
-            <Button type="button" disabled={!canSubmit} onClick={handleSubmit}>
+          <CardFooter className="justify-end px-7 pb-7">
+            <Button
+              id="library-upload-submit-btn"
+              data-testid="library-upload-submit-btn"
+              type="button"
+              disabled={!canSubmit}
+              onClick={handleSubmit}
+              className="h-11 rounded-xl px-5 text-base font-semibold disabled:bg-muted-foreground disabled:text-background disabled:opacity-100"
+            >
               {isSubmitting ? "Indexing..." : "Upload & index"}
             </Button>
           </CardFooter>
         </Card>
 
         <section
-          className="flex flex-col gap-3"
+          className="flex flex-col gap-4"
           aria-label="Uploaded rulebooks"
         >
           <div className="flex items-baseline justify-between gap-3">
-            <h2 className="text-base font-semibold">Your rulebooks</h2>
-            <span className="text-sm text-muted-foreground">
+            <h2 className="text-xl font-bold">Your rulebooks</h2>
+            <span className="text-base text-muted-foreground">
               {documents.length}{" "}
               {documents.length === 1 ? "document" : "documents"}
             </span>
@@ -329,4 +349,4 @@ export function UploadPage() {
   );
 }
 
-export default UploadPage;
+export default LibraryPage;
