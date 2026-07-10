@@ -55,6 +55,7 @@ src/
 
 ```bash
 npm run build
+npm run test
 npm run typecheck
 ```
 
@@ -62,6 +63,7 @@ From the repository root:
 
 ```bash
 npm run build -w @board-game-rules-assistant/rag-core
+npm run test -w @board-game-rules-assistant/rag-core
 npm run typecheck -w @board-game-rules-assistant/rag-core
 ```
 
