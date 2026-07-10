@@ -10,8 +10,11 @@ import {
   LangchainMemoryVectorStore,
   type RulebookDocument,
   type RulebookDocumentInterface,
+  type VectorStore,
+  type VectorStoreSimilaritySearchInput,
 } from "@board-game-rules-assistant/rag-core";
 
+import { RequestClassifierService } from "../src/application/retrieval/request-classifier-service";
 import { RetrievalService } from "../src/application/retrieval/retrieval-service";
 
 class KeywordEmbeddings implements EmbeddingsInterface {
@@ -34,6 +37,19 @@ class KeywordEmbeddings implements EmbeddingsInterface {
     return vector.some((value) => value > 0)
       ? vector
       : [0.001, 0.001, 0.001, 0.001];
+  }
+}
+
+class RecordingVectorStore implements VectorStore {
+  readonly searches: VectorStoreSimilaritySearchInput[] = [];
+
+  async upsert(): Promise<void> {}
+
+  async similaritySearch(
+    input: VectorStoreSimilaritySearchInput,
+  ): Promise<RulebookDocumentInterface[]> {
+    this.searches.push(input);
+    return [];
   }
 }
 
@@ -62,22 +78,48 @@ describe("RetrievalService", () => {
   it("returns a not-found answer when vector search has no matches", async () => {
     let createdAgent = false;
     const vectorStore = await createVectorStore();
-    const service = new RetrievalService(vectorStore, {
-      createRuleAnswerAgent: () => {
-        createdAgent = true;
-        throw new Error("should not create answer agent");
-      },
-      createRuleContextAgent: () => {
+    const service = new RetrievalService(
+      vectorStore,
+      new RequestClassifierService(),
+      () => {
         createdAgent = true;
         throw new Error("should not create context agent");
       },
-    });
+      () => {
+        createdAgent = true;
+        throw new Error("should not create answer agent");
+      },
+    );
 
-    const result = await service.search({ query: "unknown rule" });
+    const result = await service.search({
+      query: "How many resources does a city produce?",
+    });
 
     assert.equal(createdAgent, false);
     assert.deepEqual(result.matches, []);
     assert.match(result.answer, /could not find relevant rulebook context/i);
+  });
+
+  it("skips RAG for out-of-scope requests", async () => {
+    const vectorStore = new RecordingVectorStore();
+    const service = new RetrievalService(
+      vectorStore,
+      new RequestClassifierService(),
+      () => {
+        throw new Error("should not create context agent");
+      },
+      () => {
+        throw new Error("should not create answer agent");
+      },
+    );
+
+    const result = await service.search({
+      query: "What is the weather tomorrow?",
+    });
+
+    assert.equal(vectorStore.searches.length, 0);
+    assert.deepEqual(result.matches, []);
+    assert.match(result.answer, /only answer board-game rules questions/i);
   });
 
   it("uses context and answer agents after formatting retrieved matches", async () => {
@@ -91,8 +133,18 @@ describe("RetrievalService", () => {
         source: "catan.pdf",
       }),
     ]);
-    const service = new RetrievalService(vectorStore, {
-      createRuleAnswerAgent: (context) => {
+    const service = new RetrievalService(
+      vectorStore,
+      new RequestClassifierService(),
+      (context) => {
+        contextAgentInput = context;
+        return {
+          async run() {
+            return "Relevant rule: Cities produce two resources.";
+          },
+        } as unknown as RuleContextAgent;
+      },
+      (context) => {
         answerAgentContext = context;
         return {
           async run(question: string) {
@@ -101,15 +153,7 @@ describe("RetrievalService", () => {
           },
         } as unknown as RuleAnswerAgent;
       },
-      createRuleContextAgent: (context) => {
-        contextAgentInput = context;
-        return {
-          async run() {
-            return "Relevant rule: Cities produce two resources.";
-          },
-        } as unknown as RuleContextAgent;
-      },
-    });
+    );
 
     const result = await service.search({
       query: "How many resources does a city produce?",

@@ -3,6 +3,7 @@ import type {
   RuleAnswerAgent,
   RuleContextAgent,
 } from "@board-game-rules-assistant/agent-core";
+import type { RequestClassifierService } from "./request-classifier-service";
 import type {
   RetrievalMatch,
   RetrievalSearchInput,
@@ -11,22 +12,33 @@ import type {
 
 const DEFAULT_TOP_K = 5;
 
-type RetrievalServiceOptions = {
-  createRuleAnswerAgent: (context: string) => RuleAnswerAgent;
-  createRuleContextAgent: (context: string) => RuleContextAgent;
-};
-
 export class RetrievalService {
   constructor(
     private readonly vectorStore: VectorStore,
-    private readonly options: RetrievalServiceOptions,
+    private readonly requestClassifier: RequestClassifierService,
+    private readonly createRuleContextAgent: (
+      context: string,
+    ) => RuleContextAgent,
+    private readonly createRuleAnswerAgent: (
+      context: string,
+    ) => RuleAnswerAgent,
   ) {}
 
   async search({
     query,
   }: RetrievalSearchInput): Promise<RetrievalSearchResult> {
+    const classification = this.requestClassifier.classify(query);
+
+    if (!classification.isGameRuleQuestion) {
+      return {
+        answer:
+          "I can only answer board-game rules questions from indexed rulebook context. Ask about a specific game rule, turn, card, resource, scoring, setup, or movement question.",
+        matches: [],
+      };
+    }
+
     const documents = await this.vectorStore.similaritySearch({
-      query,
+      query: classification.normalizedQuery,
       topK: DEFAULT_TOP_K,
     });
 
@@ -48,9 +60,9 @@ export class RetrievalService {
     }
 
     const retrievedContext = this.formatRetrievedContext(matches);
-    const contextAgent = this.options.createRuleContextAgent(retrievedContext);
+    const contextAgent = this.createRuleContextAgent(retrievedContext);
     const relevantRules = await contextAgent.run(query);
-    const answerAgent = this.options.createRuleAnswerAgent(relevantRules);
+    const answerAgent = this.createRuleAnswerAgent(relevantRules);
     const answer = await answerAgent.run(query);
 
     return { answer, matches };

@@ -9,6 +9,7 @@ import {
 } from "@board-game-rules-assistant/agent-core";
 
 import { IngestionService } from "./application/ingestion/ingestion-service";
+import { RequestClassifierService } from "./application/retrieval/request-classifier-service";
 import { RetrievalService } from "./application/retrieval/retrieval-service";
 import { config } from "./config/config";
 import { InMemoryRulebookRepository } from "./infrastructure/persistence/rulebook/in-memory-rulebook-repository";
@@ -34,12 +35,13 @@ const ingestionService = new IngestionService(vectorStore, {
     chunkOverlap: config.ingestion.defaultChunkOverlap,
   },
 });
-const retrievalService = new RetrievalService(vectorStore, {
-  createRuleAnswerAgent: (context) =>
-    new RuleAnswerAgent("rule-answer-agent", chatModel, context),
-  createRuleContextAgent: (context) =>
-    new RuleContextAgent("rule-context-agent", chatModel, context),
-});
+const requestClassifier = new RequestClassifierService();
+const retrievalService = new RetrievalService(
+  vectorStore,
+  requestClassifier,
+  (context) => new RuleContextAgent("rule-context-agent", chatModel, context),
+  (context) => new RuleAnswerAgent("rule-answer-agent", chatModel, context),
+);
 
 // Routers
 const healthRouter = new HealthRouter();
