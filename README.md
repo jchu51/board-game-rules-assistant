@@ -3,18 +3,20 @@
 A full-stack TypeScript app for uploading board-game rulebook PDFs and building
 toward source-backed rules Q&A.
 
-The current slice lets a user enter a game name, upload a PDF rulebook, send it
-to the API for ingestion, and view/delete indexed rulebooks from the frontend.
-The RAG primitives live in a shared package so the API can grow from upload and
-indexing into retrieval, citations, and answer generation without tying those
-pieces directly to Express.
+The current slice lets a user upload PDF rulebooks, index them into an in-memory
+vector store, search those indexed chunks, and use a prototype Ask screen that
+returns an agent-generated answer with retrieved source snippets. RAG primitives
+and agent primitives live in shared packages so the API can grow this flow
+without tying those pieces directly to Express.
 
 ## Current Features
 
-- React upload page for board-game rulebooks
-- Express API with health, rulebook upload, list, and delete endpoints
+- React Ask and Library pages
+- Express API with health, rulebook upload/list/delete, and retrieval endpoints
 - Multipart PDF upload with file type and size validation
 - PDF loading, chunking, embeddings, and in-memory vector-store indexing
+- Similarity search over indexed rulebook chunks
+- Agent-core package with prompt and LangChain agent primitives
 - In-memory rulebook repository for the current API process
 - Local Swagger UI for API exploration
 - Docker Compose setup for running web and API together
@@ -30,12 +32,17 @@ board-game-rules-assistant/
   apps/
     api/
       src/
+        application/             # use-case services and application types
         config/                  # environment parsing and typed app config
-        db/rulebook-repository/   # repository interface and in-memory store
-        modules/                  # feature routers and services
-        openapi/                  # OpenAPI document loading
-        shared/http/              # HTTP status, response, and error helpers
+        domain/                  # repository contracts and domain errors
+        infrastructure/          # OpenAPI and persistence adapters
+        presentation/http/        # Express app, routers, and HTTP contracts
     packages/
+      agent-core/
+        src/
+          agents/                 # LangChain-backed agent primitives
+          llm/                    # chat model initialization helper
+          prompts/                # reusable prompt templates
       rag-core/
         src/
           chunking/               # document splitting
@@ -84,9 +91,10 @@ HOST=127.0.0.1
 PORT=8000
 CORS_ORIGIN=http://localhost:5173
 OPENAI_API_KEY=your_api_key
+AGENT_CHAT_MODEL=openai:gpt-4o-mini
 INGESTION_EMBEDDING_MODEL=text-embedding-3-large
 INGESTION_UPLOAD_DIRECTORY=../../storage/uploads
-INGESTION_MAX_UPLOAD_SIZE_BYTES=20971520
+INGESTION_MAX_UPLOAD_SIZE_BYTES=41943040
 ```
 
 For the web app, the default API URL is `http://127.0.0.1:8000`. Override it
@@ -147,6 +155,7 @@ GET    /health
 POST   /rulebooks
 GET    /rulebooks
 DELETE /rulebooks/:id
+POST   /retrieval/search
 ```
 
 Example upload:
@@ -183,8 +192,10 @@ Workspace commands:
 ```bash
 npm run build -w web
 npm run build -w api
+npm run build -w @board-game-rules-assistant/agent-core
 npm run build -w @board-game-rules-assistant/rag-core
 npm run typecheck -w api
+npm run typecheck -w @board-game-rules-assistant/agent-core
 npm run typecheck -w @board-game-rules-assistant/rag-core
 ```
 
@@ -193,5 +204,6 @@ npm run typecheck -w @board-game-rules-assistant/rag-core
 - Rulebook records are stored in memory and reset when the API process restarts.
 - Uploaded PDF files are removed after ingestion.
 - Vector-store deletion is not implemented yet.
-- Retrieval, answer generation, citation verification, auth, and persistence are
-  planned future work.
+- The Ask UI currently returns an agent-generated answer plus retrieval-backed
+  source snippets.
+- Citation verification, auth, and persistence are planned future work.
