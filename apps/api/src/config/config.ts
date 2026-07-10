@@ -38,4 +38,7 @@ export const config: Config = {
     uploadDirectory: env.INGESTION_UPLOAD_DIRECTORY,
     maxUploadSizeBytes: env.INGESTION_MAX_UPLOAD_SIZE_BYTES,
   },
+  publicSearch: {
+    tavilyApiKey: env.TAVILY_API_KEY,
+  },
 };

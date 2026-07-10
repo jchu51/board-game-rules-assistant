@@ -18,6 +18,16 @@ describe("EnvSchema", () => {
     assert.equal(env.INGESTION_CHUNK_SIZE, 500);
     assert.equal(env.INGESTION_CHUNK_OVERLAP, 100);
     assert.equal(env.INGESTION_MAX_UPLOAD_SIZE_BYTES, 40 * 1024 * 1024);
+    assert.equal(env.TAVILY_API_KEY, undefined);
+  });
+
+  it("accepts an optional Tavily API key", () => {
+    const env = EnvSchema.parse({
+      OPENAI_API_KEY: "test-key",
+      TAVILY_API_KEY: "test-tavily-key",
+    });
+
+    assert.equal(env.TAVILY_API_KEY, "test-tavily-key");
   });
 
   it("rejects an empty OpenAI API key", () => {

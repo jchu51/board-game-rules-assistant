@@ -16,4 +16,5 @@ export const testConfig: Config = {
   },
   nodeEnv: "test",
   port: 0,
+  publicSearch: {},
 };

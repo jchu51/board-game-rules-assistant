@@ -16,4 +16,7 @@ export type Config = {
     uploadDirectory: string;
     maxUploadSizeBytes: number;
   };
+  publicSearch: {
+    tavilyApiKey?: string;
+  };
 };
