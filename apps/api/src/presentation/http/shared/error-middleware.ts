@@ -1,6 +1,6 @@
 import type { ErrorRequestHandler } from "express";
 
-import type { Config } from "../../config/config-types";
+import type { Config } from "../../../config/config-types";
 import { getErrorMessage } from "./get-error-message";
 import { HttpStatus } from "./http-status";
 

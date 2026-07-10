@@ -3,7 +3,7 @@ import {
   loadPdfDocuments,
   type VectorStore,
 } from "@board-game-rules-assistant/rag-core";
-import { InvalidSplitterParamsError } from "./ingestion-errors";
+import { InvalidSplitterParamsError } from "../../domain/ingestion/ingestion-errors";
 import type {
   IngestPdfInput,
   IngestionResult,

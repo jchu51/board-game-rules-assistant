@@ -1,7 +1,7 @@
 import cors from "cors";
 import express, { type Router } from "express";
-import type { Config } from "./config/config-types";
-import { createErrorMiddleware } from "./shared/http/error-middleware";
+import type { Config } from "../../config/config-types";
+import { createErrorMiddleware } from "./shared/error-middleware";
 
 type CreateAppOptions = {
   config: Config;

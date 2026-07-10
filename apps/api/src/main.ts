@@ -8,14 +8,14 @@ import {
   RuleContextAgent,
 } from "@board-game-rules-assistant/agent-core";
 
-import { createApp } from "./app";
+import { IngestionService } from "./application/ingestion/ingestion-service";
+import { RetrievalService } from "./application/retrieval/retrieval-service";
 import { config } from "./config/config";
-import { InMemoryRulebookRepository } from "./db/rulebook-repository/in-memory-rulebook-repository";
-import { HealthRouter } from "./modules/health/health-router";
-import { IngestionRouter } from "./modules/ingestion/ingestion-router";
-import { IngestionService } from "./modules/ingestion/ingestion-service";
-import { RetrievalRouter } from "./modules/retrieval/retrieval-router";
-import { RetrievalService } from "./modules/retrieval/retrieval-service";
+import { InMemoryRulebookRepository } from "./infrastructure/persistence/rulebook/in-memory-rulebook-repository";
+import { createApp } from "./presentation/http/app";
+import { HealthRouter } from "./presentation/http/health/health-router";
+import { IngestionRouter } from "./presentation/http/ingestion/ingestion-router";
+import { RetrievalRouter } from "./presentation/http/retrieval/retrieval-router";
 
 // Services
 const embeddings = createOpenAIEmbeddings(config.ingestion.embeddingModel, {
@@ -60,7 +60,7 @@ const routers = [
 ];
 
 if (config.nodeEnv === "local") {
-  const { DocsRouter } = await import("./modules/docs/docs-router");
+  const { DocsRouter } = await import("./presentation/http/docs/docs-router");
   const docsRouter = new DocsRouter();
   routers.push(docsRouter.router);
 }

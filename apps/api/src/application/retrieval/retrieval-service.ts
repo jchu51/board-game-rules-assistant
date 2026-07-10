@@ -5,8 +5,8 @@ import type {
 } from "@board-game-rules-assistant/agent-core";
 import type {
   RetrievalMatch,
-  RetrievalSearchResponseBody,
-  RetrievalSearchRequestBody,
+  RetrievalSearchInput,
+  RetrievalSearchResult,
 } from "./retrieval-types";
 
 const DEFAULT_TOP_K = 5;
@@ -24,7 +24,7 @@ export class RetrievalService {
 
   async search({
     query,
-  }: RetrievalSearchRequestBody): Promise<RetrievalSearchResponseBody> {
+  }: RetrievalSearchInput): Promise<RetrievalSearchResult> {
     const documents = await this.vectorStore.similaritySearch({
       query,
       topK: DEFAULT_TOP_K,

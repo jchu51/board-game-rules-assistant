@@ -110,17 +110,24 @@ npm run lint
 
 ```text
 src/
-  app.ts                         # Express app factory
   main.ts                        # dependency wiring and server lifecycle
+  application/                   # use-case services and application types
+    ingestion/                   # PDF ingestion workflow
+    retrieval/                   # vector search + agent answer workflow
   config/                        # env schema, config type, config singleton
-  db/rulebook-repository/        # repository interface and in-memory repo
-  modules/
+  domain/                        # domain contracts and domain errors
+    ingestion/                   # ingestion domain errors
+    rulebook/                    # rulebook repository contract
+  infrastructure/                # adapters for external/storage concerns
+    openapi/                     # OpenAPI document loading
+    persistence/rulebook/        # in-memory rulebook repository
+  presentation/http/             # Express routers and HTTP schemas
+    app.ts                       # Express app factory
     docs/                        # local-only Swagger/OpenAPI routes
-    health/                      # health endpoint
-    ingestion/                   # rulebook upload/list/delete
-    retrieval/                   # vector similarity search
-  openapi/                       # OpenAPI document loading
-  shared/http/                   # HTTP status, typed responses, error middleware
+    health/                      # health endpoint contract/router
+    ingestion/                   # rulebook upload/list/delete HTTP layer
+    retrieval/                   # retrieval HTTP layer
+    shared/                      # HTTP status, typed responses, error middleware
 ```
 
 ## Current Limitations

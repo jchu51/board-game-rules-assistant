@@ -1,5 +1,5 @@
 import { Router } from "express";
-import type { TypedResponse } from "../../shared/http/http-types";
+import type { TypedResponse } from "../shared/http-types";
 import { HealthResponseSchema } from "./health-schema";
 import type { HealthResponseBody } from "./health-types";
 

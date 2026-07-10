@@ -1,16 +1,16 @@
 import type { NextFunction, Response } from "express";
 import { Router } from "express";
-import { HttpStatus } from "../../shared/http/http-status";
+import { RetrievalService } from "../../../application/retrieval/retrieval-service";
+import { HttpStatus } from "../shared/http-status";
 import type {
   ErrorResponseBody,
   TypedRequestBody,
   TypedResponse,
-} from "../../shared/http/http-types";
+} from "../shared/http-types";
 import {
   RetrievalSearchRequestSchema,
   RetrievalSearchResponseSchema,
 } from "./retrieval-schema";
-import { RetrievalService } from "./retrieval-service";
 import type {
   RetrievalSearchRawRequestBody,
   RetrievalSearchResponseBody,

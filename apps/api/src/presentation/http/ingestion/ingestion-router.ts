@@ -4,15 +4,12 @@ import { extname } from "node:path";
 import type { NextFunction, Request, RequestHandler, Response } from "express";
 import { Router } from "express";
 import multer, { MulterError } from "multer";
-import type { RulebookRepository } from "../../db/rulebook-repository/rulebook-repository";
-import { getErrorMessage } from "../../shared/http/get-error-message";
-import { HttpStatus } from "../../shared/http/http-status";
-import { InvalidSplitterParamsError } from "./ingestion-errors";
-import { IngestionService } from "./ingestion-service";
-import type {
-  ErrorResponseBody,
-  TypedResponse,
-} from "../../shared/http/http-types";
+import { IngestionService } from "../../../application/ingestion/ingestion-service";
+import { InvalidSplitterParamsError } from "../../../domain/ingestion/ingestion-errors";
+import type { RulebookRepository } from "../../../domain/rulebook/rulebook-repository";
+import { getErrorMessage } from "../shared/get-error-message";
+import { HttpStatus } from "../shared/http-status";
+import type { ErrorResponseBody, TypedResponse } from "../shared/http-types";
 import {
   ListRulebooksResponseSchema,
   UploadPdfsRequestSchema,

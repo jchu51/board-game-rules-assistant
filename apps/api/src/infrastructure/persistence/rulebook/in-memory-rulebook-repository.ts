@@ -1,7 +1,7 @@
 import type {
   RulebookRecord,
   RulebookRepository,
-} from "./rulebook-repository";
+} from "../../../domain/rulebook/rulebook-repository";
 
 export class InMemoryRulebookRepository implements RulebookRepository {
   private readonly rulebooks = new Map<string, RulebookRecord>();
