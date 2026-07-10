@@ -63,6 +63,7 @@ agent once during construction.
 
 ```bash
 npm run build
+npm run test
 npm run typecheck
 ```
 
@@ -70,6 +71,7 @@ From the repository root:
 
 ```bash
 npm run build -w @board-game-rules-assistant/agent-core
+npm run test -w @board-game-rules-assistant/agent-core
 npm run typecheck -w @board-game-rules-assistant/agent-core
 ```
 
@@ -78,4 +80,4 @@ npm run typecheck -w @board-game-rules-assistant/agent-core
 - This package does not currently expose a search tool. Retrieval lives in the
   API and `rag-core`.
 - There is no package-level lint script yet.
-- Runtime model behavior is not covered by automated tests yet.
+- Runtime model provider behavior is not covered by automated tests yet.

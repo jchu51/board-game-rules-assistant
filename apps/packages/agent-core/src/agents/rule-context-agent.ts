@@ -1,7 +1,10 @@
-import { createAgent } from "langchain";
 import { ConfigurableModel } from "langchain/chat_models/universal";
 
-import { Agent } from "./agent.js";
+import {
+  Agent,
+  createLangChainAgentRuntime,
+  type AgentRuntime,
+} from "./agent.js";
 import { AgentError } from "./agent-error.js";
 import { ruleContextPrompt } from "../prompts/rule-context-prompt.js";
 
@@ -11,12 +14,17 @@ import { ruleContextPrompt } from "../prompts/rule-context-prompt.js";
  * filters/compresses into relevant rules only
  */
 export class RuleContextAgent extends Agent {
-  private readonly agent: ReturnType<typeof createAgent>;
+  private readonly agent: AgentRuntime;
   readonly context: string;
 
-  constructor(name: string, model: ConfigurableModel, context: string) {
+  constructor(
+    name: string,
+    model: ConfigurableModel,
+    context: string,
+    agent: AgentRuntime = createLangChainAgentRuntime(model),
+  ) {
     super(name);
-    this.agent = createAgent({ model });
+    this.agent = agent;
     this.context = context;
   }
 
