@@ -2,6 +2,11 @@ import {
   createOpenAIEmbeddings,
   LangchainMemoryVectorStore,
 } from "@board-game-rules-assistant/rag-core";
+import {
+  LLMService,
+  RuleAnswerAgent,
+  RuleContextAgent,
+} from "@board-game-rules-assistant/agent-core";
 
 import { createApp } from "./app";
 import { config } from "./config/config";
@@ -16,6 +21,11 @@ import { RetrievalService } from "./modules/retrieval/retrieval-service";
 const embeddings = createOpenAIEmbeddings(config.ingestion.embeddingModel, {
   apiKey: config.ingestion.openAiApiKey,
 });
+const llmService = new LLMService();
+const chatModel = await llmService.init(config.agent.chatModel, {
+  apiKey: config.ingestion.openAiApiKey,
+  temperature: 0,
+});
 const vectorStore = new LangchainMemoryVectorStore(embeddings);
 const rulebookRepository = new InMemoryRulebookRepository();
 const ingestionService = new IngestionService(vectorStore, {
@@ -24,9 +34,14 @@ const ingestionService = new IngestionService(vectorStore, {
     chunkOverlap: config.ingestion.defaultChunkOverlap,
   },
 });
-const retrievalService = new RetrievalService(vectorStore);
+const retrievalService = new RetrievalService(vectorStore, {
+  createRuleAnswerAgent: (context) =>
+    new RuleAnswerAgent("rule-answer-agent", chatModel, context),
+  createRuleContextAgent: (context) =>
+    new RuleContextAgent("rule-context-agent", chatModel, context),
+});
 
-//Routers
+// Routers
 const healthRouter = new HealthRouter();
 const ingestionRouter = new IngestionRouter(
   ingestionService,

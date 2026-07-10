@@ -3,8 +3,6 @@ import { z } from "zod";
 export const RetrievalSearchRequestSchema = z
   .object({
     query: z.string().trim().min(1, "query is required"),
-    rulebookId: z.string().uuid().optional(),
-    topK: z.coerce.number().int().positive().max(20).default(5),
   })
   .strict();
 
@@ -25,6 +23,7 @@ export const RetrievalMatchSchema = z
 
 export const RetrievalSearchResponseSchema = z
   .object({
+    answer: z.string(),
     matches: z.array(RetrievalMatchSchema),
   })
   .strict();

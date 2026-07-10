@@ -32,6 +32,7 @@ export const EnvSchema = z.object({
         "OPENAI_API_KEY is required (used by rag-core's embeddings client) - set it in apps/api/.env",
     })
     .min(1, "OPENAI_API_KEY must not be empty"),
+  AGENT_CHAT_MODEL: withDefault("openai:gpt-4o-mini"),
   INGESTION_EMBEDDING_MODEL: withDefault("text-embedding-3-large"),
   INGESTION_CHUNK_SIZE: numberWithDefault(500).pipe(
     z.number().int().positive(),

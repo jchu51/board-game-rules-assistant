@@ -5,6 +5,9 @@ export type Config = {
   host: string;
   port: number;
   corsOrigin: string;
+  agent: {
+    chatModel: string;
+  };
   ingestion: {
     openAiApiKey: string;
     embeddingModel: string;

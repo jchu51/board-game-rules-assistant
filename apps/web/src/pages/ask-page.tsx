@@ -8,7 +8,10 @@ import {
   useState,
 } from "react";
 
-import { searchRulebooks, type RetrievalMatch } from "@/api/retrieval-api";
+import {
+  searchRulebooks,
+  type RetrievalSearchResponse,
+} from "@/api/retrieval-api";
 import { cn } from "@/lib/utils";
 
 type Citation = {
@@ -97,14 +100,17 @@ const excerptText = (text: string, maxLength = 420) => {
 
 const buildRetrievalAnswer = (
   question: string,
-  matches: RetrievalMatch[],
+  response: RetrievalSearchResponse,
 ): RetrievalAnswer => {
   const game = detectGame(question);
+  const { answer, matches } = response;
 
   if (matches.length === 0) {
     return {
       game,
-      text: "I could not find a matching passage in the indexed rulebooks. Try uploading the rulebook in Library first, or ask with the game name and a more specific rule term.",
+      text:
+        answer ||
+        "I could not find a matching passage in the indexed rulebooks. Try uploading the rulebook in Library first, or ask with the game name and a more specific rule term.",
       cites: [],
     };
   }
@@ -119,9 +125,7 @@ const buildRetrievalAnswer = (
 
   return {
     game,
-    text: `I found ${matches.length} similar rulebook ${
-      matches.length === 1 ? "passage" : "passages"
-    } for your question. Start with ${citationList}; the source cards below show the matching text and page metadata returned by retrieval.`,
+    text: `${answer}\n\nSources: ${citationList}`,
     cites,
   };
 };
@@ -485,7 +489,7 @@ export function AskPage() {
       const response = await searchRulebooks({ query: question });
       if (isStaleSearch()) return;
 
-      const answer = buildRetrievalAnswer(question, response.matches);
+      const answer = buildRetrievalAnswer(question, response);
       if (answer.game) setCurrentGame(answer.game);
       completeAssistantMessage(assistantMessage.id, answer);
     } catch (error) {

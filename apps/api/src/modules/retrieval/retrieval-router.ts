@@ -51,8 +51,8 @@ export class RetrievalRouter {
         );
       }
 
-      const matches = await this.retrievalService.search(parseResult.data);
-      const responseBody = RetrievalSearchResponseSchema.parse({ matches });
+      const result = await this.retrievalService.search(parseResult.data);
+      const responseBody = RetrievalSearchResponseSchema.parse(result);
 
       return response.status(HttpStatus.OK).json(responseBody);
     } catch (error) {

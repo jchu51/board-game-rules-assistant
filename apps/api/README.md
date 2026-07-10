@@ -3,8 +3,8 @@
 Express API for the Board Game Rules Assistant.
 
 The API accepts rulebook PDF uploads, extracts and chunks PDF text through
-`rag-core`, creates embeddings, stores vectors in memory, and returns rulebook
-summaries for the frontend.
+`rag-core`, creates embeddings, stores vectors in memory, returns rulebook
+summaries for the frontend, and exposes similarity search over indexed chunks.
 
 ## Stack
 
@@ -31,6 +31,7 @@ HOST=127.0.0.1
 PORT=8000
 CORS_ORIGIN=http://localhost:5173
 OPENAI_API_KEY=your_api_key
+AGENT_CHAT_MODEL=openai:gpt-4o-mini
 INGESTION_EMBEDDING_MODEL=text-embedding-3-large
 INGESTION_CHUNK_SIZE=500
 INGESTION_CHUNK_OVERLAP=100
@@ -79,6 +80,14 @@ curl -X POST http://127.0.0.1:8000/rulebooks \
   -F "file=@/path/to/catan-rulebook.pdf"
 ```
 
+Retrieval example:
+
+```bash
+curl -X POST http://127.0.0.1:8000/retrieval/search \
+  -H "Content-Type: application/json" \
+  -d '{"query":"How many resources does a city produce?"}'
+```
+
 Docs in local mode:
 
 ```text
@@ -109,6 +118,7 @@ src/
     docs/                        # local-only Swagger/OpenAPI routes
     health/                      # health endpoint
     ingestion/                   # rulebook upload/list/delete
+    retrieval/                   # vector similarity search
   openapi/                       # OpenAPI document loading
   shared/http/                   # HTTP status, typed responses, error middleware
 ```
@@ -118,4 +128,4 @@ src/
 - Rulebook metadata is stored in memory only.
 - Vector-store deletion is not implemented yet.
 - Uploaded PDF files are deleted after ingestion.
-- Answer generation is not implemented yet.
+- Retrieval returns matching chunks, metadata, and an agent-generated answer.

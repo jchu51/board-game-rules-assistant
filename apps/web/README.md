@@ -64,6 +64,8 @@ npm run preview
 src/
   api/
     rulebook-api.ts              # fetch client for /rulebooks endpoints
+    retrieval-api.ts             # fetch client for /retrieval/search
+    api-config.ts                # API base URL config
   assets/svgs/                   # reusable SVG icon components
   components/
     app-shell.tsx                # sidebar shell and route outlet
@@ -73,7 +75,7 @@ src/
     rulebook.ts                  # frontend rulebook types
   pages/
     ask-page.tsx                 # route-level Ask page
-    upload-page.tsx              # route-level Library page
+    library-page.tsx             # route-level Library page
 ```
 
 ## User Flow
@@ -82,11 +84,16 @@ src/
 2. User opens `/library` to enter a game name and select a PDF file.
 3. The Library page posts `multipart/form-data` to `POST /rulebooks`.
 4. The API returns the indexed rulebook summary.
-5. The Library page refreshes the rulebook list from `GET /rulebooks`.
+5. The Library page adds the indexed rulebook to the local list.
 6. A rulebook can be removed with `DELETE /rulebooks/:id`.
+7. The Ask page posts questions to `POST /retrieval/search` and renders the
+   agent answer plus retrieved source snippets with page/source metadata when
+   available.
 
 ## Notes
 
 - The API currently stores rulebook records in memory.
 - A failed local upload row is removed locally without calling delete, because
   no backend rulebook id exists yet.
+- The Ask page currently depends on the API retrieval endpoint for agent answer
+  generation.

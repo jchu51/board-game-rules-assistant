@@ -18,6 +18,7 @@ export type RetrievalMatch = {
 };
 
 export type RetrievalSearchResponse = {
+  answer: string;
   matches: RetrievalMatch[];
 };
 

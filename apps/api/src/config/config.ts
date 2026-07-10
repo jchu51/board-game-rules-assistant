@@ -27,6 +27,9 @@ export const config: Config = {
   host: env.HOST,
   port: env.PORT,
   corsOrigin: env.CORS_ORIGIN,
+  agent: {
+    chatModel: env.AGENT_CHAT_MODEL,
+  },
   ingestion: {
     openAiApiKey: env.OPENAI_API_KEY,
     embeddingModel: env.INGESTION_EMBEDDING_MODEL,

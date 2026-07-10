@@ -308,17 +308,6 @@ components:
           minLength: 1
           description: Natural-language search query.
           example: How many resources does a city produce?
-        rulebookId:
-          type: string
-          format: uuid
-          description: Optional rulebook id filter. When omitted, all chunks in memory are searched.
-        topK:
-          type: integer
-          minimum: 1
-          maximum: 20
-          default: 5
-          description: Maximum number of chunks to return.
-          example: 5
       additionalProperties: false
     RetrievalMatchMetadata:
       type: object
@@ -351,8 +340,12 @@ components:
     RetrievalSearchResponse:
       type: object
       required:
+        - answer
         - matches
       properties:
+        answer:
+          type: string
+          description: Agent-generated answer grounded in retrieved rulebook context.
         matches:
           type: array
           items:
