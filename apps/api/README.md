@@ -102,6 +102,7 @@ http://127.0.0.1:8000/openapi.yml
 npm run dev
 npm run build
 npm run start
+npm run test
 npm run typecheck
 npm run lint
 ```
