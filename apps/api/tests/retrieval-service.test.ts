@@ -51,6 +51,13 @@ class RecordingVectorStore implements VectorStore {
     this.searches.push(input);
     return [];
   }
+
+  async similaritySearchVectorWithScore(
+    input: VectorStoreSimilaritySearchInput,
+  ): Promise<[RulebookDocumentInterface, number][]> {
+    this.searches.push(input);
+    return [];
+  }
 }
 
 const createRulebookDocument = (

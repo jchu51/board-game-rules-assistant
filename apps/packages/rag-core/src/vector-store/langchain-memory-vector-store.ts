@@ -28,6 +28,17 @@ export class LangchainMemoryVectorStore implements VectorStore {
       input.topK,
       input.filter,
       input.callbacks,
-    ) as Promise<RulebookDocumentInterface[]>;
+    );
+  }
+
+  async similaritySearchVectorWithScore(
+    input: VectorStoreSimilaritySearchInput,
+  ): Promise<[RulebookDocumentInterface, number][]> {
+    return this.vectorStore.similaritySearchWithScore(
+      input.query,
+      input.topK,
+      input.filter,
+      input.callbacks,
+    );
   }
 }

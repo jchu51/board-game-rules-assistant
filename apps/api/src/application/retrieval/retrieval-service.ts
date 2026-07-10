@@ -11,6 +11,7 @@ import type {
 } from "./retrieval-types";
 
 const DEFAULT_TOP_K = 5;
+const MIN_RELEVANCE_SCORE = 0.65;
 
 export class RetrievalService {
   constructor(
@@ -37,19 +38,21 @@ export class RetrievalService {
       };
     }
 
-    const documents = await this.vectorStore.similaritySearch({
+    const results = await this.vectorStore.similaritySearchVectorWithScore({
       query: classification.normalizedQuery,
       topK: DEFAULT_TOP_K,
     });
 
-    const matches = documents.map((document) => ({
-      content: document.pageContent,
-      metadata: {
-        documentId: document.metadata.documentId,
-        pageNumber: document.metadata.loc?.pageNumber,
-        source: document.metadata.source,
-      },
-    }));
+    const matches: RetrievalMatch[] = results
+      .filter(([, score]) => score > MIN_RELEVANCE_SCORE)
+      .map(([document]) => ({
+        content: document.pageContent,
+        metadata: {
+          documentId: document.metadata.documentId,
+          pageNumber: document.metadata.loc?.pageNumber,
+          source: document.metadata.source,
+        },
+      }));
 
     if (matches.length === 0) {
       return {

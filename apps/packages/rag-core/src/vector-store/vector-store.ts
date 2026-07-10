@@ -18,4 +18,7 @@ export interface VectorStore {
   similaritySearch(
     input: VectorStoreSimilaritySearchInput,
   ): Promise<RulebookDocumentInterface[]>;
+  similaritySearchVectorWithScore(
+    input: VectorStoreSimilaritySearchInput,
+  ): Promise<[RulebookDocumentInterface, number][]>;
 }
