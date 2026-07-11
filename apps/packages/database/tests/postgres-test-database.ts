@@ -5,7 +5,7 @@ import { runPostgresMigrations } from "../src/postgres/run-migrations.js";
 export async function createPostgresTestDatabase() {
   const baseUrl = new URL(process.env.DATABASE_URL ?? "postgres://board_game_rules:board_game_rules@localhost:5432/board_game_rules");
   const databaseName = `board_game_rules_test_${crypto.randomUUID().replaceAll("-", "")}`;
-  const admin = postgres(baseUrl.toString(), { max: 1 });
+  const admin = postgres(baseUrl.toString(), { max: 1, onnotice: () => {} });
   let databaseCreated = false;
   let sql: ReturnType<typeof postgres> | undefined;
   try {
@@ -13,7 +13,7 @@ export async function createPostgresTestDatabase() {
     databaseCreated = true;
     const databaseUrl = new URL(baseUrl);
     databaseUrl.pathname = `/${databaseName}`;
-    const client = postgres(databaseUrl.toString(), { max: 1 });
+    const client = postgres(databaseUrl.toString(), { max: 1, onnotice: () => {} });
     sql = client;
     await runPostgresMigrations(client);
 

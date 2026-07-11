@@ -92,7 +92,7 @@ test("migration seeds every policy field and is idempotent", async () => {
     const policies = await database.sql`
       select tier, retrieval_top_k, private_upload_limit, conversation_ttl_days
       from tier_policies order by retrieval_top_k`;
-    assert.deepEqual(policies, [
+    assert.deepEqual(Array.from(policies), [
       { tier: "guest", retrieval_top_k: 3, private_upload_limit: 0, conversation_ttl_days: 7 },
       { tier: "standard", retrieval_top_k: 5, private_upload_limit: 3, conversation_ttl_days: null },
       { tier: "pro", retrieval_top_k: 8, private_upload_limit: null, conversation_ttl_days: null },
