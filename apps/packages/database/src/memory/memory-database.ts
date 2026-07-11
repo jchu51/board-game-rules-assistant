@@ -226,6 +226,10 @@ export const createMemoryPersistence = async (): Promise<Persistence> => {
           ? clone(document)
           : null;
       },
+      async getGlobalDocument({ documentId, gameId }) {
+        const document = documents.get(documentId);
+        return document?.gameId === gameId && document.visibility === "global" && document.deletedAt === null ? clone(document) : null;
+      },
       async listOwnedDocuments({ ownerId }) {
         return [...documents.values()]
           .filter((document) => document.ownerId === ownerId && document.deletedAt === null)
@@ -272,15 +276,38 @@ export const createMemoryPersistence = async (): Promise<Persistence> => {
           failureMessage: null,
           activatedAt: null,
           publishedAt: null,
+          verifiedAt: null,
+          verifiedBy: null,
           objectStorageKey: input.objectStorageKey ?? null,
           ...createTimestamped(),
         };
         versions.set(record.id, clone(record));
         return clone(record);
       },
+      async getVersion({ versionId }) {
+        const record = versions.get(versionId);
+        return record ? clone(record) : null;
+      },
+      async markGlobalVersionReady({ versionId, chunkCount }) {
+        const record = versions.get(versionId);
+        const document = record && documents.get(record.documentId);
+        if (!record || document?.visibility !== "global" || record.status !== "processing") throw new PersistenceNotFoundError("processing global document version");
+        const updated = { ...record, status: "ready" as const, chunkCount, updatedAt: now() };
+        versions.set(versionId, clone(updated));
+        return clone(updated);
+      },
+      async verifyGlobalVersion({ versionId, verifiedBy }) {
+        const record = versions.get(versionId);
+        const document = record && documents.get(record.documentId);
+        if (!record || document?.visibility !== "global" || record.status !== "ready") throw new PersistenceNotFoundError("ready global document version");
+        const timestamp = now();
+        const updated = { ...record, verifiedAt: timestamp, verifiedBy, updatedAt: timestamp };
+        versions.set(versionId, clone(updated));
+        return clone(updated);
+      },
       async markVersionFailed({ versionId, failureCode, failureMessage }) {
         const record = versions.get(versionId);
-        if (!record) throw new PersistenceNotFoundError("document version");
+        if (!record || !["processing", "ready"].includes(record.status)) throw new PersistenceNotFoundError("failable document version");
         const updated = {
           ...record,
           status: "failed" as const,
@@ -329,7 +356,8 @@ export const createMemoryPersistence = async (): Promise<Persistence> => {
       },
       async publishGlobalVersion({ versionId }) {
         const record = versions.get(versionId);
-        if (!record) throw new PersistenceNotFoundError("document version");
+        const document = record && documents.get(record.documentId);
+        if (!record || document?.visibility !== "global" || record.status !== "ready" || !record.verifiedAt) throw new PersistenceNotFoundError("verified global document version");
         const timestamp = now();
         for (const version of versions.values()) {
           if (

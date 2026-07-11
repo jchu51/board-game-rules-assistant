@@ -255,11 +255,15 @@ export const runPersistenceContract = (
       await persistence.vectorStore.upsert([
         createChunk("old global rule", globalDocument.id, globalFirst.id, "shared"),
       ]);
+      await persistence.library.markGlobalVersionReady({ versionId: globalFirst.id, chunkCount: 1 });
+      await persistence.library.verifyGlobalVersion({ versionId: globalFirst.id, verifiedBy: owner.id });
       await persistence.library.publishGlobalVersion({ versionId: globalFirst.id });
       const globalReplacement = await createVersion(globalDocument.id, "global-v2");
       await persistence.vectorStore.upsert([
         createChunk("new global rule", globalDocument.id, globalReplacement.id, "shared"),
       ]);
+      await persistence.library.markGlobalVersionReady({ versionId: globalReplacement.id, chunkCount: 1 });
+      await persistence.library.verifyGlobalVersion({ versionId: globalReplacement.id, verifiedBy: owner.id });
       await persistence.library.publishGlobalVersion({ versionId: globalReplacement.id });
       const globalResults = await persistence.vectorStore.similaritySearch({
         query: "global rule",

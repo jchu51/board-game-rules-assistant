@@ -76,6 +76,8 @@ export type DocumentVersionRecord = TimestampedRecord & {
   failureMessage: string | null;
   activatedAt: Date | null;
   publishedAt: Date | null;
+  verifiedAt: Date | null;
+  verifiedBy: string | null;
   objectStorageKey: string | null;
 };
 

@@ -62,6 +62,7 @@ export type LibraryRepository = {
     documentId: string;
     ownerId: string;
   }): Promise<DocumentRecord | null>;
+  getGlobalDocument(input: { documentId: string; gameId: string }): Promise<DocumentRecord | null>;
   listOwnedDocuments(input: { ownerId: string }): Promise<
     Array<{ document: DocumentRecord; game: GameRecord }>
   >;
@@ -78,6 +79,9 @@ export type LibraryRepository = {
     embeddingDimensions: number;
     objectStorageKey?: string | null;
   }): Promise<DocumentVersionRecord>;
+  getVersion(input: { versionId: string }): Promise<DocumentVersionRecord | null>;
+  markGlobalVersionReady(input: { versionId: string; chunkCount: number }): Promise<DocumentVersionRecord>;
+  verifyGlobalVersion(input: { versionId: string; verifiedBy: string }): Promise<DocumentVersionRecord>;
   markVersionFailed(input: {
     versionId: string;
     failureCode: string;

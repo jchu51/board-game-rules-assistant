@@ -6,6 +6,7 @@ import { HttpStatus } from "./http-status";
 import { DatabaseUnavailableError, PersistenceNotFoundError } from "@board-game-rules-assistant/database";
 import { AdminRequiredError, PlanLimitReachedError } from "../../../application/access/access-policy-service";
 import { ActorResolutionError, GuestSessionExpiredError, UnauthorizedResourceError } from "../../../domain/identity/actor";
+import { InvalidLibraryTransitionError } from "../../../application/library/library-service";
 
 export const createErrorMiddleware =
   (config: Config): ErrorRequestHandler =>
@@ -22,6 +23,10 @@ export const createErrorMiddleware =
     }
     if (error instanceof AdminRequiredError) {
       response.status(HttpStatus.FORBIDDEN).json({ code: error.code });
+      return;
+    }
+    if (error instanceof InvalidLibraryTransitionError) {
+      response.status(HttpStatus.CONFLICT).json({ code: error.code });
       return;
     }
     if (error instanceof GuestSessionExpiredError || error instanceof ActorResolutionError) {

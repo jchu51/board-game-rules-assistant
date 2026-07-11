@@ -13,6 +13,8 @@ tags:
     description: Rulebook upload and indexing
   - name: Retrieval
     description: Similarity search over indexed rulebook chunks
+  - name: Admin Library
+    description: Administrator-managed global rulebook publication
 paths:
   /health:
     get:
@@ -163,8 +165,69 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /admin/games/{gameId}/documents:
+    post:
+      tags: [Admin Library]
+      summary: Ingest a global document version into the ready state
+      parameters:
+        - { name: gameId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema: { $ref: "#/components/schemas/CreateGlobalDocumentRequest" }
+      responses:
+        "200": { description: Global version is ready for verification, content: { application/json: { schema: { $ref: "#/components/schemas/CreateGlobalDocumentResponse" } } } }
+        "400": { description: Invalid upload request, content: { application/json: { schema: { $ref: "#/components/schemas/TypedErrorResponse" } } } }
+        "403": { description: Administrator access required, content: { application/json: { schema: { $ref: "#/components/schemas/TypedErrorResponse" } } } }
+  /admin/document-versions/{id}/verify:
+    post:
+      tags: [Admin Library]
+      summary: Verify a ready global document version
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: Version verified, content: { application/json: { schema: { $ref: "#/components/schemas/GlobalVersionResponse" } } } }
+        "403": { description: Administrator access required, content: { application/json: { schema: { $ref: "#/components/schemas/TypedErrorResponse" } } } }
+        "409": { description: Version is not ready, content: { application/json: { schema: { $ref: "#/components/schemas/TypedErrorResponse" } } } }
+  /admin/document-versions/{id}/publish:
+    post:
+      tags: [Admin Library]
+      summary: Atomically publish a verified global document version
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: Version published, content: { application/json: { schema: { $ref: "#/components/schemas/GlobalVersionResponse" } } } }
+        "403": { description: Administrator access required, content: { application/json: { schema: { $ref: "#/components/schemas/TypedErrorResponse" } } } }
+        "409": { description: Version is not verified and ready, content: { application/json: { schema: { $ref: "#/components/schemas/TypedErrorResponse" } } } }
 components:
   schemas:
+    TypedErrorResponse:
+      type: object
+      required: [code]
+      properties: { code: { type: string } }
+    CreateGlobalDocumentRequest:
+      type: object
+      required: [title, kind, file]
+      properties:
+        title: { type: string, minLength: 1 }
+        kind: { type: string, enum: [base_rules, expansion, errata, other] }
+        documentId: { type: string, format: uuid, description: Existing global document for a replacement version }
+        file: { type: string, format: binary }
+    CreateGlobalDocumentResponse:
+      type: object
+      required: [document, version]
+      properties:
+        document: { type: object, additionalProperties: true }
+        version: { type: object, additionalProperties: true }
+    GlobalVersionResponse:
+      type: object
+      required: [id, status, verifiedAt, verifiedBy]
+      properties:
+        id: { type: string, format: uuid }
+        status: { type: string, enum: [ready, published] }
+        verifiedAt: { type: [string, "null"], format: date-time }
+        verifiedBy: { type: [string, "null"], format: uuid }
     ErrorResponse:
       type: object
       required:

@@ -22,6 +22,8 @@ import { createApp } from "./presentation/http/app";
 import { HealthRouter } from "./presentation/http/health/health-router";
 import { IngestionRouter } from "./presentation/http/ingestion/ingestion-router";
 import { RetrievalRouter } from "./presentation/http/retrieval/retrieval-router";
+import { LibraryService } from "./application/library/library-service";
+import { AdminLibraryRouter } from "./presentation/http/admin/admin-library-router";
 
 // Services
 const embeddings = createOpenAIEmbeddings(config.ingestion.embeddingModel, {
@@ -54,6 +56,10 @@ const rulebookService = new RulebookService(persistence.library, accessPolicySer
   embeddingModel: config.ingestion.embeddingModel,
   embeddingDimensions: config.ingestion.embeddingDimensions,
 });
+const libraryService = new LibraryService(persistence.library, accessPolicyService, ingestionService, {
+  embeddingModel: config.ingestion.embeddingModel,
+  embeddingDimensions: config.ingestion.embeddingDimensions,
+});
 const requestClassifier = new RequestClassifierService();
 const publicSearchService = new TavilyPublicSearchService({
   apiKey: config.publicSearch.tavilyApiKey,
@@ -81,10 +87,15 @@ const ingestionRouter = new IngestionRouter(
   },
 );
 const retrievalRouter = new RetrievalRouter(retrievalService, actorService);
+const adminLibraryRouter = new AdminLibraryRouter(libraryService, actorService, {
+  uploadDirectory: config.ingestion.uploadDirectory,
+  maxUploadSizeBytes: config.ingestion.maxUploadSizeBytes,
+});
 const routers = [
   healthRouter.router,
   ingestionRouter.router,
   retrievalRouter.router,
+  adminLibraryRouter.router,
 ];
 
 if (config.nodeEnv === "local") {

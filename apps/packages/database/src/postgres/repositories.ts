@@ -129,6 +129,11 @@ export const createPostgresRepositories = (db: PostgresDatabase): {
         eq(documents.visibility, "private"), isNull(documents.deletedAt),
       )).limit(1))[0] ?? null;
     },
+    async getGlobalDocument({ documentId, gameId }) {
+      return (await db.select().from(documents).where(and(
+        eq(documents.id, documentId), eq(documents.gameId, gameId), eq(documents.visibility, "global"), isNull(documents.deletedAt),
+      )).limit(1))[0] ?? null;
+    },
     async listOwnedDocuments({ ownerId }) {
       const rows = await db
         .select({ document: documents, game: games })
@@ -184,12 +189,28 @@ export const createPostgresRepositories = (db: PostgresDatabase): {
         );
       });
     },
+    async getVersion({ versionId }) {
+      return (await db.select().from(documentVersions).where(eq(documentVersions.id, versionId)).limit(1))[0] ?? null;
+    },
+    async markGlobalVersionReady({ versionId, chunkCount }) {
+      return firstOrThrow(await db.update(documentVersions).set({ status: "ready", chunkCount, updatedAt: new Date() }).where(and(
+        eq(documentVersions.id, versionId), eq(documentVersions.status, "processing"),
+        sql`exists(select 1 from ${documents} where ${documents.id} = ${documentVersions.documentId} and ${documents.visibility} = 'global')`,
+      )).returning(), "processing global document version");
+    },
+    async verifyGlobalVersion({ versionId, verifiedBy }) {
+      const timestamp = new Date();
+      return firstOrThrow(await db.update(documentVersions).set({ verifiedAt: timestamp, verifiedBy, updatedAt: timestamp }).where(and(
+        eq(documentVersions.id, versionId), eq(documentVersions.status, "ready"),
+        sql`exists(select 1 from ${documents} where ${documents.id} = ${documentVersions.documentId} and ${documents.visibility} = 'global')`,
+      )).returning(), "ready global document version");
+    },
     async markVersionFailed({ versionId, failureCode, failureMessage }) {
       return firstOrThrow(
         await db
           .update(documentVersions)
           .set({ status: "failed", failureCode, failureMessage, updatedAt: new Date() })
-          .where(eq(documentVersions.id, versionId))
+          .where(and(eq(documentVersions.id, versionId), sql`${documentVersions.status} in ('processing', 'ready')`))
           .returning(),
         "document version",
       );
@@ -240,7 +261,7 @@ export const createPostgresRepositories = (db: PostgresDatabase): {
             .from(documentVersions)
             .innerJoin(documents, eq(documentVersions.documentId, documents.id))
             .where(
-              and(eq(documentVersions.id, versionId), eq(documents.visibility, "global")),
+                and(eq(documentVersions.id, versionId), eq(documents.visibility, "global"), eq(documentVersions.status, "ready"), sql`${documentVersions.verifiedAt} is not null`),
             )
             .limit(1),
           "global document version",

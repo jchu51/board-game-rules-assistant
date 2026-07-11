@@ -31,6 +31,7 @@ test("migration creates vector extension and the complete constrained schema", a
       "conversations_user_id_users_id_fk",
       "document_chunks_document_version_id_document_versions_id_fk",
       "document_versions_document_id_documents_id_fk",
+      "document_versions_verified_by_users_id_fk",
       "documents_game_id_games_id_fk",
       "documents_owner_id_users_id_fk",
       "message_citations_document_chunk_id_document_chunks_id_fk",

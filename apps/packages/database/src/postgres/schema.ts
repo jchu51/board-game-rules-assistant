@@ -48,6 +48,8 @@ export const documentVersions = pgTable("document_versions", {
   embeddingModel: text("embedding_model").notNull(), embeddingDimensions: integer("embedding_dimensions").notNull(),
   chunkCount: integer("chunk_count").notNull().default(0), failureCode: text("failure_code"), failureMessage: text("failure_message"),
   activatedAt: timestamp("activated_at", { withTimezone: true }), publishedAt: timestamp("published_at", { withTimezone: true }),
+  verifiedAt: timestamp("verified_at", { withTimezone: true }),
+  verifiedBy: uuid("verified_by").references(() => users.id),
   objectStorageKey: text("object_storage_key"), ...timestamps,
 }, (table) => [
   uniqueIndex("document_versions_document_version_unique").on(table.documentId, table.versionNumber),
