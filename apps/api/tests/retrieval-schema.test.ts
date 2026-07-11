@@ -10,19 +10,36 @@ describe("Retrieval schemas", () => {
   it("trims valid search requests and rejects extra fields", () => {
     assert.deepEqual(
       RetrievalSearchRequestSchema.parse({
+        conversationId: "11111111-1111-4111-8111-111111111111",
         query: "  How many resources does a city produce?  ",
       }),
       {
+        conversationId: "11111111-1111-4111-8111-111111111111",
         query: "How many resources does a city produce?",
       },
     );
 
     const result = RetrievalSearchRequestSchema.safeParse({
+      conversationId: "11111111-1111-4111-8111-111111111111",
       query: "How many resources does a city produce?",
       topK: 10,
     });
 
     assert.equal(result.success, false);
+
+    assert.equal(
+      RetrievalSearchRequestSchema.safeParse({
+        conversationId: "not-a-uuid",
+        query: "How many resources does a city produce?",
+      }).success,
+      false,
+    );
+    assert.equal(
+      RetrievalSearchRequestSchema.safeParse({
+        query: "How many resources does a city produce?",
+      }).success,
+      false,
+    );
   });
 
   it("validates answer responses with retrieval match metadata", () => {

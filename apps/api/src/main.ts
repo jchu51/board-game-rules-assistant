@@ -13,6 +13,7 @@ import { RequestClassifierService } from "./application/retrieval/request-classi
 import { RetrievalService } from "./application/retrieval/retrieval-service";
 import { config } from "./config/config";
 import { InMemoryRulebookRepository } from "./infrastructure/persistence/rulebook/in-memory-rulebook-repository";
+import { InMemoryConversationRepository } from "./infrastructure/persistence/conversation/in-memory-conversation-repository";
 import { TavilyPublicSearchService } from "./infrastructure/public-search/tavily-public-search-service";
 import { createApp } from "./presentation/http/app";
 import { HealthRouter } from "./presentation/http/health/health-router";
@@ -30,6 +31,7 @@ const chatModel = await llmService.init(config.agent.chatModel, {
 });
 const vectorStore = new LangchainMemoryVectorStore(embeddings);
 const rulebookRepository = new InMemoryRulebookRepository();
+const conversationRepository = new InMemoryConversationRepository();
 const ingestionService = new IngestionService(vectorStore, {
   defaultSplitterParams: {
     chunkSize: config.ingestion.defaultChunkSize,
@@ -45,6 +47,7 @@ const retrievalService = new RetrievalService(
   vectorStore,
   requestClassifier,
   publicSearchService,
+  conversationRepository,
   (context) => new RuleContextAgent("rule-context-agent", chatModel, context),
   (context) => new RuleAnswerAgent("rule-answer-agent", chatModel, context),
 );

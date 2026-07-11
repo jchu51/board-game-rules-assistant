@@ -1,4 +1,5 @@
 export type RetrievalSearchInput = {
+  conversationId: string;
   query: string;
 };
 

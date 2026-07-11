@@ -31,6 +31,8 @@ HOST=127.0.0.1
 PORT=8000
 CORS_ORIGIN=http://localhost:5173
 OPENAI_API_KEY=your_api_key
+TAVILY_API_KEY=your_api_key
+PUBLIC_SEARCH_INCLUDE_DOMAINS=catan.com,boardgamegeek.com
 AGENT_CHAT_MODEL=openai:gpt-4o-mini
 INGESTION_EMBEDDING_MODEL=text-embedding-3-large
 INGESTION_CHUNK_SIZE=500
@@ -41,6 +43,10 @@ INGESTION_MAX_UPLOAD_SIZE_BYTES=41943040
 
 `NODE_ENV=local` enables Swagger UI. Docs are not mounted in `development`,
 `test`, or `production`.
+
+`PUBLIC_SEARCH_INCLUDE_DOMAINS` is optional. When set, it is parsed as a
+comma-separated list and applied to Tavily fallback searches. Use trusted
+board-game domains; leaving it unset permits results from any domain.
 
 ## Start
 
@@ -85,8 +91,20 @@ Retrieval example:
 ```bash
 curl -X POST http://127.0.0.1:8000/retrieval/search \
   -H "Content-Type: application/json" \
-  -d '{"query":"How many resources does a city produce?"}'
+  -d '{"conversationId":"11111111-1111-4111-8111-111111111111","query":"How many resources does a city produce?"}'
 ```
+
+Reuse the same `conversationId` for follow-up questions. The API keeps the most
+recent 20 user and assistant messages for each conversation in memory. A new
+identifier starts an isolated chat. Conversation history is lost when the API
+process restarts.
+
+The retrieval flow first rejects clearly out-of-scope requests with a
+lightweight keyword classifier. Recognized `how to play <game>` requests, such
+as `how to play Everdell?`, are accepted without making generic `play` queries
+like `How do I play the guitar?` in scope. When vector retrieval has no relevant
+match, accepted questions may use Tavily public search, constrained by
+`PUBLIC_SEARCH_INCLUDE_DOMAINS` when configured.
 
 Docs in local mode:
 
@@ -137,3 +155,5 @@ src/
 - Vector-store deletion is not implemented yet.
 - Uploaded PDF files are deleted after ingestion.
 - Retrieval returns matching chunks, metadata, and an agent-generated answer.
+- Request classification relies on a maintained keyword and known-game list;
+  it is not yet derived from indexed rulebooks or an LLM classifier.

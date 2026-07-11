@@ -21,6 +21,9 @@ import type {
 } from "../src/application/public-search/public-search-service";
 import { RequestClassifierService } from "../src/application/retrieval/request-classifier-service";
 import { RetrievalService } from "../src/application/retrieval/retrieval-service";
+import { InMemoryConversationRepository } from "../src/infrastructure/persistence/conversation/in-memory-conversation-repository";
+
+const CONVERSATION_ID = "11111111-1111-4111-8111-111111111111";
 
 class KeywordEmbeddings implements EmbeddingsInterface {
   private readonly terms = ["city", "resources", "road", "infection"];
@@ -106,6 +109,7 @@ describe("RetrievalService", () => {
       vectorStore,
       new RequestClassifierService(),
       publicSearchService,
+      new InMemoryConversationRepository(),
       () => {
         createdAgent = true;
         throw new Error("should not create context agent");
@@ -117,6 +121,7 @@ describe("RetrievalService", () => {
     );
 
     const result = await service.search({
+      conversationId: CONVERSATION_ID,
       query: "How many resources does a city produce?",
     });
 
@@ -126,7 +131,7 @@ describe("RetrievalService", () => {
     assert.match(result.answer, /could not find relevant rulebook context/i);
   });
 
-  it("filters out weak vector matches below the relevance threshold", async () => {
+  it("asks for clarification when all vector matches are weak", async () => {
     let createdAgent = false;
     // Shares only "city" with the query → cosine 0.5, below the 0.65 cutoff.
     const vectorStore = await createVectorStore([
@@ -141,6 +146,7 @@ describe("RetrievalService", () => {
       vectorStore,
       new RequestClassifierService(),
       publicSearchService,
+      new InMemoryConversationRepository(),
       () => {
         createdAgent = true;
         throw new Error("should not create context agent");
@@ -152,13 +158,15 @@ describe("RetrievalService", () => {
     );
 
     const result = await service.search({
+      conversationId: CONVERSATION_ID,
       query: "How many resources does a city produce?",
     });
 
     assert.equal(createdAgent, false);
-    assert.equal(publicSearchService.searches.length, 1);
+    assert.equal(publicSearchService.searches.length, 0);
     assert.deepEqual(result.matches, []);
-    assert.match(result.answer, /could not find relevant rulebook context/i);
+    assert.match(result.answer, /please clarify the game/i);
+    assert.match(result.answer, /not relevant enough to answer confidently/i);
   });
 
   it("degrades to a not-found answer when public search fails", async () => {
@@ -173,6 +181,7 @@ describe("RetrievalService", () => {
       vectorStore,
       new RequestClassifierService(),
       failingPublicSearchService,
+      new InMemoryConversationRepository(),
       () => {
         createdAgent = true;
         throw new Error("should not create context agent");
@@ -184,6 +193,7 @@ describe("RetrievalService", () => {
     );
 
     const result = await service.search({
+      conversationId: CONVERSATION_ID,
       query: "How many resources does a city produce?",
     });
 
@@ -207,6 +217,7 @@ describe("RetrievalService", () => {
       vectorStore,
       new RequestClassifierService(),
       publicSearchService,
+      new InMemoryConversationRepository(),
       (context) => {
         contextAgentInput = context;
         return {
@@ -225,6 +236,7 @@ describe("RetrievalService", () => {
     );
 
     const result = await service.search({
+      conversationId: CONVERSATION_ID,
       query: "How many resources does a city produce?",
     });
 
@@ -250,6 +262,7 @@ describe("RetrievalService", () => {
       vectorStore,
       new RequestClassifierService(),
       publicSearchService,
+      new InMemoryConversationRepository(),
       () => {
         throw new Error("should not create context agent");
       },
@@ -259,6 +272,7 @@ describe("RetrievalService", () => {
     );
 
     const result = await service.search({
+      conversationId: CONVERSATION_ID,
       query: "What is the weather tomorrow?",
     });
 
@@ -283,6 +297,7 @@ describe("RetrievalService", () => {
       vectorStore,
       new RequestClassifierService(),
       new StubPublicSearchService(),
+      new InMemoryConversationRepository(),
       (context) => {
         contextAgentInput = context;
         return {
@@ -303,6 +318,7 @@ describe("RetrievalService", () => {
     );
 
     const result = await service.search({
+      conversationId: CONVERSATION_ID,
       query: "How many resources does a city produce?",
     });
 
@@ -333,5 +349,85 @@ describe("RetrievalService", () => {
         },
       ],
     });
+  });
+
+  it("uses saved thread context for follow-ups and isolates other conversations", async () => {
+    const vectorStore = new RecordingVectorStore();
+    const conversationRepository = new InMemoryConversationRepository();
+    const publicSearchService = new StubPublicSearchService([
+      {
+        title: "Everdell setup",
+        url: "https://example.com/everdell-setup",
+        content: "The second player starts with six cards.",
+        score: 0.9,
+      },
+    ]);
+    const agentQuestions: string[] = [];
+    const service = new RetrievalService(
+      vectorStore,
+      new RequestClassifierService(),
+      publicSearchService,
+      conversationRepository,
+      () =>
+        ({
+          async run(question: string) {
+            agentQuestions.push(question);
+            return "The second player starts with six cards.";
+          },
+        }) as unknown as RuleContextAgent,
+      () =>
+        ({
+          async run(question: string) {
+            agentQuestions.push(question);
+            return "The second player starts with six cards.";
+          },
+        }) as unknown as RuleAnswerAgent,
+    );
+
+    await service.search({
+      conversationId: CONVERSATION_ID,
+      query: "In Everdell, how many cards does the first player start with?",
+    });
+    const followUpResult = await service.search({
+      conversationId: CONVERSATION_ID,
+      query: "And the second one?",
+    });
+    const isolatedResult = await service.search({
+      conversationId: "22222222-2222-4222-8222-222222222222",
+      query: "And the second one?",
+    });
+
+    assert.equal(vectorStore.searches.length, 2);
+    assert.match(
+      vectorStore.searches[1]?.query ?? "",
+      /In Everdell, how many cards does the first player start with\?/,
+    );
+    assert.match(vectorStore.searches[1]?.query ?? "", /And the second one\?/);
+    assert.match(agentQuestions.at(-1) ?? "", /Conversation context:/);
+    assert.match(agentQuestions.at(-1) ?? "", /assistant:/);
+    assert.equal(
+      followUpResult.answer,
+      "The second player starts with six cards.",
+    );
+    assert.match(
+      isolatedResult.answer,
+      /only answer board-game rules questions/i,
+    );
+    assert.deepEqual(conversationRepository.getMessages(CONVERSATION_ID), [
+      {
+        role: "user",
+        content:
+          "In Everdell, how many cards does the first player start with?",
+      },
+      {
+        role: "assistant",
+        content: "The second player starts with six cards.",
+      },
+      { role: "user", content: "And the second one?" },
+      {
+        role: "assistant",
+        content: "The second player starts with six cards.",
+      },
+    ]);
   });
 });

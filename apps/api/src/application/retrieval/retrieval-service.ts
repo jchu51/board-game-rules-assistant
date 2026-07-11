@@ -8,6 +8,10 @@ import type {
   PublicSearchResult,
   PublicSearchService,
 } from "../public-search/public-search-service";
+import type {
+  ConversationMessage,
+  ConversationRepository,
+} from "../../domain/conversation/conversation-repository";
 import type { RequestClassifierService } from "./request-classifier-service";
 import type {
   RetrievalMatch,
@@ -17,12 +21,14 @@ import type {
 
 const DEFAULT_TOP_K = 5;
 const MIN_RELEVANCE_SCORE = 0.65;
+const MAX_CONTEXT_MESSAGES = 10;
 
 export class RetrievalService {
   constructor(
     private readonly vectorStore: VectorStore,
     private readonly requestClassifier: RequestClassifierService,
     private readonly publicSearchService: PublicSearchService,
+    private readonly conversationRepository: ConversationRepository,
     private readonly createRuleContextAgent: (
       context: string,
     ) => RuleContextAgent,
@@ -32,16 +38,28 @@ export class RetrievalService {
   ) {}
 
   async search({
+    conversationId,
     query,
   }: RetrievalSearchInput): Promise<RetrievalSearchResult> {
-    const classification = this.requestClassifier.classify(query);
+    const conversationMessages = this.conversationRepository
+      .getMessages(conversationId)
+      .slice(-MAX_CONTEXT_MESSAGES);
+    const contextualQuery = this.formatContextualQuery(
+      query,
+      conversationMessages,
+    );
+    const conversationQuestion = this.formatConversationQuestion(
+      query,
+      conversationMessages,
+    );
+    const classification = this.requestClassifier.classify(contextualQuery);
 
     if (!classification.isGameRuleQuestion) {
-      return {
+      return this.completeTurn(conversationId, query, {
         answer:
           "I can only answer board-game rules questions from indexed rulebook context. Ask about a specific game rule, turn, card, resource, scoring, setup, or movement question.",
         matches: [],
-      };
+      });
     }
 
     const results = await this.vectorStore.similaritySearchVectorWithScore({
@@ -61,11 +79,77 @@ export class RetrievalService {
         },
       }));
 
-    if (matches.length === 0) {
-      return this.searchPublicSources(query, classification.normalizedQuery);
+    if (results.length > 0 && matches.length === 0) {
+      return this.completeTurn(conversationId, query, {
+        answer:
+          "I found potentially related rulebook content, but it was not relevant enough to answer confidently. Please clarify the game and the specific rule, action, card, or situation you are asking about.",
+        matches: [],
+      });
     }
 
-    return this.answerFromMatches(query, matches);
+    if (matches.length === 0) {
+      const result = await this.searchPublicSources(
+        conversationQuestion,
+        classification.normalizedQuery,
+      );
+
+      return this.completeTurn(conversationId, query, result);
+    }
+
+    const result = await this.answerFromMatches(conversationQuestion, matches);
+
+    return this.completeTurn(conversationId, query, result);
+  }
+
+  private completeTurn(
+    conversationId: string,
+    query: string,
+    result: RetrievalSearchResult,
+  ): RetrievalSearchResult {
+    this.conversationRepository.appendMessages(conversationId, [
+      { role: "user", content: query },
+      { role: "assistant", content: result.answer },
+    ]);
+
+    return result;
+  }
+
+  private formatContextualQuery(
+    query: string,
+    messages: ConversationMessage[],
+  ): string {
+    if (messages.length === 0) {
+      return query;
+    }
+
+    const priorUserQuestions = messages
+      .filter((message) => message.role === "user")
+      .map((message) => `${message.role}: ${message.content}`)
+      .join("\n");
+
+    return [
+      "Previous user questions:",
+      priorUserQuestions,
+      "Current user question:",
+      query,
+    ].join("\n");
+  }
+
+  private formatConversationQuestion(
+    query: string,
+    messages: ConversationMessage[],
+  ): string {
+    if (messages.length === 0) {
+      return query;
+    }
+
+    const history = messages
+      .map((message) => `${message.role}: ${message.content}`)
+      .join("\n");
+
+    return ["Conversation context:", history, "Current question:", query].join(
+      "\n",
+    );
   }
 
   private async searchPublicSources(

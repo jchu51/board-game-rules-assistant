@@ -4,6 +4,7 @@ import { CONTEXT_ORIGINS } from "@board-game-rules-assistant/agent-core";
 
 export const RetrievalSearchRequestSchema = z
   .object({
+    conversationId: z.string().uuid("conversationId must be a valid UUID"),
     query: z.string().trim().min(1, "query is required"),
   })
   .strict();

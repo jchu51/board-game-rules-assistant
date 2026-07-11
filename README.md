@@ -16,6 +16,8 @@ without tying those pieces directly to Express.
 - Multipart PDF upload with file type and size validation
 - PDF loading, chunking, embeddings, and in-memory vector-store indexing
 - Similarity search over indexed rulebook chunks
+- Rule-question classification with a public-search fallback when indexed
+  rulebook context has no relevant match
 - Agent-core package with prompt and LangChain agent primitives
 - In-memory rulebook repository for the current API process
 - Local Swagger UI for API exploration
@@ -68,6 +70,11 @@ board-game-rules-assistant/
 
 See the [Phase 0 flow](docs/tech-reviews/000-phase-0-single-pdf-rag-agent/diagrams/phase-0-flow.png).
 
+See the
+[Phase 01 Tavily retrieval low-level design](docs/tech-reviews/001-phase-01-tavily-public-search/low-level-design.md)
+for the implemented classification, relevance, clarification, and public-search
+decision flow.
+
 ## Requirements
 
 - Node.js 22+
@@ -101,6 +108,11 @@ INGESTION_MAX_UPLOAD_SIZE_BYTES=41943040
 
 For the web app, the default API URL is `http://127.0.0.1:8000`. Override it
 with `VITE_API_BASE_URL` if needed.
+
+`PUBLIC_SEARCH_INCLUDE_DOMAINS` is a comma-separated allowlist passed to
+Tavily. Configure it with trusted board-game sites to prevent fallback searches
+from returning unrelated domains. If it is unset, Tavily searches are not
+restricted by domain.
 
 ## Start Locally
 
@@ -178,6 +190,23 @@ http://127.0.0.1:8000/openapi.yml
 
 Swagger docs are only mounted when the API runs with `NODE_ENV=local`.
 
+The Ask page creates a conversation identifier and reuses it for follow-up
+questions. The API retains up to 20 recent messages per conversation in memory;
+selecting **New chat** creates a fresh thread. Conversation memory is process-local
+and resets when the API restarts.
+
+### Request classification and fallback search
+
+Before retrieval, the API uses a lightweight keyword classifier to reject
+clearly unrelated questions. It accepts rules-oriented questions and recognized
+`how to play <game>` questions, including `how to play Everdell?`. Generic uses
+of the same language, such as `How do I play the guitar?`, remain out of scope.
+
+If no sufficiently relevant indexed rulebook chunks are found, an in-scope
+question can fall back to Tavily public search. The classifier is intentionally
+heuristic, so `PUBLIC_SEARCH_INCLUDE_DOMAINS` is the practical safety boundary
+until classification is backed by indexed-game metadata or an LLM classifier.
+
 ## Useful Commands
 
 Run from the project root:
@@ -208,4 +237,6 @@ npm run typecheck -w @board-game-rules-assistant/rag-core
 - Vector-store deletion is not implemented yet.
 - The Ask UI currently returns an agent-generated answer plus retrieval-backed
   source snippets.
+- Request classification uses a maintained keyword and known-game list rather
+  than the indexed rulebook catalog or an LLM classifier.
 - Citation verification, auth, and persistence are planned future work.

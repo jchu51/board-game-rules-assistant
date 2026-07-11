@@ -354,6 +354,7 @@ export function AskPage() {
   const [input, setInput] = useState("");
   const [currentGame, setCurrentGame] = useState<string | null>(null);
   const [isSearching, setIsSearching] = useState(false);
+  const conversationIdRef = useRef(crypto.randomUUID());
   const scrollRef = useRef<HTMLElement | null>(null);
   const timersRef = useRef<Record<string, number>>({});
   const messageIdRef = useRef(0);
@@ -486,7 +487,10 @@ export function AskPage() {
     const isStaleSearch = () => activeSearchIdRef.current !== searchId;
 
     try {
-      const response = await searchRulebooks({ query: question });
+      const response = await searchRulebooks({
+        conversationId: conversationIdRef.current,
+        query: question,
+      });
       if (isStaleSearch()) return;
 
       const answer = buildRetrievalAnswer(question, response);
@@ -507,6 +511,7 @@ export function AskPage() {
     activeSearchIdRef.current += 1;
     clearTimers(timersRef.current);
     timersRef.current = {};
+    conversationIdRef.current = crypto.randomUUID();
     setMessages([]);
     setInput("");
     setCurrentGame(null);
