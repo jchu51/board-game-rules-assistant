@@ -16,6 +16,7 @@ import type {
   RetrievalSearchRawRequestBody,
   RetrievalSearchResponseBody,
 } from "./retrieval-types";
+import { createActorMiddleware } from "../middleware/actor-middleware";
 
 type RetrievalSearchRequest = TypedRequestBody<RetrievalSearchRawRequestBody>;
 type RetrievalSearchResponse = TypedResponse<
@@ -25,8 +26,9 @@ type RetrievalSearchResponse = TypedResponse<
 export class RetrievalRouter {
   readonly router: Router;
 
-  constructor(private readonly retrievalService: RetrievalService, private readonly actorService: ActorService) {
+  constructor(private readonly retrievalService: RetrievalService, actorService: ActorService) {
     const router = Router();
+    router.use(createActorMiddleware(actorService));
 
     router.post("/retrieval/search", this.search);
 
@@ -52,7 +54,7 @@ export class RetrievalRouter {
         );
       }
 
-      const actor = await this.actorService.resolve(request.headers);
+      const actor = response.locals.actor;
       const result = await this.retrievalService.search({ ...parseResult.data, actor });
       const responseBody = RetrievalSearchResponseSchema.parse(result);
 

@@ -4,6 +4,7 @@ import postgres from "postgres";
 import { Document } from "@langchain/core/documents";
 import { createPersistence, runPostgresMigrations } from "@board-game-rules-assistant/database";
 import { RulebookService } from "../src/application/ingestion/rulebook-service";
+import { AccessPolicyService } from "../src/application/access/access-policy-service";
 
 test("postgres driver persists upload version chunks, listing and soft deletion", async () => {
   const base = new URL(process.env.DATABASE_URL ?? "postgres://board_game_rules:board_game_rules@localhost:5432/board_game_rules");
@@ -20,7 +21,7 @@ test("postgres driver persists upload version chunks, listing and soft deletion"
     await persistence.healthCheck();
     const actor = { kind: "user" as const, userId: crypto.randomUUID(), accountRole: "user" as const, planTier: "standard" as const };
     await persistence.identity.createUser({ id: actor.userId, email: "upload@example.com", displayName: "Uploader", accountRole: "user", planTier: "standard" });
-    const service = new RulebookService(persistence.library, {
+    const service = new RulebookService(persistence.library, new AccessPolicyService(persistence.policies, persistence.library), {
       async ingestPdf(input) {
         await persistence.vectorStore.upsert([new Document({ pageContent: "Setup uses three cards", metadata: { ...input.metadata, documentChunkId: crypto.randomUUID() } })]);
         return { documentCount: 1, chunkCount: 1 };

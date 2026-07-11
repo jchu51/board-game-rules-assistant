@@ -106,6 +106,29 @@ export const createPostgresRepositories = (db: PostgresDatabase): {
         "document",
       );
     },
+    async createPrivateDocumentWithinLimit(input) {
+      return db.transaction(async (tx) => {
+        await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${input.ownerId}, 0))`);
+        const currentUsage = firstOrThrow(
+          await tx.select({ value: count() }).from(documents).where(and(
+            eq(documents.ownerId, input.ownerId), eq(documents.visibility, "private"), isNull(documents.deletedAt),
+          )),
+          "document count",
+        ).value;
+        if (input.limit !== null && currentUsage >= input.limit) return { document: null, currentUsage };
+        const document = firstOrThrow(await tx.insert(documents).values({
+          gameId: input.gameId, ownerId: input.ownerId, visibility: "private",
+          kind: input.kind, title: input.title, fileSizeBytes: input.fileSizeBytes ?? 0,
+        }).returning(), "document");
+        return { document, currentUsage };
+      });
+    },
+    async getOwnedPrivateDocument({ documentId, ownerId }) {
+      return (await db.select().from(documents).where(and(
+        eq(documents.id, documentId), eq(documents.ownerId, ownerId),
+        eq(documents.visibility, "private"), isNull(documents.deletedAt),
+      )).limit(1))[0] ?? null;
+    },
     async listOwnedDocuments({ ownerId }) {
       const rows = await db
         .select({ document: documents, game: games })

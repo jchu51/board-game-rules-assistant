@@ -3,6 +3,9 @@ import type { ErrorRequestHandler } from "express";
 import type { Config } from "../../../config/config-types";
 import { getErrorMessage } from "./get-error-message";
 import { HttpStatus } from "./http-status";
+import { DatabaseUnavailableError, PersistenceNotFoundError } from "@board-game-rules-assistant/database";
+import { AdminRequiredError, PlanLimitReachedError } from "../../../application/access/access-policy-service";
+import { ActorResolutionError, GuestSessionExpiredError, UnauthorizedResourceError } from "../../../domain/identity/actor";
 
 export const createErrorMiddleware =
   (config: Config): ErrorRequestHandler =>
@@ -11,6 +14,27 @@ export const createErrorMiddleware =
 
     if (response.headersSent) {
       return next(error);
+    }
+
+    if (error instanceof PlanLimitReachedError) {
+      response.status(HttpStatus.FORBIDDEN).json({ code: error.code, currentUsage: error.currentUsage, limit: error.limit });
+      return;
+    }
+    if (error instanceof AdminRequiredError) {
+      response.status(HttpStatus.FORBIDDEN).json({ code: error.code });
+      return;
+    }
+    if (error instanceof GuestSessionExpiredError || error instanceof ActorResolutionError) {
+      response.status(HttpStatus.UNAUTHORIZED).json({ code: error.code });
+      return;
+    }
+    if (error instanceof UnauthorizedResourceError || error instanceof PersistenceNotFoundError) {
+      response.status(HttpStatus.NOT_FOUND).json({ code: "RESOURCE_NOT_FOUND" });
+      return;
+    }
+    if (error instanceof DatabaseUnavailableError) {
+      response.status(HttpStatus.SERVICE_UNAVAILABLE).json({ code: error.code });
+      return;
     }
 
     if (config.nodeEnv === "production") {

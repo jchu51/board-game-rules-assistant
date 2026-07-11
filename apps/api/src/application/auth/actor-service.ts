@@ -4,6 +4,7 @@ import type {
   UserRecord,
 } from "@board-game-rules-assistant/database";
 import type { NodeEnv } from "../../config/config-types";
+import { ActorResolutionError, GuestSessionExpiredError } from "../../domain/identity/actor";
 
 type Headers = Record<string, string | string[] | undefined>;
 
@@ -34,7 +35,7 @@ export class ActorService {
   async resolve(headers: Headers): Promise<Actor> {
     const userId = singleHeader(headers["x-user-id"]);
     const guestSessionId = singleHeader(headers["x-guest-session-id"]);
-    if (userId && guestSessionId) throw new Error("provide exactly one actor header");
+    if (userId && guestSessionId) throw new ActorResolutionError("provide exactly one actor header");
 
     const resolvedUserId = userId ??
       (this.options.nodeEnv === "local" && !guestSessionId
@@ -42,7 +43,7 @@ export class ActorService {
         : undefined);
     if (resolvedUserId) {
       const user = await this.identity.getUserById({ id: resolvedUserId });
-      if (!user) throw new Error("unknown user actor");
+      if (!user) throw new ActorResolutionError("unknown user actor");
       return {
         kind: "user",
         userId: user.id,
@@ -53,9 +54,9 @@ export class ActorService {
 
     if (guestSessionId) {
       const guest = await this.identity.getGuestSession({ id: guestSessionId });
-      if (!guest || guest.expiresAt <= new Date()) throw new Error("unknown or expired guest actor");
+      if (!guest || guest.expiresAt <= new Date()) throw new GuestSessionExpiredError();
       return { kind: "guest", guestSessionId: guest.id };
     }
-    throw new Error("x-user-id or x-guest-session-id actor header is required");
+    throw new ActorResolutionError("x-user-id or x-guest-session-id actor header is required");
   }
 }

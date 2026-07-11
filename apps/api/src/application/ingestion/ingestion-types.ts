@@ -1,4 +1,5 @@
 import type { RulebookChunkMetadata } from "@board-game-rules-assistant/rag-core";
+import type { Actor, DocumentKind } from "@board-game-rules-assistant/database";
 
 export type IngestionSplitterParams = {
   chunkSize: number;
@@ -10,6 +11,11 @@ export type IngestionServiceOptions = {
 };
 
 export type IngestPdfInput = {
+  actor: Actor;
+  gameId: string;
+  title: string;
+  kind: DocumentKind;
+  documentId?: string;
   filePath: string;
   metadata?: Partial<RulebookChunkMetadata>;
   source?: string;

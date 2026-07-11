@@ -9,6 +9,9 @@ import type {
 
 import { createErrorMiddleware } from "../src/presentation/http/shared/error-middleware";
 import { testConfig } from "./test-config";
+import { PlanLimitReachedError } from "../src/application/access/access-policy-service";
+import { GuestSessionExpiredError, UnauthorizedResourceError } from "../src/domain/identity/actor";
+import { DatabaseUnavailableError } from "@board-game-rules-assistant/database";
 
 type CapturedResponse = {
   body?: unknown;
@@ -41,6 +44,21 @@ const invokeMiddleware = (
 };
 
 describe("createErrorMiddleware", () => {
+  for (const [error, statusCode, body] of [
+    [new PlanLimitReachedError(3, 3), 403, { code: "PLAN_LIMIT_REACHED", currentUsage: 3, limit: 3 }],
+    [new GuestSessionExpiredError(), 401, { code: "GUEST_SESSION_EXPIRED" }],
+    [new UnauthorizedResourceError(), 404, { code: "RESOURCE_NOT_FOUND" }],
+    [new DatabaseUnavailableError(), 503, { code: "DATABASE_UNAVAILABLE" }],
+  ] as const) {
+    it(`maps ${error.name} to ${statusCode}`, () => {
+      const captured: CapturedResponse = {};
+      const errorMock = mock.method(console, "error", () => {});
+      try { invokeMiddleware(createErrorMiddleware(testConfig), error, createMockResponse(captured)); }
+      finally { errorMock.mock.restore(); }
+      assert.equal(captured.statusCode, statusCode);
+      assert.deepEqual(captured.body, body);
+    });
+  }
   it("returns a production-safe error body", () => {
     const captured: CapturedResponse = {};
     const errorMock = mock.method(console, "error", () => {});

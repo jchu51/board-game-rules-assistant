@@ -20,6 +20,7 @@ import type {
   ListRulebooksResponseBody,
   UploadPdfsResponseBody,
 } from "./ingestion-types";
+import { createActorMiddleware } from "../middleware/actor-middleware";
 
 type UploadPdfsResponse = TypedResponse<
   UploadPdfsResponseBody | ErrorResponseBody
@@ -33,7 +34,7 @@ export class IngestionRouter {
 
   constructor(
     private readonly rulebookService: RulebookService,
-    private readonly actorService: ActorService,
+    actorService: ActorService,
     {
       uploadDirectory,
       maxUploadSizeBytes,
@@ -65,6 +66,7 @@ export class IngestionRouter {
     });
 
     const router = Router();
+    router.use(createActorMiddleware(actorService));
 
     router.post(
       "/rulebooks",
@@ -132,16 +134,20 @@ export class IngestionRouter {
         );
       }
 
-      const { gameName, splitterParams } = parseResult.data;
+      const { gameName, gameId, documentId, title, kind, splitterParams } = parseResult.data;
       const pdfName = request.file.originalname;
       const fileSize = request.file.size;
-      const actor = await this.actorService.resolve(request.headers);
+      const actor = response.locals.actor;
       const result = await this.rulebookService.upload({
         actor,
         filePath: request.file.path,
         pdfName,
         fileSize,
         gameName,
+        gameId,
+        documentId,
+        title,
+        kind,
         splitterParams,
       });
       const responseBody = UploadPdfsResponseSchema.parse(result);
@@ -159,12 +165,12 @@ export class IngestionRouter {
   };
 
   private listRulebooks = async (
-    request: Request,
+    _request: Request,
     response: ListRulebooksResponse,
     next: NextFunction,
   ) => {
     try {
-      const actor = await this.actorService.resolve(request.headers);
+      const actor = response.locals.actor;
       const responseBody = ListRulebooksResponseSchema.parse({ rulebooks: await this.rulebookService.list(actor) });
       return response.status(HttpStatus.OK).json(responseBody);
     } catch (error) { next(error); }
@@ -177,7 +183,7 @@ export class IngestionRouter {
   ) => {
     let deleted: boolean;
     try {
-      const actor = await this.actorService.resolve(request.headers);
+      const actor = response.locals.actor;
       deleted = await this.rulebookService.delete(actor, request.params.id);
     } catch (error) { next(error); return; }
 

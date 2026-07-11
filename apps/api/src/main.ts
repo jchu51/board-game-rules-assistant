@@ -11,6 +11,7 @@ import {
 import { IngestionService } from "./application/ingestion/ingestion-service";
 import { RulebookService } from "./application/ingestion/rulebook-service";
 import { ActorService } from "./application/auth/actor-service";
+import { AccessPolicyService } from "./application/access/access-policy-service";
 import { preparePersistence, closePersistenceAfterServer } from "./application/runtime/persistence-lifecycle";
 import { RequestClassifierService } from "./application/retrieval/request-classifier-service";
 import { RetrievalService } from "./application/retrieval/retrieval-service";
@@ -40,6 +41,7 @@ const persistence = await createPersistence({
 });
 await preparePersistence(persistence, config.nodeEnv, config.localUserId);
 const actorService = new ActorService(persistence.identity, { nodeEnv: config.nodeEnv, localUserId: config.localUserId });
+const accessPolicyService = new AccessPolicyService(persistence.policies, persistence.library);
 const vectorStore = persistence.vectorStore;
 const conversationRepository = new PersistedConversationHistory(persistence.conversations);
 const ingestionService = new IngestionService(vectorStore, {
@@ -48,7 +50,7 @@ const ingestionService = new IngestionService(vectorStore, {
     chunkOverlap: config.ingestion.defaultChunkOverlap,
   },
 });
-const rulebookService = new RulebookService(persistence.library, ingestionService, {
+const rulebookService = new RulebookService(persistence.library, accessPolicyService, ingestionService, {
   embeddingModel: config.ingestion.embeddingModel,
   embeddingDimensions: config.ingestion.embeddingDimensions,
 });
@@ -64,6 +66,7 @@ const retrievalService = new RetrievalService(
   conversationRepository,
   (context) => new RuleContextAgent("rule-context-agent", chatModel, context),
   (context) => new RuleAnswerAgent("rule-answer-agent", chatModel, context),
+  accessPolicyService,
 );
 
 // Routers

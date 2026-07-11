@@ -47,6 +47,21 @@ export type LibraryRepository = {
     title: string;
     fileSizeBytes?: number;
   }): Promise<DocumentRecord>;
+  createPrivateDocumentWithinLimit(input: {
+    gameId: string;
+    ownerId: string;
+    kind: DocumentKind;
+    title: string;
+    fileSizeBytes?: number;
+    limit: number | null;
+  }): Promise<
+    | { document: DocumentRecord; currentUsage: number }
+    | { document: null; currentUsage: number }
+  >;
+  getOwnedPrivateDocument(input: {
+    documentId: string;
+    ownerId: string;
+  }): Promise<DocumentRecord | null>;
   listOwnedDocuments(input: { ownerId: string }): Promise<
     Array<{ document: DocumentRecord; game: GameRecord }>
   >;

@@ -83,6 +83,23 @@ export const runPersistenceContract = (
       await persistence.close();
     });
 
+    test("atomically enforces a concurrent private document limit", async () => {
+      const persistence = await createPersistence();
+      const user = await persistence.identity.createUser({
+        email: `quota-${crypto.randomUUID()}@example.com`, displayName: "Quota",
+        accountRole: "user", planTier: "standard",
+      });
+      const game = await persistence.library.createGame({ name: `Quota ${crypto.randomUUID()}`, slug: `quota-${crypto.randomUUID()}` });
+      const results = await Promise.all(Array.from({ length: 8 }, (_, index) =>
+        persistence.library.createPrivateDocumentWithinLimit({
+          gameId: game.id, ownerId: user.id, kind: "other", title: `Document ${index}`, limit: 3,
+        }),
+      ));
+      assert.equal(results.filter(({ document }) => document !== null).length, 3);
+      assert.equal(await persistence.library.countActivePrivateDocuments({ ownerId: user.id }), 3);
+      await persistence.close();
+    });
+
     test("never returns another owner's private document", async () => {
       const persistence = await createPersistence();
       const game = await persistence.library.createGame({

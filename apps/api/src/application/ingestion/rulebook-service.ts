@@ -2,6 +2,9 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import type { Actor, LibraryRepository } from "@board-game-rules-assistant/database";
 import type { IngestPdfInput, IngestionResult } from "./ingestion-types";
+import type { AccessPolicyService } from "../access/access-policy-service";
+import { PlanLimitReachedError } from "../access/access-policy-service";
+import { UnauthorizedResourceError } from "../../domain/identity/actor";
 
 type PdfIngestion = { ingestPdf(input: IngestPdfInput): Promise<IngestionResult> };
 
@@ -9,13 +12,14 @@ const slugify = (name: string): string =>
   name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
 const requireUser = (actor: Actor) => {
-  if (actor.kind !== "user") throw new Error("Guests cannot upload or manage rulebooks");
+  if (actor.kind !== "user") throw new PlanLimitReachedError(0, 0);
   return actor;
 };
 
 export class RulebookService {
   constructor(
     private readonly library: LibraryRepository,
+    private readonly accessPolicy: AccessPolicyService,
     private readonly ingestion: PdfIngestion,
     private readonly embedding: { embeddingModel: string; embeddingDimensions: number },
   ) {}
@@ -26,28 +30,45 @@ export class RulebookService {
     pdfName: string;
     fileSize: number;
     gameName: string;
+    gameId?: string;
+    documentId?: string;
+    kind?: IngestPdfInput["kind"];
+    title?: string;
     splitterParams?: IngestPdfInput["splitterParams"];
   }) {
     const user = requireUser(input.actor);
-    const game = await this.library.resolveGame({ name: input.gameName, slug: slugify(input.gameName) });
-    const document = await this.library.createDocument({
+    const existingDocument = input.documentId
+      ? await this.library.getOwnedPrivateDocument({ documentId: input.documentId, ownerId: user.userId })
+      : null;
+    if (input.documentId && !existingDocument) throw new UnauthorizedResourceError();
+    const game = existingDocument
+      ? await this.library.getGameById({ id: existingDocument.gameId })
+      : input.gameId
+        ? await this.library.getGameById({ id: input.gameId })
+        : await this.library.resolveGame({ name: input.gameName, slug: slugify(input.gameName) });
+    if (!game) throw new UnauthorizedResourceError();
+    const checksum = createHash("sha256").update(await readFile(input.filePath).catch(() => input.pdfName)).digest("hex");
+    const document = existingDocument ?? await this.accessPolicy.createPrivateDocument(user, {
       gameId: game.id,
-      ownerId: user.userId,
-      visibility: "private",
-      kind: "base_rules",
-      title: input.pdfName,
+      kind: input.kind ?? "base_rules",
+      title: input.title ?? input.pdfName,
       fileSizeBytes: input.fileSize,
     });
-    const checksum = createHash("sha256").update(await readFile(input.filePath).catch(() => input.pdfName)).digest("hex");
-    const version = await this.library.createVersion({
-      documentId: document.id,
-      checksum,
-      embeddingProvider: "openai",
-      embeddingModel: this.embedding.embeddingModel,
-      embeddingDimensions: this.embedding.embeddingDimensions,
-    });
+    let version: Awaited<ReturnType<LibraryRepository["createVersion"]>> | undefined;
     try {
+      version = await this.library.createVersion({
+        documentId: document.id,
+        checksum,
+        embeddingProvider: "openai",
+        embeddingModel: this.embedding.embeddingModel,
+        embeddingDimensions: this.embedding.embeddingDimensions,
+      });
       const result = await this.ingestion.ingestPdf({
+        actor: user,
+        gameId: game.id,
+        title: input.title ?? input.pdfName,
+        kind: input.kind ?? document.kind,
+        documentId: input.documentId,
         filePath: input.filePath,
         source: input.pdfName,
         splitterParams: input.splitterParams,
@@ -62,7 +83,11 @@ export class RulebookService {
       await this.library.replaceActivePrivateVersion({ versionId: version.id, userId: user.userId, chunkCount: result.chunkCount });
       return { ...result, id: document.id, versionId: version.id, gameId: game.id, gameName: game.name, pdfName: document.title, fileSize: document.fileSizeBytes, status: "completed" as const };
     } catch (error) {
-      await this.library.markVersionFailed({ versionId: version.id, failureCode: "INGESTION_FAILED", failureMessage: error instanceof Error ? error.message : "Ingestion failed" });
+      if (version) {
+        await this.library.markVersionFailed({ versionId: version.id, failureCode: "INGESTION_FAILED", failureMessage: error instanceof Error ? error.message : "Ingestion failed" });
+      } else if (!existingDocument) {
+        await this.library.softDeleteDocument({ documentId: document.id, ownerId: user.userId });
+      }
       throw error;
     }
   }

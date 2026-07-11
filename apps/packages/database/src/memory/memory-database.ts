@@ -207,6 +207,25 @@ export const createMemoryPersistence = async (): Promise<Persistence> => {
         documents.set(record.id, clone(record));
         return clone(record);
       },
+      async createPrivateDocumentWithinLimit(input) {
+        const currentUsage = [...documents.values()].filter(
+          (document) => document.ownerId === input.ownerId && document.visibility === "private" && document.deletedAt === null,
+        ).length;
+        if (input.limit !== null && currentUsage >= input.limit) return { document: null, currentUsage };
+        const record: DocumentRecord = {
+          id: randomUUID(), gameId: input.gameId, ownerId: input.ownerId,
+          visibility: "private", kind: input.kind, title: input.title,
+          fileSizeBytes: input.fileSizeBytes ?? 0, deletedAt: null, ...createTimestamped(),
+        };
+        documents.set(record.id, clone(record));
+        return { document: clone(record), currentUsage };
+      },
+      async getOwnedPrivateDocument({ documentId, ownerId }) {
+        const document = documents.get(documentId);
+        return document?.ownerId === ownerId && document.visibility === "private" && document.deletedAt === null
+          ? clone(document)
+          : null;
+      },
       async listOwnedDocuments({ ownerId }) {
         return [...documents.values()]
           .filter((document) => document.ownerId === ownerId && document.deletedAt === null)

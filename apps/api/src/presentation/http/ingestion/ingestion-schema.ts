@@ -8,6 +8,10 @@ export const IngestionSplitterParamsSchema = z.object({
 const SplitterParamsInputSchema = z
   .object({
     gameName: z.string().trim().min(1, "gameName is required"),
+    gameId: z.string().uuid().optional(),
+    documentId: z.string().uuid().optional(),
+    title: z.string().trim().min(1).optional(),
+    kind: z.enum(["base_rules", "expansion", "errata", "other"]).optional(),
     chunkSize: z.coerce.number().int().positive().optional(),
     chunkOverlap: z.coerce.number().int().nonnegative().optional(),
   })
@@ -34,6 +38,10 @@ export const UploadPdfsRequestSchema = SplitterParamsInputSchema.transform(
 
     return {
       gameName: body.gameName,
+      ...(body.gameId ? { gameId: body.gameId } : {}),
+      ...(body.documentId ? { documentId: body.documentId } : {}),
+      ...(body.title ? { title: body.title } : {}),
+      ...(body.kind ? { kind: body.kind } : {}),
       splitterParams:
         Object.keys(splitterParams).length > 0 ? splitterParams : undefined,
     };

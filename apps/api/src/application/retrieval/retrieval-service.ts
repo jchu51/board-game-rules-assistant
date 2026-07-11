@@ -19,6 +19,7 @@ import type {
   RetrievalSearchInput,
   RetrievalSearchResult,
 } from "./retrieval-types";
+import type { AccessPolicyService } from "../access/access-policy-service";
 
 const DEFAULT_TOP_K = 5;
 const MIN_RELEVANCE_SCORE = 0.65;
@@ -36,6 +37,7 @@ export class RetrievalService {
     private readonly createRuleAnswerAgent: (
       context: string,
     ) => RuleAnswerAgent,
+    private readonly accessPolicy?: AccessPolicyService,
   ) {}
 
   async search({
@@ -71,9 +73,12 @@ export class RetrievalService {
       });
     }
 
+    const topK = actor && this.accessPolicy
+      ? (await this.accessPolicy.getEffectivePolicy(actor)).retrievalTopK
+      : DEFAULT_TOP_K;
     const results = await this.vectorStore.similaritySearchVectorWithScore({
       query: classification.normalizedQuery,
-      topK: DEFAULT_TOP_K,
+      topK,
       scope: { gameId, userId: actor?.kind === "user" ? actor.userId : undefined },
     });
 
