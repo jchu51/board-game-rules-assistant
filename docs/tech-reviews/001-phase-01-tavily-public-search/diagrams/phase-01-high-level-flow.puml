@@ -1,0 +1,59 @@
+@startuml phase-01-high-level-flow
+!theme plain
+skinparam backgroundColor #FEFEFE
+skinparam shadowing false
+skinparam defaultFontSize 11
+skinparam linetype polyline
+skinparam nodesep 70
+skinparam ranksep 55
+skinparam activity {
+  BackgroundColor #FFFFFF
+  BorderColor #555555
+  DiamondBackgroundColor #FFF9C4
+  DiamondBorderColor #777777
+  ArrowColor #555555
+}
+
+title Phase 01 — Internal-First Retrieval with Tavily Fallback
+
+start
+:Classify board-game rules question;
+
+if (Supported domain?) then (no)
+  :Return scope guidance; <<#FFCDD2>>
+  stop
+else (yes)
+  :Search indexed rulebook chunks;
+endif
+
+if (Any score > 0.65?) then (yes)
+  :Build **rulebook** context; <<#C8E6C9>>
+else (no)
+  :Search Tavily; <<#B3E5FC>>
+  note right
+    Include-domain allowlist is
+    applied only when configured.
+  end note
+
+  if (Any public results?) then (no)
+    :Return not enough information; <<#FFCDD2>>
+    stop
+  else (yes)
+    :Build **public_web** context
+    with source URLs; <<#B3E5FC>>
+  endif
+endif
+
+:RuleContextAgent filters evidence;
+:RuleAnswerAgent generates answer;
+:Return answer + source matches;
+stop
+
+legend right
+|= Color |= Meaning |
+| <#C8E6C9> | Accepted indexed rulebook evidence |
+| <#B3E5FC> | Public-web fallback |
+| <#FFCDD2> | Safe stop without generated answer |
+endlegend
+
+@enduml

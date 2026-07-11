@@ -1,0 +1,75 @@
+@startuml phase-01-retrieval-decision-flow
+!theme plain
+skinparam backgroundColor #FEFEFE
+skinparam shadowing false
+skinparam defaultFontSize 11
+skinparam linetype polyline
+skinparam nodesep 70
+skinparam ranksep 55
+skinparam activity {
+  BackgroundColor #FFFFFF
+  BorderColor #555555
+  DiamondBackgroundColor #FFF9C4
+  DiamondBorderColor #777777
+  ArrowColor #555555
+}
+
+title Phase 01 — Retrieval Decision Flow with Tavily Fallback
+
+start
+:Receive POST /retrieval/search;
+:Normalize and classify question;
+
+if (Supported board-game\nrules question?) then (no)
+  :Return out-of-scope guidance; <<#FFCDD2>>
+  stop
+else (yes)
+  :Search in-memory vector store\ntopK=5;
+endif
+
+if (Any result scores\nabove 0.65?) then (yes)
+  :Build rulebook context; <<#C8E6C9>>
+  :RuleContextAgent filters\nrelevant rules;
+  :RuleAnswerAgent generates\ngrounded answer;
+  :Return answer + rulebook matches;
+  stop
+else (no)
+endif
+
+if (Did vector search return\nany candidates?) then (yes - weak)
+  :Return clarification request; <<#FFE0B2>>
+  note right
+    Do not call Tavily.
+    Ask for the game and a more
+    specific rule or situation.
+  end note
+  stop
+else (no candidates)
+  :Search Tavily;
+endif
+
+note right
+  PUBLIC_SEARCH_INCLUDE_DOMAINS
+  restricts results when configured.
+end note
+
+if (Tavily failed or returned\nno results?) then (yes)
+  :Return not enough information; <<#FFCDD2>>
+  stop
+else (no)
+  :Map results to public_web context\nwith source URLs; <<#B3E5FC>>
+  :RuleContextAgent filters\nrelevant rules;
+  :RuleAnswerAgent generates answer;
+  :Return answer + public-web matches;
+  stop
+endif
+
+legend right
+|= Color |= Meaning |
+| <#C8E6C9> | Strong indexed context |
+| <#FFE0B2> | Weak context; clarify |
+| <#B3E5FC> | Public web fallback |
+| <#FFCDD2> | Safe stop response |
+endlegend
+
+@enduml

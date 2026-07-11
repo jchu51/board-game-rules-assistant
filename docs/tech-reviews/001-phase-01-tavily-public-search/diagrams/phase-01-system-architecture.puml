@@ -1,0 +1,69 @@
+@startuml phase-01-system-architecture
+!theme plain
+top to bottom direction
+
+skinparam backgroundColor #FEFEFE
+skinparam shadowing false
+skinparam componentStyle rectangle
+skinparam defaultFontSize 11
+skinparam linetype polyline
+skinparam nodesep 65
+skinparam ranksep 55
+
+title Phase 01 — Board Game Rules Assistant with Tavily Fallback
+
+actor "Player" as player
+
+package "Browser — apps/web" as web #E0F7FA {
+  rectangle "**React Application**\nAsk rules questions\nUpload and manage rulebooks\nRender answers + sources" as browser_app #FFFFFF
+}
+
+package "Express API — apps/api" as api #E8EAF6 {
+  rectangle "**HTTP API**\n/rulebooks\n/retrieval/search" as http_api #FFFFFF
+  rectangle "**Ingestion Workflow**\nValidate PDF\nLoad, chunk, and index" as ingestion #FFFFFF
+  rectangle "**Retrieval Decision Layer**\nClassify request\nAnswer strong internal evidence\nClarify weak evidence\nFallback when index is empty" as retrieval #FFFFFF
+  rectangle "**Tavily Adapter**\nNormalize search results\nApply optional domain allowlist" as tavily_adapter #FFFFFF
+  database "**In-Memory Rulebook Metadata**\nProcess-local records" as metadata #FFFFFF
+}
+
+package "Shared Packages" as shared #F5F5F5 {
+  rectangle "**rag-core**\nPDF loading + chunking\nOpenAI embeddings\nMemory vector store" as rag_core #E8F5E9
+  rectangle "**agent-core**\nFilter retrieved evidence\nGenerate grounded answers\nPreserve evidence origin" as agent_core #FCE4EC
+}
+
+cloud "**OpenAI APIs**\nEmbeddings + chat completion" as openai #FFFDE7
+cloud "**Tavily Search API**\nPublic rules sources" as tavily #FFFDE7
+
+player -down-> browser_app : use assistant
+browser_app -down-> http_api : HTTPS / JSON + PDF
+
+http_api -down-> ingestion : rulebook commands
+http_api -down-> retrieval : rules questions
+ingestion -left-> metadata : store records
+ingestion -down-> rag_core : index PDF chunks
+
+retrieval -down-> rag_core : scored vector search
+retrieval -down-> agent_core : rulebook or public_web evidence
+retrieval -right-> tavily_adapter : fallback when vector search\nreturns no candidates
+tavily_adapter -down-> tavily : public search
+
+rag_core -down-> openai : embedding requests
+agent_core -down-> openai : context + answer requests
+agent_core -up-> retrieval : grounded answer
+retrieval -up-> http_api : answer + source matches
+http_api -up-> browser_app : response
+
+metadata -[hidden]right- ingestion
+rag_core -[hidden]right- agent_core
+openai -[hidden]right- tavily
+
+legend right
+|= Color |= Boundary |
+| <#E0F7FA> | React web application |
+| <#E8EAF6> | Express API |
+| <#E8F5E9> | Shared RAG package |
+| <#FCE4EC> | Shared agent package |
+| <#FFFDE7> | External provider |
+endlegend
+
+@enduml
