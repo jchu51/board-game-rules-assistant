@@ -8,6 +8,13 @@
       "when": 1783799782534,
       "tag": "0000_initial_persistence",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1783800157509,
+      "tag": "0001_cascade_cleanup_relations",
+      "breakpoints": true
     }
   ]
 }

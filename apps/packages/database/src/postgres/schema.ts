@@ -56,25 +56,25 @@ export const documentVersions = pgTable("document_versions", {
 ]);
 export const documentChunks = pgTable("document_chunks", {
   id: uuid("id").primaryKey().defaultRandom(),
-  documentVersionId: uuid("document_version_id").notNull().references(() => documentVersions.id),
+  documentVersionId: uuid("document_version_id").notNull().references(() => documentVersions.id, { onDelete: "cascade" }),
   ordinal: integer("ordinal").notNull(), content: text("content").notNull(), pageNumber: integer("page_number"),
   metadata: jsonb("metadata").notNull().default({}), embedding: vector("embedding", { dimensions: 3072 }).notNull(), ...timestamps,
 }, (table) => [uniqueIndex("document_chunks_version_ordinal_unique").on(table.documentVersionId, table.ordinal), index("document_chunks_document_version_id_idx").on(table.documentVersionId)]);
 export const conversations = pgTable("conversations", {
   id: uuid("id").primaryKey().defaultRandom(), gameId: uuid("game_id").notNull().references(() => games.id),
-  userId: uuid("user_id").references(() => users.id), guestSessionId: uuid("guest_session_id").references(() => guestSessions.id),
+  userId: uuid("user_id").references(() => users.id), guestSessionId: uuid("guest_session_id").references(() => guestSessions.id, { onDelete: "cascade" }),
   title: text("title").notNull(), expiresAt: timestamp("expires_at", { withTimezone: true }), ...timestamps,
 }, (table) => [
   check("conversations_actor_xor_check", sql`(${table.userId} IS NOT NULL) <> (${table.guestSessionId} IS NOT NULL)`),
   index("conversations_user_id_idx").on(table.userId), index("conversations_guest_session_id_idx").on(table.guestSessionId), index("conversations_game_id_idx").on(table.gameId),
 ]);
 export const messages = pgTable("messages", {
-  id: uuid("id").primaryKey().defaultRandom(), conversationId: uuid("conversation_id").notNull().references(() => conversations.id),
+  id: uuid("id").primaryKey().defaultRandom(), conversationId: uuid("conversation_id").notNull().references(() => conversations.id, { onDelete: "cascade" }),
   role: messageRoleEnum("role").notNull(), content: text("content").notNull(), model: text("model"), ...timestamps,
 }, (table) => [index("messages_conversation_id_idx").on(table.conversationId)]);
 export const messageCitations = pgTable("message_citations", {
-  messageId: uuid("message_id").notNull().references(() => messages.id),
-  documentChunkId: uuid("document_chunk_id").notNull().references(() => documentChunks.id),
+  messageId: uuid("message_id").notNull().references(() => messages.id, { onDelete: "cascade" }),
+  documentChunkId: uuid("document_chunk_id").notNull().references(() => documentChunks.id, { onDelete: "cascade" }),
   rank: integer("rank").notNull(), distance: doublePrecision("distance"), quotedText: text("quoted_text").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [primaryKey({ columns: [table.messageId, table.documentChunkId] })]);
