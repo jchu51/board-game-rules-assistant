@@ -30,6 +30,7 @@ describe("Retrieval schemas", () => {
       answer: "A city produces two resources.",
       matches: [
         {
+          origin: "rulebook",
           content: "Cities produce two resources.",
           metadata: {
             documentId: "11111111-1111-4111-8111-111111111111",
@@ -41,6 +42,7 @@ describe("Retrieval schemas", () => {
     });
 
     assert.equal(response.answer, "A city produces two resources.");
+    assert.equal(response.matches[0]?.origin, "rulebook");
     assert.equal(response.matches[0]?.metadata.pageNumber, 3);
   });
 });

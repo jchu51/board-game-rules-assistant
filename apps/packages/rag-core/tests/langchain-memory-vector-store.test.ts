@@ -59,6 +59,30 @@ describe("LangchainMemoryVectorStore", () => {
     assert.equal(results[0]?.pageContent, "A city produces two resources.");
   });
 
+  it("returns scored results ordered by similarity", async () => {
+    const vectorStore = new LangchainMemoryVectorStore(new KeywordEmbeddings());
+
+    await vectorStore.upsert([
+      createDocument("The longest road can score bonus points.", "road-card"),
+      createDocument("A city produces two resources.", "catan"),
+    ]);
+
+    const results = await vectorStore.similaritySearchVectorWithScore({
+      query: "How many resources does a city produce?",
+      topK: 2,
+    });
+
+    assert.equal(results.length, 2);
+
+    const [bestMatch, weakestMatch] = results;
+
+    assert.ok(bestMatch);
+    assert.ok(weakestMatch);
+    assert.equal(bestMatch[0].metadata.documentId, "catan");
+    assert.ok(bestMatch[1] > 0.99, "exact keyword overlap scores ~1");
+    assert.ok(bestMatch[1] > weakestMatch[1], "results ordered by score");
+  });
+
   it("applies filters before returning similarity search results", async () => {
     const vectorStore = new LangchainMemoryVectorStore(new KeywordEmbeddings());
 

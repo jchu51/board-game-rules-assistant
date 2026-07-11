@@ -2,7 +2,12 @@ export type RetrievalSearchInput = {
   query: string;
 };
 
+import type { ContextOrigin } from "@board-game-rules-assistant/agent-core";
+
+export type RetrievalMatchOrigin = ContextOrigin;
+
 export type RetrievalMatch = {
+  origin: RetrievalMatchOrigin;
   content: string;
   metadata: {
     documentId?: string;

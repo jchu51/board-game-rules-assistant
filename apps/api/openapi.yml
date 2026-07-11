@@ -322,15 +322,24 @@ components:
           description: Source PDF page number when available.
         source:
           type: string
-          description: Source PDF filename when available.
+          description: Source PDF filename or public web URL when available.
           example: catan-rulebook.pdf
       additionalProperties: false
     RetrievalMatch:
       type: object
       required:
+        - origin
         - content
         - metadata
       properties:
+        origin:
+          type: string
+          enum:
+            - rulebook
+            - public_web
+          description:
+            Whether the match came from an indexed rulebook or public web
+            search.
         content:
           type: string
           description: Retrieved chunk text.

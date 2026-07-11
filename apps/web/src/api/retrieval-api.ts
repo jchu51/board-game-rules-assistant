@@ -8,7 +8,10 @@ export type RetrievalSearchInput = {
   query: string;
 };
 
+export type RetrievalMatchOrigin = "rulebook" | "public_web";
+
 export type RetrievalMatch = {
+  origin: RetrievalMatchOrigin;
   content: string;
   metadata: {
     documentId?: string;

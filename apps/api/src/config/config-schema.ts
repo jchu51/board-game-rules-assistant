@@ -32,7 +32,16 @@ export const EnvSchema = z.object({
         "OPENAI_API_KEY is required (used by rag-core's embeddings client) - set it in apps/api/.env",
     })
     .min(1, "OPENAI_API_KEY must not be empty"),
-  TAVILY_API_KEY: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
+  TAVILY_API_KEY: z
+    .string({
+      message:
+        "TAVILY_API_KEY is required (used by the Tavily public-search service) - set it in apps/api/.env",
+    })
+    .min(1, "TAVILY_API_KEY must not be empty"),
+  PUBLIC_SEARCH_INCLUDE_DOMAINS: z.preprocess(
+    emptyToUndefined,
+    z.string().min(1).optional(),
+  ),
   AGENT_CHAT_MODEL: withDefault("openai:gpt-4o-mini"),
   INGESTION_EMBEDDING_MODEL: withDefault("text-embedding-3-large"),
   INGESTION_CHUNK_SIZE: numberWithDefault(500).pipe(

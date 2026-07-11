@@ -78,6 +78,37 @@ describe("TavilyPublicSearchService", () => {
     ]);
   });
 
+  it("applies the configured include domains when the input has none", async () => {
+    const inputs: { includeDomains?: string[] }[] = [];
+    const response: TavilySearchResponse = {
+      query: "Catan longest road rule",
+      response_time: 0.1,
+      results: [],
+    };
+    const service = new TavilyPublicSearchService({
+      apiKey: "test-tavily-key",
+      includeDomains: ["catan.com", "boardgamegeek.com"],
+      createTool: () => ({
+        invoke: async (input) => {
+          inputs.push(input);
+          return response;
+        },
+      }),
+    });
+
+    await service.search({ query: "Catan longest road rule" });
+    await service.search({
+      query: "Catan longest road rule",
+      includeDomains: ["catan.com"],
+    });
+
+    assert.deepEqual(inputs[0]?.includeDomains, [
+      "catan.com",
+      "boardgamegeek.com",
+    ]);
+    assert.deepEqual(inputs[1]?.includeDomains, ["catan.com"]);
+  });
+
   it("returns no results for blank queries without calling Tavily", async () => {
     const service = new TavilyPublicSearchService({
       apiKey: "test-tavily-key",

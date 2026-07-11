@@ -17,6 +17,7 @@ export type Config = {
     maxUploadSizeBytes: number;
   };
   publicSearch: {
-    tavilyApiKey?: string;
+    tavilyApiKey: string;
+    includeDomains?: string[];
   };
 };

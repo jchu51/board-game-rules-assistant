@@ -1,8 +1,13 @@
 import type { VectorStore } from "@board-game-rules-assistant/rag-core";
+import { CONTEXT_ORIGIN } from "@board-game-rules-assistant/agent-core";
 import type {
   RuleAnswerAgent,
   RuleContextAgent,
 } from "@board-game-rules-assistant/agent-core";
+import type {
+  PublicSearchResult,
+  PublicSearchService,
+} from "../public-search/public-search-service";
 import type { RequestClassifierService } from "./request-classifier-service";
 import type {
   RetrievalMatch,
@@ -17,6 +22,7 @@ export class RetrievalService {
   constructor(
     private readonly vectorStore: VectorStore,
     private readonly requestClassifier: RequestClassifierService,
+    private readonly publicSearchService: PublicSearchService,
     private readonly createRuleContextAgent: (
       context: string,
     ) => RuleContextAgent,
@@ -46,6 +52,7 @@ export class RetrievalService {
     const matches: RetrievalMatch[] = results
       .filter(([, score]) => score > MIN_RELEVANCE_SCORE)
       .map(([document]) => ({
+        origin: CONTEXT_ORIGIN.rulebook,
         content: document.pageContent,
         metadata: {
           documentId: document.metadata.documentId,
@@ -55,13 +62,50 @@ export class RetrievalService {
       }));
 
     if (matches.length === 0) {
+      return this.searchPublicSources(query, classification.normalizedQuery);
+    }
+
+    return this.answerFromMatches(query, matches);
+  }
+
+  private async searchPublicSources(
+    query: string,
+    normalizedQuery: string,
+  ): Promise<RetrievalSearchResult> {
+    let publicResults: PublicSearchResult[];
+
+    try {
+      publicResults = await this.publicSearchService.search({
+        query: normalizedQuery,
+      });
+    } catch (error) {
+      console.error("public search failed:\n", error);
+      publicResults = [];
+    }
+
+    const matches: RetrievalMatch[] = publicResults.map((result) => ({
+      origin: CONTEXT_ORIGIN.publicWeb,
+      content: result.content,
+      metadata: {
+        source: result.url,
+      },
+    }));
+
+    if (matches.length === 0) {
       return {
         answer:
-          "I could not find relevant rulebook context for that question in the indexed documents.",
+          "I could not find relevant rulebook context for that question in the indexed documents or a reliable public source.",
         matches,
       };
     }
 
+    return this.answerFromMatches(query, matches);
+  }
+
+  private async answerFromMatches(
+    query: string,
+    matches: RetrievalMatch[],
+  ): Promise<RetrievalSearchResult> {
     const retrievedContext = this.formatRetrievedContext(matches);
     const contextAgent = this.createRuleContextAgent(retrievedContext);
     const relevantRules = await contextAgent.run(query);
@@ -75,6 +119,7 @@ export class RetrievalService {
     return matches
       .map((match, index) => {
         const metadata = [
+          `origin=${match.origin}`,
           match.metadata.source ? `source=${match.metadata.source}` : "",
           match.metadata.pageNumber ? `page=${match.metadata.pageNumber}` : "",
           match.metadata.documentId
@@ -84,10 +129,7 @@ export class RetrievalService {
           .filter(Boolean)
           .join(", ");
 
-        return [
-          `Chunk ${index + 1}${metadata ? ` (${metadata})` : ""}:`,
-          match.content,
-        ].join("\n");
+        return [`Chunk ${index + 1} (${metadata}):`, match.content].join("\n");
       })
       .join("\n\n---\n\n");
   }

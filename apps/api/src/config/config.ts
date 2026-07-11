@@ -40,5 +40,8 @@ export const config: Config = {
   },
   publicSearch: {
     tavilyApiKey: env.TAVILY_API_KEY,
+    includeDomains: env.PUBLIC_SEARCH_INCLUDE_DOMAINS?.split(",")
+      .map((domain) => domain.trim())
+      .filter(Boolean),
   },
 };

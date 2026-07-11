@@ -25,6 +25,8 @@ describe("ruleContextPrompt", () => {
 
     assert.match(content, /Question: How many resources/);
     assert.match(content, /Retrieved chunks: Chunk 1/);
+    assert.match(content, /rulebook chunks come from/);
+    assert.match(content, /public_web chunks/);
     assert.match(content, /Remove irrelevant rules/);
   });
 });
@@ -41,7 +43,12 @@ describe("boardGameRuleMasterPrompt", () => {
     const systemContent = contentAsText(messages[0]?.content);
     const humanContent = contentAsText(messages[1]?.content);
 
-    assert.match(systemContent, /using only the rulebook excerpts/);
+    assert.match(systemContent, /using only the excerpts provided/);
+    assert.match(
+      systemContent,
+      /rulebook: an excerpt from an officially uploaded rulebook/,
+    );
+    assert.match(systemContent, /public_web: a public web search result/);
     assert.match(systemContent, /Page 3: Cities produce two resources/);
     assert.equal(humanContent, "How many resources does a city produce?");
   });

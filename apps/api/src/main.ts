@@ -13,6 +13,7 @@ import { RequestClassifierService } from "./application/retrieval/request-classi
 import { RetrievalService } from "./application/retrieval/retrieval-service";
 import { config } from "./config/config";
 import { InMemoryRulebookRepository } from "./infrastructure/persistence/rulebook/in-memory-rulebook-repository";
+import { TavilyPublicSearchService } from "./infrastructure/public-search/tavily-public-search-service";
 import { createApp } from "./presentation/http/app";
 import { HealthRouter } from "./presentation/http/health/health-router";
 import { IngestionRouter } from "./presentation/http/ingestion/ingestion-router";
@@ -36,9 +37,14 @@ const ingestionService = new IngestionService(vectorStore, {
   },
 });
 const requestClassifier = new RequestClassifierService();
+const publicSearchService = new TavilyPublicSearchService({
+  apiKey: config.publicSearch.tavilyApiKey,
+  includeDomains: config.publicSearch.includeDomains,
+});
 const retrievalService = new RetrievalService(
   vectorStore,
   requestClassifier,
+  publicSearchService,
   (context) => new RuleContextAgent("rule-context-agent", chatModel, context),
   (context) => new RuleAnswerAgent("rule-answer-agent", chatModel, context),
 );

@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { CONTEXT_ORIGINS } from "@board-game-rules-assistant/agent-core";
+
 export const RetrievalSearchRequestSchema = z
   .object({
     query: z.string().trim().min(1, "query is required"),
@@ -16,6 +18,7 @@ export const RetrievalMatchMetadataSchema = z
 
 export const RetrievalMatchSchema = z
   .object({
+    origin: z.enum(CONTEXT_ORIGINS),
     content: z.string(),
     metadata: RetrievalMatchMetadataSchema,
   })

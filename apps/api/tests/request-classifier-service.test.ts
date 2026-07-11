@@ -29,6 +29,23 @@ describe("RequestClassifierService", () => {
         .isGameRuleQuestion,
       true,
     );
+    assert.equal(
+      classifier.classify("how to play Cluedo board game?").isGameRuleQuestion,
+      true,
+    );
+    assert.equal(
+      classifier.classify("how to play everdell ?").isGameRuleQuestion,
+      true,
+    );
+    assert.equal(
+      classifier.classify("Can I trade sheep in Catan?").isGameRuleQuestion,
+      true,
+    );
+    assert.equal(
+      classifier.classify("Who plays first when we roll the same number?")
+        .isGameRuleQuestion,
+      true,
+    );
   });
 
   it("classifies unrelated requests as out of scope", () => {
@@ -45,6 +62,14 @@ describe("RequestClassifierService", () => {
     );
     assert.equal(
       classifier.classify("How do I open a browser window?").isGameRuleQuestion,
+      false,
+    );
+    assert.equal(
+      classifier.classify("How do I deal with stress?").isGameRuleQuestion,
+      false,
+    );
+    assert.equal(
+      classifier.classify("How do I play the guitar?").isGameRuleQuestion,
       false,
     );
   });

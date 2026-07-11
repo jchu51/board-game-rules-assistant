@@ -12,6 +12,7 @@ import type {
 
 type TavilyPublicSearchServiceOptions = {
   apiKey: string;
+  includeDomains?: string[];
   defaultMaxResults?: number;
   searchDepth?: PublicSearchDepth;
   includeRawContent?: boolean | "markdown" | "text";
@@ -63,7 +64,7 @@ export class TavilyPublicSearchService implements PublicSearchService {
 
     const response = await tool.invoke({
       query,
-      includeDomains: input.includeDomains,
+      includeDomains: input.includeDomains ?? this.options.includeDomains,
       excludeDomains: input.excludeDomains,
     });
 

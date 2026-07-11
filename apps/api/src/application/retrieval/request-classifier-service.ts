@@ -10,6 +10,7 @@ const BOARD_GAME_NAMES = [
   "ark nova",
   "azul",
   "catan",
+  "everdell",
   "gloomhaven",
   "pandemic",
   "root",
@@ -23,6 +24,8 @@ const RULE_TERMS = [
   "action",
   "allowed",
   "attack",
+  "bid",
+  "board game",
   "build",
   "card",
   "city",
@@ -33,25 +36,37 @@ const RULE_TERMS = [
   "draw",
   "end game",
   "game end",
+  "goal",
   "hand",
   "hand limit",
   "legal",
+  "meeple",
   "move",
+  "objective",
+  "pawn",
   "pay",
+  "penalty",
   "phase",
+  "piece",
   "placement",
   "player",
   "point",
   "resource",
   "road",
+  "roll",
   "round",
   "rule",
   "score",
   "setup",
+  "shuffle",
+  "tie",
+  "tile",
   "token",
+  "trade",
   "turn",
   "victory",
   "win",
+  "worker",
 ];
 
 const QUESTION_TERMS = [
@@ -83,8 +98,11 @@ export class RequestClassifierService {
     const looksLikeQuestion = QUESTION_TERMS.some((term) =>
       searchableQuery.startsWith(`${term} `),
     );
+    const asksHowToPlayKnownGame =
+      searchableQuery.startsWith("how to play ") && mentionsKnownGame;
     const isGameRuleQuestion =
-      mentionsRuleTerm && (mentionsKnownGame || looksLikeQuestion);
+      asksHowToPlayKnownGame ||
+      (mentionsRuleTerm && (mentionsKnownGame || looksLikeQuestion));
 
     return {
       isGameRuleQuestion,
