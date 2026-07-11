@@ -5,17 +5,28 @@
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
   "scripts": {
     "build": "rm -rf dist && tsc",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx src/postgres/migrate.ts",
+    "db:check": "drizzle-kit check",
     "typecheck": "tsc --noEmit",
     "test": "tsc --noEmit -p tests/tsconfig.json && node --import tsx --test tests/*.test.ts"
   },
   "dependencies": {
-    "@board-game-rules-assistant/rag-core": "^0.1.0"
+    "@board-game-rules-assistant/rag-core": "^0.1.0",
+    "drizzle-orm": "^0.45.2",
+    "postgres": "^3.4.9"
   },
   "devDependencies": {
     "@types/node": "^24.13.2",
+    "drizzle-kit": "^0.31.10",
     "tsx": "^4.23.0",
     "typescript": "^6.0.3"
   }

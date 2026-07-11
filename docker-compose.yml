@@ -8,6 +8,11 @@ services:
       HOST: 0.0.0.0
       PORT: 8000
       CORS_ORIGIN: http://localhost:5173
+      DATABASE_URL: postgres://board_game_rules:board_game_rules@postgres:5432/board_game_rules
+      PERSISTENCE_DRIVER: postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
     ports:
       - "8000:8000"
     volumes:
@@ -26,6 +31,23 @@ services:
       - web_node_modules:/workspace/node_modules
     command: sh -c "npm install && npm run dev -w web -- --host 0.0.0.0"
 
+  postgres:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_DB: board_game_rules
+      POSTGRES_USER: board_game_rules
+      POSTGRES_PASSWORD: board_game_rules
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U board_game_rules -d board_game_rules"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
 volumes:
   api_node_modules:
   web_node_modules:
+  postgres_data:
