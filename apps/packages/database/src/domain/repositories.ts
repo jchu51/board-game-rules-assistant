@@ -79,6 +79,15 @@ export type LibraryRepository = {
     embeddingDimensions: number;
     objectStorageKey?: string | null;
   }): Promise<DocumentVersionRecord>;
+  createGlobalDraftVersion(input: {
+    documentId: string;
+    checksum: string;
+    embeddingProvider: string;
+    embeddingModel: string;
+    embeddingDimensions: number;
+    objectStorageKey?: string | null;
+  }): Promise<DocumentVersionRecord>;
+  startGlobalVersionProcessing(input: { versionId: string }): Promise<DocumentVersionRecord>;
   getVersion(input: { versionId: string }): Promise<DocumentVersionRecord | null>;
   markGlobalVersionReady(input: { versionId: string; chunkCount: number }): Promise<DocumentVersionRecord>;
   verifyGlobalVersion(input: { versionId: string; verifiedBy: string }): Promise<DocumentVersionRecord>;

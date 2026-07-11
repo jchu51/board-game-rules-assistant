@@ -42,9 +42,11 @@ export class LibraryService {
     if (input.documentId && !existing) throw new UnauthorizedResourceError();
     const checksum = createHash("sha256").update(await readFile(input.filePath).catch(() => input.pdfName)).digest("hex");
     const document = existing ?? await this.library.createDocument({ gameId: input.gameId, ownerId: null, visibility: "global", kind: input.kind, title: input.title, fileSizeBytes: input.fileSize });
-    const version = await this.library.createVersion({ documentId: document.id, checksum, embeddingProvider: "openai", embeddingModel: this.embedding.embeddingModel, embeddingDimensions: this.embedding.embeddingDimensions });
+    const draft = await this.library.createGlobalDraftVersion({ documentId: document.id, checksum, embeddingProvider: "openai", embeddingModel: this.embedding.embeddingModel, embeddingDimensions: this.embedding.embeddingDimensions });
+    assertTransition(draft.status, "processing");
+    const version = await this.library.startGlobalVersionProcessing({ versionId: draft.id });
     try {
-      const result = await this.ingestion.ingestPdf({ actor: input.actor, gameId: input.gameId, title: input.title, kind: input.kind, documentId: document.id, filePath: input.filePath, source: input.pdfName, metadata: { documentId: document.id, documentVersion: version.id, gameId: input.gameId, visibility: "community" } });
+      const result = await this.ingestion.ingestPdf({ actor: input.actor, gameId: input.gameId, title: input.title, kind: input.kind, documentId: document.id, filePath: input.filePath, source: input.pdfName, metadata: { documentId: document.id, documentVersion: version.id, gameId: input.gameId, visibility: "global" } });
       assertTransition(version.status, "ready");
       return { document, version: await this.library.markGlobalVersionReady({ versionId: version.id, chunkCount: result.chunkCount }) };
     } catch (error) {

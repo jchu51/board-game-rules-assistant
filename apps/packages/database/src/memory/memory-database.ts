@@ -284,6 +284,29 @@ export const createMemoryPersistence = async (): Promise<Persistence> => {
         versions.set(record.id, clone(record));
         return clone(record);
       },
+      async createGlobalDraftVersion(input) {
+        const document = documents.get(input.documentId);
+        if (!document || document.visibility !== "global") throw new PersistenceNotFoundError("global document");
+        const versionNumber = Math.max(0, ...[...versions.values()].filter((version) => version.documentId === input.documentId).map((version) => version.versionNumber)) + 1;
+        const record: DocumentVersionRecord = {
+          id: randomUUID(), documentId: input.documentId, versionNumber, status: "draft",
+          checksum: input.checksum, embeddingProvider: input.embeddingProvider,
+          embeddingModel: input.embeddingModel, embeddingDimensions: input.embeddingDimensions,
+          chunkCount: 0, failureCode: null, failureMessage: null, activatedAt: null,
+          publishedAt: null, verifiedAt: null, verifiedBy: null,
+          objectStorageKey: input.objectStorageKey ?? null, ...createTimestamped(),
+        };
+        versions.set(record.id, clone(record));
+        return clone(record);
+      },
+      async startGlobalVersionProcessing({ versionId }) {
+        const record = versions.get(versionId);
+        const document = record && documents.get(record.documentId);
+        if (!record || document?.visibility !== "global" || record.status !== "draft") throw new PersistenceNotFoundError("draft global document version");
+        const updated = { ...record, status: "processing" as const, updatedAt: now() };
+        versions.set(versionId, clone(updated));
+        return clone(updated);
+      },
       async getVersion({ versionId }) {
         const record = versions.get(versionId);
         return record ? clone(record) : null;

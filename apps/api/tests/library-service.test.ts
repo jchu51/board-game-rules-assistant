@@ -36,6 +36,34 @@ test("a ready global version cannot publish until an admin verifies it", async (
   assert.equal((await service.publishGlobalVersion(admin, created.version.id)).status, "published");
 });
 
+test("persists draft then transitions it to processing before ingestion with canonical global metadata", async () => {
+  const persistence = await createMemoryPersistence();
+  const game = await persistence.library.createGame({ name: "Root", slug: "root" });
+  const events: string[] = [];
+  const library = {
+    ...persistence.library,
+    async createGlobalDraftVersion(input: Parameters<typeof persistence.library.createGlobalDraftVersion>[0]) {
+      const version = await persistence.library.createGlobalDraftVersion(input);
+      events.push(`created:${version.status}`);
+      return version;
+    },
+    async startGlobalVersionProcessing(input: Parameters<typeof persistence.library.startGlobalVersionProcessing>[0]) {
+      const version = await persistence.library.startGlobalVersionProcessing(input);
+      events.push(`started:${version.status}`);
+      return version;
+    },
+  };
+  const service = new LibraryService(library, new AccessPolicyService(persistence.policies, library), {
+    async ingestPdf(input) {
+      events.push("ingested");
+      assert.equal(input.metadata?.visibility, "global");
+      return { documentCount: 1, chunkCount: 1 };
+    },
+  }, { embeddingModel: "test", embeddingDimensions: 3072 });
+  await service.createGlobalDraft({ actor: admin, gameId: game.id, filePath: "/tmp/root.pdf", pdfName: "root.pdf", fileSize: 1, title: "Rules", kind: "base_rules" });
+  assert.deepEqual(events, ["created:draft", "started:processing", "ingested"]);
+});
+
 test("publishing version two archives version one atomically", async () => {
   const { game, service, persistence } = await setup();
   const first = await service.createGlobalDraft({ actor: admin, gameId: game.id, filePath: "/tmp/v1.pdf", pdfName: "v1.pdf", fileSize: 1, title: "Rules", kind: "base_rules" });

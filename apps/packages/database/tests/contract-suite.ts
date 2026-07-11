@@ -173,7 +173,7 @@ export const runPersistenceContract = (
         content: string,
         documentId: string,
         documentVersion: string,
-        visibility: "private" | "shared",
+        visibility: "private" | "global" | "shared",
       ): RulebookDocument =>
         new Document({
           pageContent: content,
@@ -251,16 +251,28 @@ export const runPersistenceContract = (
         kind: "base_rules",
         title: "Official rules",
       });
-      const globalFirst = await createVersion(globalDocument.id, "global-v1");
+      const globalFirstDraft = await persistence.library.createGlobalDraftVersion({
+        documentId: globalDocument.id, checksum: "global-v1", embeddingProvider: "openai",
+        embeddingModel: "test", embeddingDimensions: 3072,
+      });
+      assert.equal(globalFirstDraft.status, "draft");
+      const globalFirst = await persistence.library.startGlobalVersionProcessing({ versionId: globalFirstDraft.id });
+      await assert.rejects(() => persistence.library.startGlobalVersionProcessing({ versionId: globalFirst.id }));
       await persistence.vectorStore.upsert([
-        createChunk("old global rule", globalDocument.id, globalFirst.id, "shared"),
+        createChunk("old global rule", globalDocument.id, globalFirst.id, "global"),
       ]);
       await persistence.library.markGlobalVersionReady({ versionId: globalFirst.id, chunkCount: 1 });
+      await assert.rejects(() => persistence.library.markGlobalVersionReady({ versionId: globalFirst.id, chunkCount: 1 }));
       await persistence.library.verifyGlobalVersion({ versionId: globalFirst.id, verifiedBy: owner.id });
       await persistence.library.publishGlobalVersion({ versionId: globalFirst.id });
-      const globalReplacement = await createVersion(globalDocument.id, "global-v2");
+      await assert.rejects(() => persistence.library.publishGlobalVersion({ versionId: globalFirst.id }));
+      const globalReplacementDraft = await persistence.library.createGlobalDraftVersion({
+        documentId: globalDocument.id, checksum: "global-v2", embeddingProvider: "openai",
+        embeddingModel: "test", embeddingDimensions: 3072,
+      });
+      const globalReplacement = await persistence.library.startGlobalVersionProcessing({ versionId: globalReplacementDraft.id });
       await persistence.vectorStore.upsert([
-        createChunk("new global rule", globalDocument.id, globalReplacement.id, "shared"),
+        createChunk("new global rule", globalDocument.id, globalReplacement.id, "global"),
       ]);
       await persistence.library.markGlobalVersionReady({ versionId: globalReplacement.id, chunkCount: 1 });
       await persistence.library.verifyGlobalVersion({ versionId: globalReplacement.id, verifiedBy: owner.id });

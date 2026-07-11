@@ -189,6 +189,24 @@ export const createPostgresRepositories = (db: PostgresDatabase): {
         );
       });
     },
+    async createGlobalDraftVersion(input) {
+      return db.transaction(async (tx) => {
+        const document = await tx.select({ id: documents.id }).from(documents).where(and(eq(documents.id, input.documentId), eq(documents.visibility, "global"))).limit(1);
+        if (!document[0]) throw new PersistenceNotFoundError("global document");
+        const latest = await tx.select({ versionNumber: documentVersions.versionNumber }).from(documentVersions)
+          .where(eq(documentVersions.documentId, input.documentId)).orderBy(sql`${documentVersions.versionNumber} desc`).limit(1);
+        return firstOrThrow(await tx.insert(documentVersions).values({
+          ...input, objectStorageKey: input.objectStorageKey ?? null,
+          versionNumber: (latest[0]?.versionNumber ?? 0) + 1, status: "draft",
+        }).returning(), "global draft document version");
+      });
+    },
+    async startGlobalVersionProcessing({ versionId }) {
+      return firstOrThrow(await db.update(documentVersions).set({ status: "processing", updatedAt: new Date() }).where(and(
+        eq(documentVersions.id, versionId), eq(documentVersions.status, "draft"),
+        sql`exists(select 1 from ${documents} where ${documents.id} = ${documentVersions.documentId} and ${documents.visibility} = 'global')`,
+      )).returning(), "draft global document version");
+    },
     async getVersion({ versionId }) {
       return (await db.select().from(documentVersions).where(eq(documentVersions.id, versionId)).limit(1))[0] ?? null;
     },

@@ -9,7 +9,7 @@ export type RulebookSourceType =
   | "community_rule_pack"
   | "premium_rule_pack";
 
-export type RulebookVisibility = "private" | "shared" | "community" | "premium";
+export type RulebookVisibility = "private" | "global" | "shared" | "community" | "premium";
 
 export type RulebookChunkMetadata = {
   documentChunkId?: string;
