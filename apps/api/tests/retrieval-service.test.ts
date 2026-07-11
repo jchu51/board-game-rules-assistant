@@ -24,6 +24,7 @@ import { RetrievalService } from "../src/application/retrieval/retrieval-service
 import { InMemoryConversationRepository } from "../src/infrastructure/persistence/conversation/in-memory-conversation-repository";
 
 const CONVERSATION_ID = "11111111-1111-4111-8111-111111111111";
+const GAME_ID = "22222222-2222-4222-8222-222222222222";
 
 class KeywordEmbeddings implements EmbeddingsInterface {
   private readonly terms = ["city", "resources", "road", "infection"];
@@ -85,7 +86,7 @@ const createRulebookDocument = (
 ): RulebookDocumentInterface =>
   new Document({
     pageContent,
-    metadata,
+    metadata: { gameId: GAME_ID, visibility: "shared", ...metadata },
   }) as RulebookDocumentInterface;
 
 const createVectorStore = async (
@@ -122,6 +123,7 @@ describe("RetrievalService", () => {
 
     const result = await service.search({
       conversationId: CONVERSATION_ID,
+      gameId: GAME_ID,
       query: "How many resources does a city produce?",
     });
 
@@ -159,6 +161,7 @@ describe("RetrievalService", () => {
 
     const result = await service.search({
       conversationId: CONVERSATION_ID,
+      gameId: GAME_ID,
       query: "How many resources does a city produce?",
     });
 
@@ -194,6 +197,7 @@ describe("RetrievalService", () => {
 
     const result = await service.search({
       conversationId: CONVERSATION_ID,
+      gameId: GAME_ID,
       query: "How many resources does a city produce?",
     });
 
@@ -237,6 +241,7 @@ describe("RetrievalService", () => {
 
     const result = await service.search({
       conversationId: CONVERSATION_ID,
+      gameId: GAME_ID,
       query: "How many resources does a city produce?",
     });
 
@@ -273,6 +278,7 @@ describe("RetrievalService", () => {
 
     const result = await service.search({
       conversationId: CONVERSATION_ID,
+      gameId: GAME_ID,
       query: "What is the weather tomorrow?",
     });
 
@@ -319,6 +325,7 @@ describe("RetrievalService", () => {
 
     const result = await service.search({
       conversationId: CONVERSATION_ID,
+      gameId: GAME_ID,
       query: "How many resources does a city produce?",
     });
 
@@ -386,18 +393,28 @@ describe("RetrievalService", () => {
 
     await service.search({
       conversationId: CONVERSATION_ID,
+      gameId: GAME_ID,
       query: "In Everdell, how many cards does the first player start with?",
     });
     const followUpResult = await service.search({
       conversationId: CONVERSATION_ID,
+      gameId: GAME_ID,
       query: "And the second one?",
     });
     const isolatedResult = await service.search({
       conversationId: "22222222-2222-4222-8222-222222222222",
+      gameId: GAME_ID,
       query: "And the second one?",
     });
 
     assert.equal(vectorStore.searches.length, 2);
+    assert.ok(
+      vectorStore.searches.every(
+        (search) =>
+          search.scope.gameId === GAME_ID &&
+          search.scope.userId === undefined,
+      ),
+    );
     assert.match(
       vectorStore.searches[1]?.query ?? "",
       /In Everdell, how many cards does the first player start with\?/,

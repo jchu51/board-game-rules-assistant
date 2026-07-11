@@ -78,4 +78,65 @@ Observed: both exited 0; all workspace TypeScript projects passed.
 
 ## Concern
 
-The existing API retrieval layer has no game identity in its request contract. It now supplies `conversationId` as the required serializable game scope solely to keep the existing consumer type-safe. A later API/application task should derive the real `gameId` and authenticated `userId` from the owned conversation before using PostgreSQL retrieval.
+Task 8 should derive the authenticated `userId` and canonical `gameId` from the owned conversation, then remove `gameId` from the public request payload. In this pre-auth stage the public payload requires only `gameId`; it does not accept `userId`.
+
+## Review fixes
+
+### Additional RED evidence
+
+API boundary tests were updated first to require `gameId`. The test TypeScript check failed as expected because `RetrievalSearchInput` did not yet expose it:
+
+```text
+apps/api/tests/retrieval-service.test.ts(...): error TS2353:
+Object literal may only specify known properties, and 'gameId' does not exist in type 'RetrievalSearchInput'.
+```
+
+Migration-state tests were also added before the health implementation changed:
+
+```text
+health accepts the current migration state: passed
+health rejects an empty migration journal: failed — Missing expected rejection
+health rejects a stale migration journal: failed — Missing expected rejection
+tests 3, pass 1, fail 2
+```
+
+### Review-fix GREEN evidence
+
+Full compiled database suite against live localhost PostgreSQL:
+
+```text
+memory persistence contract: 3 passed
+memory vector store: 3 passed
+migration schema/idempotency: 2 passed
+postgres persistence contract: 3 passed
+health current/empty/stale migration states: 3 passed
+tests 14, pass 14, fail 0
+```
+
+Compiled rag-core suite:
+
+```text
+tests 5, pass 5, fail 0
+```
+
+The authorization test explicitly scopes as Bob and proves Alice's private chunk is absent while the global chunk for the same game remains. The same shared assertion ran against memory and live PostgreSQL.
+
+Relevant compiled API suites:
+
+```text
+Retrieval schemas: 2 passed
+RetrievalService: 7 passed
+tests 9, pass 9, fail 0
+```
+
+The service assertion verifies the explicit `gameId` reaches vector scope and no client-provided `userId` is present.
+
+Final commands:
+
+```bash
+npm run typecheck
+npm run build -w web
+git diff --check
+```
+
+All exited 0. The public API and web client now require an explicit game identifier; `RetrievalService` no longer derives or fabricates it from `conversationId`. `CURRENT_MIGRATION_STATE` names the expected migration count and latest applied timestamp and must be advanced with future production migrations.

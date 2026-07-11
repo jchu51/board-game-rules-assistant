@@ -6,6 +6,7 @@ type ApiErrorResponse = {
 
 export type RetrievalSearchInput = {
   conversationId: string;
+  gameId: string;
   query: string;
 };
 
@@ -28,6 +29,7 @@ export type RetrievalSearchResponse = {
 
 export async function searchRulebooks({
   conversationId,
+  gameId,
   query,
 }: RetrievalSearchInput): Promise<RetrievalSearchResponse> {
   const response = await fetch(`${API_BASE_URL}/retrieval/search`, {
@@ -35,7 +37,7 @@ export async function searchRulebooks({
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ conversationId, query }),
+    body: JSON.stringify({ conversationId, gameId, query }),
   });
 
   if (!response.ok) {

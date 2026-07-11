@@ -39,6 +39,7 @@ export class RetrievalService {
 
   async search({
     conversationId,
+    gameId,
     query,
   }: RetrievalSearchInput): Promise<RetrievalSearchResult> {
     const conversationMessages = this.conversationRepository
@@ -65,7 +66,7 @@ export class RetrievalService {
     const results = await this.vectorStore.similaritySearchVectorWithScore({
       query: classification.normalizedQuery,
       topK: DEFAULT_TOP_K,
-      scope: { gameId: conversationId },
+      scope: { gameId },
     });
 
     const matches: RetrievalMatch[] = results

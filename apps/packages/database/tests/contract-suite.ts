@@ -201,6 +201,15 @@ export const runPersistenceContract = (
         scope: { gameId: game.id },
       });
       assert.deepEqual(globalResults.map((result) => result.pageContent), ["new global rule"]);
+      const intruderResults = await persistence.vectorStore.similaritySearch({
+        query: "rule",
+        topK: 10,
+        scope: { gameId: game.id, userId: intruder.id },
+      });
+      assert.deepEqual(
+        intruderResults.map((result) => result.pageContent),
+        ["new global rule"],
+      );
 
       const conversation = await persistence.conversations.createConversation({
         actor,

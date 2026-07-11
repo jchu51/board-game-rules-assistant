@@ -11,16 +11,19 @@ describe("Retrieval schemas", () => {
     assert.deepEqual(
       RetrievalSearchRequestSchema.parse({
         conversationId: "11111111-1111-4111-8111-111111111111",
+        gameId: "22222222-2222-4222-8222-222222222222",
         query: "  How many resources does a city produce?  ",
       }),
       {
         conversationId: "11111111-1111-4111-8111-111111111111",
+        gameId: "22222222-2222-4222-8222-222222222222",
         query: "How many resources does a city produce?",
       },
     );
 
     const result = RetrievalSearchRequestSchema.safeParse({
       conversationId: "11111111-1111-4111-8111-111111111111",
+      gameId: "22222222-2222-4222-8222-222222222222",
       query: "How many resources does a city produce?",
       topK: 10,
     });
@@ -30,12 +33,21 @@ describe("Retrieval schemas", () => {
     assert.equal(
       RetrievalSearchRequestSchema.safeParse({
         conversationId: "not-a-uuid",
+        gameId: "22222222-2222-4222-8222-222222222222",
         query: "How many resources does a city produce?",
       }).success,
       false,
     );
     assert.equal(
       RetrievalSearchRequestSchema.safeParse({
+        gameId: "22222222-2222-4222-8222-222222222222",
+        query: "How many resources does a city produce?",
+      }).success,
+      false,
+    );
+    assert.equal(
+      RetrievalSearchRequestSchema.safeParse({
+        conversationId: "11111111-1111-4111-8111-111111111111",
         query: "How many resources does a city produce?",
       }).success,
       false,

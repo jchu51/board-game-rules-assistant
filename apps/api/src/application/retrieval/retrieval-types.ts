@@ -1,5 +1,6 @@
 export type RetrievalSearchInput = {
   conversationId: string;
+  gameId: string;
   query: string;
 };
 

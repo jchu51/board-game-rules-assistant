@@ -59,6 +59,19 @@ const gamesByToken: Record<string, string> = {
   wingspan: "Wingspan",
 };
 
+const gameIdsByName: Record<string, string> = {
+  Azul: "00000000-0000-4000-8000-000000000001",
+  Catan: "00000000-0000-4000-8000-000000000002",
+  Gloomhaven: "00000000-0000-4000-8000-000000000003",
+  Monopoly: "00000000-0000-4000-8000-000000000004",
+  Pandemic: "00000000-0000-4000-8000-000000000005",
+  Root: "00000000-0000-4000-8000-000000000006",
+  Scythe: "00000000-0000-4000-8000-000000000007",
+  "Terraforming Mars": "00000000-0000-4000-8000-000000000008",
+  "Ticket to Ride": "00000000-0000-4000-8000-000000000009",
+  Wingspan: "00000000-0000-4000-8000-000000000010",
+};
+
 const exampleQuestions = [
   {
     id: "ask-example-catan-road-btn",
@@ -487,8 +500,13 @@ export function AskPage() {
     const isStaleSearch = () => activeSearchIdRef.current !== searchId;
 
     try {
+      const gameId = gameIdsByName[detectedGame ?? currentGame ?? ""];
+      if (!gameId) {
+        throw new Error("Name the board game so its rulebook can be searched.");
+      }
       const response = await searchRulebooks({
         conversationId: conversationIdRef.current,
+        gameId,
         query: question,
       });
       if (isStaleSearch()) return;

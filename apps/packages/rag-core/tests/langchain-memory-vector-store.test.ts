@@ -88,25 +88,32 @@ describe("LangchainMemoryVectorStore", () => {
     assert.ok(bestMatch[1] > weakestMatch[1], "results ordered by score");
   });
 
-  it("applies authorized scope before returning similarity search results", async () => {
+  it("excludes another owner's private chunks while retaining global game chunks", async () => {
     const vectorStore = new LangchainMemoryVectorStore(new KeywordEmbeddings());
 
     await vectorStore.upsert([
-      createDocument("A city produces two resources.", "catan", "game-1"),
       createDocument(
-        "Increase the infection rate after an epidemic.",
-        "pandemic",
-        "game-2",
+        "Alice private resources.",
+        "alice-private",
+        "game-1",
+        "private",
+        "alice",
+      ),
+      createDocument(
+        "Global resources rule.",
+        "global-rule",
+        "game-1",
+        "shared",
       ),
     ]);
 
     const results = await vectorStore.similaritySearch({
-      query: "How many resources does a city produce?",
+      query: "resources",
       topK: 2,
-      scope: { gameId: "game-2" },
+      scope: { gameId: "game-1", userId: "bob" },
     });
 
     assert.equal(results.length, 1);
-    assert.equal(results[0]?.metadata.documentId, "pandemic");
+    assert.equal(results[0]?.metadata.documentId, "global-rule");
   });
 });
