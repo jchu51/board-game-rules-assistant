@@ -16,15 +16,18 @@ export const runPersistenceContract = (
         privateUploadLimit: 0,
         conversationTtlDays: 7,
       });
-      assert.equal(
-        (await persistence.policies.getTierPolicy("standard"))
-          .privateUploadLimit,
-        3,
-      );
-      assert.equal(
-        (await persistence.policies.getTierPolicy("pro")).privateUploadLimit,
-        null,
-      );
+      assert.deepEqual(await persistence.policies.getTierPolicy("standard"), {
+        tier: "standard",
+        retrievalTopK: 5,
+        privateUploadLimit: 3,
+        conversationTtlDays: null,
+      });
+      assert.deepEqual(await persistence.policies.getTierPolicy("pro"), {
+        tier: "pro",
+        retrievalTopK: 8,
+        privateUploadLimit: null,
+        conversationTtlDays: null,
+      });
       await persistence.close();
     });
 
