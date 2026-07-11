@@ -8,6 +8,9 @@ dist/
 
 storage/
 
+.superpowers/
+.worktrees/
+
 .env
 .env.*
 !.env.example
