@@ -11,10 +11,15 @@ export type Config = {
   ingestion: {
     openAiApiKey: string;
     embeddingModel: string;
+    embeddingDimensions: number;
     defaultChunkSize: number;
     defaultChunkOverlap: number;
     uploadDirectory: string;
     maxUploadSizeBytes: number;
+  };
+  persistence: {
+    driver: "memory" | "postgres";
+    databaseUrl?: string;
   };
   publicSearch: {
     tavilyApiKey: string;

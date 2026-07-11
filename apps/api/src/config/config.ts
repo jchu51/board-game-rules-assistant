@@ -33,10 +33,15 @@ export const config: Config = {
   ingestion: {
     openAiApiKey: env.OPENAI_API_KEY,
     embeddingModel: env.INGESTION_EMBEDDING_MODEL,
+    embeddingDimensions: env.INGESTION_EMBEDDING_DIMENSIONS,
     defaultChunkSize: env.INGESTION_CHUNK_SIZE,
     defaultChunkOverlap: env.INGESTION_CHUNK_OVERLAP,
     uploadDirectory: env.INGESTION_UPLOAD_DIRECTORY,
     maxUploadSizeBytes: env.INGESTION_MAX_UPLOAD_SIZE_BYTES,
+  },
+  persistence: {
+    driver: env.PERSISTENCE_DRIVER,
+    databaseUrl: env.DATABASE_URL,
   },
   publicSearch: {
     tavilyApiKey: env.TAVILY_API_KEY,

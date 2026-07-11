@@ -1,7 +1,7 @@
 import {
   createOpenAIEmbeddings,
-  LangchainMemoryVectorStore,
 } from "@board-game-rules-assistant/rag-core";
+import { createPersistence } from "@board-game-rules-assistant/database";
 import {
   LLMService,
   RuleAnswerAgent,
@@ -29,7 +29,15 @@ const chatModel = await llmService.init(config.agent.chatModel, {
   apiKey: config.ingestion.openAiApiKey,
   temperature: 0,
 });
-const vectorStore = new LangchainMemoryVectorStore(embeddings);
+const persistence = await createPersistence({
+  driver: config.persistence.driver,
+  nodeEnv: config.nodeEnv,
+  databaseUrl: config.persistence.databaseUrl,
+  embeddings,
+  expectedDimensions: config.ingestion.embeddingDimensions,
+});
+await persistence.healthCheck();
+const vectorStore = persistence.vectorStore;
 const rulebookRepository = new InMemoryRulebookRepository();
 const conversationRepository = new InMemoryConversationRepository();
 const ingestionService = new IngestionService(vectorStore, {
@@ -82,10 +90,23 @@ const server = app.listen(config.port, config.host, () => {
   console.log(`API listening on http://${config.host}:${config.port}`);
 });
 
+let isShuttingDown = false;
 const shutdown = (signal: NodeJS.Signals) => {
+  if (isShuttingDown) return;
+  isShuttingDown = true;
   console.log(`${signal} received. Closing API server.`);
-  server.close(() => {
-    process.exit(0);
+  server.close(async (error) => {
+    try {
+      await persistence.close();
+    } catch (closeError) {
+      console.error("Failed to close persistence:", closeError);
+      process.exitCode = 1;
+    }
+
+    if (error) {
+      console.error("Failed to close API server:", error);
+      process.exitCode = 1;
+    }
   });
 };
 

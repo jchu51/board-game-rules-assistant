@@ -44,6 +44,14 @@ export const EnvSchema = z.object({
   ),
   AGENT_CHAT_MODEL: withDefault("openai:gpt-4o-mini"),
   INGESTION_EMBEDDING_MODEL: withDefault("text-embedding-3-large"),
+  INGESTION_EMBEDDING_DIMENSIONS: numberWithDefault(3072).pipe(
+    z.number().int().positive(),
+  ),
+  PERSISTENCE_DRIVER: z.preprocess(
+    (value) => emptyToUndefined(value) ?? "postgres",
+    z.enum(["memory", "postgres"]),
+  ),
+  DATABASE_URL: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
   INGESTION_CHUNK_SIZE: numberWithDefault(500).pipe(
     z.number().int().positive(),
   ),
@@ -54,6 +62,22 @@ export const EnvSchema = z.object({
   INGESTION_MAX_UPLOAD_SIZE_BYTES: numberWithDefault(40 * 1024 * 1024).pipe(
     z.number().int().positive(),
   ),
+}).superRefine((env, context) => {
+  if (env.NODE_ENV === "production" && env.PERSISTENCE_DRIVER === "memory") {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["PERSISTENCE_DRIVER"],
+      message: "production requires postgres persistence",
+    });
+  }
+
+  if (env.PERSISTENCE_DRIVER === "postgres" && !env.DATABASE_URL) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["DATABASE_URL"],
+      message: "DATABASE_URL is required for postgres persistence",
+    });
+  }
 });
 
 export type Env = z.infer<typeof EnvSchema>;

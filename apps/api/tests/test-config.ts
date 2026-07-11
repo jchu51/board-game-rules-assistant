@@ -10,12 +10,16 @@ export const testConfig: Config = {
     defaultChunkOverlap: 100,
     defaultChunkSize: 500,
     embeddingModel: "text-embedding-3-large",
+    embeddingDimensions: 3072,
     maxUploadSizeBytes: 40 * 1024 * 1024,
     openAiApiKey: "test-api-key",
     uploadDirectory: "/tmp",
   },
   nodeEnv: "test",
   port: 0,
+  persistence: {
+    driver: "memory",
+  },
   publicSearch: {
     tavilyApiKey: "test-tavily-key",
   },

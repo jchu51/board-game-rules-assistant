@@ -4,8 +4,43 @@ import { describe, it } from "node:test";
 import { EnvSchema } from "../src/config/config-schema";
 
 describe("EnvSchema", () => {
+  const validEnv = {
+    DATABASE_URL: "postgres://localhost/test",
+    OPENAI_API_KEY: "test-key",
+    TAVILY_API_KEY: "test-tavily-key",
+  };
+
+  it("defaults local persistence to postgres", () => {
+    assert.equal(EnvSchema.parse(validEnv).PERSISTENCE_DRIVER, "postgres");
+  });
+
+  it("rejects memory persistence in production", () => {
+    assert.throws(
+      () =>
+        EnvSchema.parse({
+          ...validEnv,
+          NODE_ENV: "production",
+          PERSISTENCE_DRIVER: "memory",
+        }),
+      /production requires postgres/,
+    );
+  });
+
+  it("requires DATABASE_URL for postgres", () => {
+    assert.throws(
+      () =>
+        EnvSchema.parse({
+          ...validEnv,
+          PERSISTENCE_DRIVER: "postgres",
+          DATABASE_URL: "",
+        }),
+      /DATABASE_URL/,
+    );
+  });
+
   it("applies defaults while requiring the API keys", () => {
     const env = EnvSchema.parse({
+      DATABASE_URL: "postgres://localhost/test",
       OPENAI_API_KEY: "test-key",
       TAVILY_API_KEY: "test-tavily-key",
     });
@@ -50,6 +85,7 @@ describe("EnvSchema", () => {
 
   it("treats blank public search include domains as unset", () => {
     const env = EnvSchema.parse({
+      DATABASE_URL: "postgres://localhost/test",
       OPENAI_API_KEY: "test-key",
       TAVILY_API_KEY: "test-tavily-key",
       PUBLIC_SEARCH_INCLUDE_DOMAINS: "",
