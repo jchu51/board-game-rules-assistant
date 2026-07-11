@@ -30,10 +30,13 @@ class KeywordEmbeddings implements EmbeddingsInterface {
 const createDocument = (
   pageContent: string,
   documentId: string,
+  gameId = "game-1",
+  visibility: "private" | "shared" = "shared",
+  ownerUserId?: string,
 ): RulebookDocument =>
   new Document({
     pageContent,
-    metadata: { documentId },
+    metadata: { documentId, gameId, visibility, ownerUserId },
   }) as RulebookDocument;
 
 describe("LangchainMemoryVectorStore", () => {
@@ -52,6 +55,7 @@ describe("LangchainMemoryVectorStore", () => {
     const results = await vectorStore.similaritySearch({
       query: "How many resources does a city produce?",
       topK: 1,
+      scope: { gameId: "game-1" },
     });
 
     assert.equal(results.length, 1);
@@ -70,6 +74,7 @@ describe("LangchainMemoryVectorStore", () => {
     const results = await vectorStore.similaritySearchVectorWithScore({
       query: "How many resources does a city produce?",
       topK: 2,
+      scope: { gameId: "game-1" },
     });
 
     assert.equal(results.length, 2);
@@ -83,21 +88,22 @@ describe("LangchainMemoryVectorStore", () => {
     assert.ok(bestMatch[1] > weakestMatch[1], "results ordered by score");
   });
 
-  it("applies filters before returning similarity search results", async () => {
+  it("applies authorized scope before returning similarity search results", async () => {
     const vectorStore = new LangchainMemoryVectorStore(new KeywordEmbeddings());
 
     await vectorStore.upsert([
-      createDocument("A city produces two resources.", "catan"),
+      createDocument("A city produces two resources.", "catan", "game-1"),
       createDocument(
         "Increase the infection rate after an epidemic.",
         "pandemic",
+        "game-2",
       ),
     ]);
 
     const results = await vectorStore.similaritySearch({
-      filter: (document) => document.metadata.documentId === "pandemic",
       query: "How many resources does a city produce?",
       topK: 2,
+      scope: { gameId: "game-2" },
     });
 
     assert.equal(results.length, 1);

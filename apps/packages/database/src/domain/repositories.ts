@@ -64,6 +64,7 @@ export type LibraryRepository = {
   }): Promise<DocumentVersionRecord>;
   replaceActivePrivateVersion(input: {
     versionId: string;
+    userId: string;
     chunkCount: number;
   }): Promise<DocumentVersionRecord>;
   publishGlobalVersion(input: {

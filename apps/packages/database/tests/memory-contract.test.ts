@@ -17,7 +17,7 @@ const createChunk = (
 ): RulebookDocument =>
   new Document({
     pageContent,
-    metadata: { documentId },
+    metadata: { documentId, gameId: "game-1", visibility: "shared" },
   }) as RulebookDocument;
 
 test("vector upsert retains every chunk in a document batch", async () => {
@@ -31,6 +31,7 @@ test("vector upsert retains every chunk in a document batch", async () => {
   const results = await persistence.vectorStore.similaritySearch({
     query: "rules",
     topK: 10,
+    scope: { gameId: "game-1" },
   });
   assert.deepEqual(
     results.map((result) => result.pageContent),
@@ -54,6 +55,7 @@ test("vector upsert replaces the complete previous chunk set", async () => {
   const results = await persistence.vectorStore.similaritySearch({
     query: "rules",
     topK: 10,
+    scope: { gameId: "game-1" },
   });
   assert.deepEqual(
     results.map((result) => result.pageContent),
@@ -72,6 +74,7 @@ test("vector upsert clones input documents", async () => {
   const results = await persistence.vectorStore.similaritySearch({
     query: "rules",
     topK: 10,
+    scope: { gameId: "game-1" },
   });
   assert.equal(results.length, 1);
   assert.equal(results[0]?.pageContent, "Stored rules");

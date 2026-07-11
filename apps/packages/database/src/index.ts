@@ -3,3 +3,5 @@ export * from "./domain/models.js";
 export * from "./domain/repositories.js";
 export * from "./memory/memory-database.js";
 export * from "./postgres/schema.js";
+export * from "./postgres/persistence.js";
+export * from "./postgres/vector-store.js";

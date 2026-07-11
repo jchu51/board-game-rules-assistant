@@ -33,18 +33,41 @@ const createTimestamped = () => {
 class MemoryVectorStore implements VectorStore {
   private documents: RulebookDocument[] = [];
 
+  constructor(
+    private readonly isActiveAndAuthorized: (
+      document: RulebookDocument,
+      input: VectorStoreSimilaritySearchInput,
+    ) => boolean = ({ metadata }, input) =>
+      metadata.gameId === input.scope.gameId &&
+      (metadata.visibility !== "private" ||
+        (input.scope.userId !== undefined &&
+          metadata.ownerUserId === input.scope.userId)),
+  ) {}
+
   async upsert(records: RulebookDocument[]): Promise<void> {
-    const documentIds = new Set(
+    const recordKeys = new Set(
       records
-        .map((record) => record.metadata.documentId)
-        .filter((documentId): documentId is string => documentId !== undefined),
+        .map(
+          (record) =>
+            record.metadata.documentVersion ?? record.metadata.documentId,
+        )
+        .filter((key): key is string => key !== undefined),
     );
     this.documents = this.documents.filter(
       (document) =>
-        document.metadata.documentId === undefined ||
-        !documentIds.has(document.metadata.documentId),
+        (document.metadata.documentVersion ?? document.metadata.documentId) ===
+          undefined ||
+        !recordKeys.has(
+          (document.metadata.documentVersion ?? document.metadata.documentId)!,
+        ),
     );
-    this.documents.push(...records.map(clone));
+    this.documents.push(
+      ...records.map((record) => {
+        const copy = clone(record);
+        copy.metadata.documentChunkId ??= randomUUID();
+        return copy;
+      }),
+    );
   }
 
   async similaritySearch(
@@ -60,10 +83,10 @@ class MemoryVectorStore implements VectorStore {
   }
 
   private select(input: VectorStoreSimilaritySearchInput): RulebookDocument[] {
-    const filtered = input.filter
-      ? this.documents.filter((document) => input.filter?.(document))
-      : this.documents;
-    return filtered.slice(0, input.topK ?? 4);
+    const filtered = this.documents.filter((document) =>
+      this.isActiveAndAuthorized(document, input),
+    );
+    return filtered.slice(0, input.topK);
   }
 }
 
@@ -234,9 +257,17 @@ export const createMemoryPersistence = async (): Promise<Persistence> => {
         versions.set(versionId, clone(updated));
         return clone(updated);
       },
-      async replaceActivePrivateVersion({ versionId, chunkCount }) {
+      async replaceActivePrivateVersion({ versionId, userId, chunkCount }) {
         const record = versions.get(versionId);
         if (!record) throw new PersistenceNotFoundError("document version");
+        const document = documents.get(record.documentId);
+        if (
+          !document ||
+          document.visibility !== "private" ||
+          document.ownerId !== userId
+        ) {
+          throw new PersistenceNotFoundError("private document version");
+        }
         const timestamp = now();
         for (const version of versions.values()) {
           if (
@@ -386,7 +417,31 @@ export const createMemoryPersistence = async (): Promise<Persistence> => {
         return clone(result);
       },
     },
-    vectorStore: new MemoryVectorStore(),
+    vectorStore: new MemoryVectorStore(({ metadata }, input) => {
+      const document = metadata.documentId
+        ? documents.get(metadata.documentId)
+        : undefined;
+      const version = metadata.documentVersion
+        ? versions.get(metadata.documentVersion)
+        : undefined;
+      if (!document || !version) {
+        return (
+          metadata.gameId === input.scope.gameId &&
+          (metadata.visibility !== "private" ||
+            (input.scope.userId !== undefined &&
+              metadata.ownerUserId === input.scope.userId))
+        );
+      }
+      return (
+        document.gameId === input.scope.gameId &&
+        document.deletedAt === null &&
+        version.activatedAt !== null &&
+        (version.status === "ready" || version.status === "published") &&
+        (document.visibility === "global" ||
+          (input.scope.userId !== undefined &&
+            document.ownerId === input.scope.userId))
+      );
+    }),
     async healthCheck() {},
     async close() {},
   };

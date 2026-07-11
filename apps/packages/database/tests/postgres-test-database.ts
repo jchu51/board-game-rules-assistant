@@ -48,3 +48,20 @@ export async function createPostgresTestDatabase() {
     throw error;
   }
 }
+
+export class DeterministicEmbeddings {
+  async embedQuery(text: string): Promise<number[]> {
+    const seed = [...text].reduce(
+      (sum, character) => sum + character.charCodeAt(0),
+      0,
+    );
+    return Array.from(
+      { length: 3072 },
+      (_, index) => ((seed + index) % 101) / 100,
+    );
+  }
+
+  async embedDocuments(texts: string[]): Promise<number[][]> {
+    return Promise.all(texts.map((text) => this.embedQuery(text)));
+  }
+}

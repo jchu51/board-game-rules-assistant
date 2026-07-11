@@ -26,7 +26,7 @@ export class LangchainMemoryVectorStore implements VectorStore {
     return this.vectorStore.similaritySearch(
       input.query,
       input.topK,
-      input.filter,
+      (document) => this.isAuthorized(document as RulebookDocument, input),
       input.callbacks,
     );
   }
@@ -37,8 +37,21 @@ export class LangchainMemoryVectorStore implements VectorStore {
     return this.vectorStore.similaritySearchWithScore(
       input.query,
       input.topK,
-      input.filter,
+      (document) => this.isAuthorized(document as RulebookDocument, input),
       input.callbacks,
+    );
+  }
+
+  private isAuthorized(
+    document: RulebookDocument,
+    input: VectorStoreSimilaritySearchInput,
+  ): boolean {
+    const { metadata } = document;
+    return (
+      metadata.gameId === input.scope.gameId &&
+      (metadata.visibility !== "private" ||
+        (input.scope.userId !== undefined &&
+          metadata.ownerUserId === input.scope.userId))
     );
   }
 }

@@ -12,6 +12,7 @@ export type RulebookSourceType =
 export type RulebookVisibility = "private" | "shared" | "community" | "premium";
 
 export type RulebookChunkMetadata = {
+  documentChunkId?: string;
   documentId?: string;
   documentType?: string;
   documentVersion?: string;

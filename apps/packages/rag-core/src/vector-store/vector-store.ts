@@ -4,13 +4,16 @@ import type {
   RulebookDocumentInterface,
 } from "../documents/rulebook-document.js";
 
-export type VectorStoreFilter = (document: RulebookDocument) => boolean;
+export type VectorStoreScope = {
+  gameId: string;
+  userId?: string;
+};
 
 export type VectorStoreSimilaritySearchInput = {
   callbacks?: Callbacks;
-  filter?: VectorStoreFilter;
   query: string;
-  topK?: number;
+  topK: number;
+  scope: VectorStoreScope;
 };
 
 export interface VectorStore {

@@ -65,6 +65,7 @@ export class RetrievalService {
     const results = await this.vectorStore.similaritySearchVectorWithScore({
       query: classification.normalizedQuery,
       topK: DEFAULT_TOP_K,
+      scope: { gameId: conversationId },
     });
 
     const matches: RetrievalMatch[] = results
