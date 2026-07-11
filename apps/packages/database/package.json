@@ -1,0 +1,22 @@
+{
+  "name": "@board-game-rules-assistant/database",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } },
+  "scripts": {
+    "build": "rm -rf dist && tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "tsc --noEmit -p tests/tsconfig.json && node --import tsx --test tests/*.test.ts"
+  },
+  "dependencies": {
+    "@board-game-rules-assistant/rag-core": "^0.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.2",
+    "tsx": "^4.23.0",
+    "typescript": "^6.0.3"
+  }
+}

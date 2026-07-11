@@ -1,0 +1,119 @@
+import type { VectorStore } from "@board-game-rules-assistant/rag-core";
+
+import type {
+  AccountRole,
+  Actor,
+  ConversationRecord,
+  DocumentKind,
+  DocumentRecord,
+  DocumentVersionRecord,
+  GameRecord,
+  GuestSessionRecord,
+  MessageCitationRecord,
+  MessageRecord,
+  MessageWithCitations,
+  PlanTier,
+  PolicyTier,
+  TierPolicyRecord,
+  UserRecord,
+} from "./models.js";
+
+export type IdentityRepository = {
+  createUser(input: {
+    email: string;
+    displayName: string;
+    accountRole: AccountRole;
+    planTier: PlanTier;
+  }): Promise<UserRecord>;
+  getUserById(input: { id: string }): Promise<UserRecord | null>;
+  createGuestSession(input: { expiresAt: Date }): Promise<GuestSessionRecord>;
+  getGuestSession(input: { id: string }): Promise<GuestSessionRecord | null>;
+};
+
+export type PolicyRepository = {
+  getTierPolicy(tier: PolicyTier): Promise<TierPolicyRecord>;
+};
+
+export type LibraryRepository = {
+  createGame(input: { name: string; slug: string }): Promise<GameRecord>;
+  getGameById(input: { id: string }): Promise<GameRecord | null>;
+  createDocument(input: {
+    gameId: string;
+    ownerId?: string | null;
+    visibility: "global" | "private";
+    kind: DocumentKind;
+    title: string;
+  }): Promise<DocumentRecord>;
+  countActivePrivateDocuments(input: { ownerId: string }): Promise<number>;
+  listRetrievableDocuments(input: {
+    gameId: string;
+    userId?: string;
+  }): Promise<DocumentRecord[]>;
+  createVersion(input: {
+    documentId: string;
+    checksum: string;
+    embeddingProvider: string;
+    embeddingModel: string;
+    embeddingDimensions: number;
+    objectStorageKey?: string | null;
+  }): Promise<DocumentVersionRecord>;
+  markVersionFailed(input: {
+    versionId: string;
+    failureCode: string;
+    failureMessage: string;
+  }): Promise<DocumentVersionRecord>;
+  replaceActivePrivateVersion(input: {
+    versionId: string;
+    chunkCount: number;
+  }): Promise<DocumentVersionRecord>;
+  publishGlobalVersion(input: {
+    versionId: string;
+  }): Promise<DocumentVersionRecord>;
+  softDeleteDocument(input: {
+    documentId: string;
+    ownerId: string;
+  }): Promise<DocumentRecord | null>;
+};
+
+export type ConversationRepository = {
+  createConversation(input: {
+    actor: Actor;
+    gameId: string;
+    title: string;
+    expiresAt?: Date | null;
+  }): Promise<ConversationRecord>;
+  getOwnedConversation(input: {
+    actor: Actor;
+    conversationId: string;
+  }): Promise<ConversationRecord | null>;
+  listMessages(input: {
+    actor: Actor;
+    conversationId: string;
+  }): Promise<MessageWithCitations[]>;
+  appendUserMessage(input: {
+    actor: Actor;
+    conversationId: string;
+    content: string;
+  }): Promise<MessageRecord>;
+  appendAssistantMessageWithCitations(input: {
+    actor: Actor;
+    conversationId: string;
+    content: string;
+    model: string;
+    citations: Array<
+      Omit<MessageCitationRecord, "messageId" | "createdAt">
+    >;
+  }): Promise<MessageWithCitations>;
+};
+
+export type Persistence = {
+  identity: IdentityRepository;
+  policies: PolicyRepository;
+  library: LibraryRepository;
+  conversations: ConversationRepository;
+  vectorStore: VectorStore;
+  healthCheck(): Promise<void>;
+  close(): Promise<void>;
+};
+
+export type { VectorStore } from "@board-game-rules-assistant/rag-core";
