@@ -32,3 +32,18 @@ Two-axis review found no documented standards violations. Review concerns were a
 
 - The compiled fallback requires adding `.js` suffixes only in generated verification output because the source project uses bundler-style extensionless imports.
 - PostgreSQL quota serialization uses `pg_advisory_xact_lock(hashtextextended(ownerId, 0))`; this is PostgreSQL-specific by design, while memory remains local/test-only.
+
+## Review fix: PostgreSQL repository error boundary
+
+- Added one composition-level `withPostgresErrorBoundary` proxy around identity, policy, library, conversation, and vector-store adapters. Repository methods therefore share one translation policy rather than repetitive catches.
+- The classifier walks wrapped causes and translates only connection/availability codes (connection lifecycle, network failures, PostgreSQL SQLSTATE class 08, and server-shutdown states) to `DatabaseUnavailableError` with the original error chain as `cause`.
+- Existing `DatabaseUnavailableError` instances pass through unchanged. Repository domain errors and SQL constraint errors are not translated; live regressions cover `PersistenceNotFoundError` and unique violation SQLSTATE `23505`.
+- Live end-to-end regression closes the public PostgreSQL persistence client, invokes `policies.getTierPolicy`, verifies `DatabaseUnavailableError`, and passes it through API error middleware to verify HTTP 503 `{ code: "DATABASE_UNAVAILABLE" }`.
+
+### Review-fix evidence
+
+- RED: focused live boundary suite failed 2/2 before implementation: the closed connection surfaced as `DrizzleQueryError` with nested `CONNECTION_ENDED`, and the unique constraint surfaced as `DrizzleQueryError` with nested SQLSTATE `23505`.
+- GREEN: focused live boundary suite passed 2/2 after the centralized boundary.
+- Full compiled database suite: **20 passed, 0 failed** against live PostgreSQL.
+- Full compiled API suite: **55 passed, 0 failed**, including the live repository-to-HTTP 503 regression.
+- `npm run build -w @board-game-rules-assistant/database` and `npm run typecheck -w api` passed before the full suites.

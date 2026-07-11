@@ -1,10 +1,13 @@
 import assert from "node:assert/strict";
-import { test } from "node:test";
+import { mock, test } from "node:test";
+import type { Request, Response } from "express";
 import postgres from "postgres";
 import { Document } from "@langchain/core/documents";
-import { createPersistence, runPostgresMigrations } from "@board-game-rules-assistant/database";
+import { DatabaseUnavailableError, createPersistence, runPostgresMigrations } from "@board-game-rules-assistant/database";
 import { RulebookService } from "../src/application/ingestion/rulebook-service";
 import { AccessPolicyService } from "../src/application/access/access-policy-service";
+import { createErrorMiddleware } from "../src/presentation/http/shared/error-middleware";
+import { testConfig } from "./test-config";
 
 test("postgres driver persists upload version chunks, listing and soft deletion", async () => {
   const base = new URL(process.env.DATABASE_URL ?? "postgres://board_game_rules:board_game_rules@localhost:5432/board_game_rules");
@@ -36,6 +39,39 @@ test("postgres driver persists upload version chunks, listing and soft deletion"
   } finally {
     await persistence.close();
     await admin.unsafe(`DROP DATABASE ${name} WITH (FORCE)`);
+    await admin.end();
+  }
+});
+
+test("closed PostgreSQL repository calls map through HTTP middleware to typed 503", async () => {
+  const base = new URL(process.env.DATABASE_URL ?? "postgres://board_game_rules:board_game_rules@localhost:5432/board_game_rules");
+  const admin = postgres(base.toString(), { max: 1, onnotice: () => {} });
+  const databaseName = `api_unavailable_${crypto.randomUUID().replaceAll("-", "")}`;
+  await admin.unsafe(`CREATE DATABASE ${databaseName}`);
+  const url = new URL(base);
+  url.pathname = `/${databaseName}`;
+  const migrationClient = postgres(url.toString(), { max: 1, onnotice: () => {} });
+  try {
+    await runPostgresMigrations(migrationClient);
+    const embeddings = { async embedQuery() { return Array(3072).fill(0.1); }, async embedDocuments(texts: string[]) { return texts.map(() => Array(3072).fill(0.1)); } };
+    const persistence = await createPersistence({ driver: "postgres", nodeEnv: "test", databaseUrl: url.toString(), embeddings, expectedDimensions: 3072 });
+    await persistence.close();
+    const error = await persistence.policies.getTierPolicy("standard").catch((caught: unknown) => caught);
+    assert.ok(error instanceof DatabaseUnavailableError);
+    const captured: { status?: number; body?: unknown } = {};
+    const response = {
+      headersSent: false,
+      status(status: number) { captured.status = status; return this; },
+      json(body: unknown) { captured.body = body; return this; },
+    } as Response;
+    const errorMock = mock.method(console, "error", () => {});
+    try { createErrorMiddleware(testConfig)(error, {} as Request, response, () => {}); }
+    finally { errorMock.mock.restore(); }
+    assert.equal(captured.status, 503);
+    assert.deepEqual(captured.body, { code: "DATABASE_UNAVAILABLE" });
+  } finally {
+    await migrationClient.end();
+    await admin.unsafe(`DROP DATABASE ${databaseName} WITH (FORCE)`);
     await admin.end();
   }
 });
