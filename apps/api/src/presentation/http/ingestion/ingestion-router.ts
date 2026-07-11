@@ -4,9 +4,9 @@ import { extname } from "node:path";
 import type { NextFunction, Request, RequestHandler, Response } from "express";
 import { Router } from "express";
 import multer, { MulterError } from "multer";
-import { IngestionService } from "../../../application/ingestion/ingestion-service";
+import { RulebookService } from "../../../application/ingestion/rulebook-service";
+import { ActorService } from "../../../application/auth/actor-service";
 import { InvalidSplitterParamsError } from "../../../domain/ingestion/ingestion-errors";
-import type { RulebookRepository } from "../../../domain/rulebook/rulebook-repository";
 import { getErrorMessage } from "../shared/get-error-message";
 import { HttpStatus } from "../shared/http-status";
 import type { ErrorResponseBody, TypedResponse } from "../shared/http-types";
@@ -32,8 +32,8 @@ export class IngestionRouter {
   private readonly isProduction: boolean;
 
   constructor(
-    private readonly ingestionService: IngestionService,
-    private readonly rulebookRepository: RulebookRepository,
+    private readonly rulebookService: RulebookService,
+    private readonly actorService: ActorService,
     {
       uploadDirectory,
       maxUploadSizeBytes,
@@ -133,29 +133,18 @@ export class IngestionRouter {
       }
 
       const { gameName, splitterParams } = parseResult.data;
-      const id = randomUUID();
       const pdfName = request.file.originalname;
       const fileSize = request.file.size;
-
-      const result = await this.ingestionService.ingestPdf({
+      const actor = await this.actorService.resolve(request.headers);
+      const result = await this.rulebookService.upload({
+        actor,
         filePath: request.file.path,
-        metadata: {
-          documentId: id,
-        },
-        source: pdfName,
-        splitterParams,
-      });
-
-      this.rulebookRepository.create({ id, gameName, pdfName, fileSize });
-
-      const responseBody = UploadPdfsResponseSchema.parse({
-        ...result,
-        id,
-        gameName,
         pdfName,
         fileSize,
-        status: "completed",
+        gameName,
+        splitterParams,
       });
+      const responseBody = UploadPdfsResponseSchema.parse(result);
 
       return response.status(HttpStatus.OK).json(responseBody);
     } catch (error) {
@@ -169,22 +158,28 @@ export class IngestionRouter {
     }
   };
 
-  private listRulebooks = (
-    _request: Request,
+  private listRulebooks = async (
+    request: Request,
     response: ListRulebooksResponse,
+    next: NextFunction,
   ) => {
-    const responseBody = ListRulebooksResponseSchema.parse({
-      rulebooks: this.rulebookRepository.list(),
-    });
-
-    return response.status(HttpStatus.OK).json(responseBody);
+    try {
+      const actor = await this.actorService.resolve(request.headers);
+      const responseBody = ListRulebooksResponseSchema.parse({ rulebooks: await this.rulebookService.list(actor) });
+      return response.status(HttpStatus.OK).json(responseBody);
+    } catch (error) { next(error); }
   };
 
-  private deleteRulebook = (
+  private deleteRulebook = async (
     request: Request<{ id: string }>,
     response: DeleteRulebookResponse,
+    next: NextFunction,
   ) => {
-    const deleted = this.rulebookRepository.deleteById(request.params.id);
+    let deleted: boolean;
+    try {
+      const actor = await this.actorService.resolve(request.headers);
+      deleted = await this.rulebookService.delete(actor, request.params.id);
+    } catch (error) { next(error); return; }
 
     if (!deleted) {
       return this.sendError(

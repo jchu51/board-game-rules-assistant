@@ -9,8 +9,8 @@ import type { PostgresDatabase } from "./client.js";
 
 // Update both values whenever a production migration is added.
 export const CURRENT_MIGRATION_STATE = {
-  count: 2,
-  latestCreatedAt: "1783800157509",
+  count: 3,
+  latestCreatedAt: "1783820000000",
 } as const;
 
 export const checkPostgresHealth = async (

@@ -135,9 +135,10 @@ export const createMemoryPersistence = async (): Promise<Persistence> => {
   return {
     identity: {
       async createUser(input) {
+        const { id, ...attributes } = input;
         const record: UserRecord = {
-          id: randomUUID(),
-          ...clone(input),
+          id: id ?? randomUUID(),
+          ...clone(attributes),
           ...createTimestamped(),
         };
         users.set(record.id, clone(record));
@@ -182,6 +183,14 @@ export const createMemoryPersistence = async (): Promise<Persistence> => {
         const record = games.get(id);
         return record ? clone(record) : null;
       },
+      async resolveGame(input) {
+        const existing = [...games.values()].find((game) => game.slug === input.slug);
+        if (existing) return clone(existing);
+        const { id, ...attributes } = input;
+        const record: GameRecord = { id: id ?? randomUUID(), ...clone(attributes), ...createTimestamped() };
+        games.set(record.id, clone(record));
+        return clone(record);
+      },
       async createDocument(input) {
         const ownerId = input.ownerId ?? null;
         const record: DocumentRecord = {
@@ -191,11 +200,17 @@ export const createMemoryPersistence = async (): Promise<Persistence> => {
           visibility: input.visibility,
           kind: input.kind,
           title: input.title,
+          fileSizeBytes: input.fileSizeBytes ?? 0,
           deletedAt: null,
           ...createTimestamped(),
         };
         documents.set(record.id, clone(record));
         return clone(record);
+      },
+      async listOwnedDocuments({ ownerId }) {
+        return [...documents.values()]
+          .filter((document) => document.ownerId === ownerId && document.deletedAt === null)
+          .map((document) => ({ document: clone(document), game: clone(games.get(document.gameId)!) }));
       },
       async countActivePrivateDocuments({ ownerId }) {
         return [...documents.values()].filter(
@@ -335,9 +350,9 @@ export const createMemoryPersistence = async (): Promise<Persistence> => {
       },
     },
     conversations: {
-      async createConversation({ actor, gameId, title, expiresAt }) {
+      async createConversation({ id, actor, gameId, title, expiresAt }) {
         const record: ConversationRecord = {
-          id: randomUUID(),
+          id: id ?? randomUUID(),
           gameId,
           userId: actor.kind === "user" ? actor.userId : null,
           guestSessionId:

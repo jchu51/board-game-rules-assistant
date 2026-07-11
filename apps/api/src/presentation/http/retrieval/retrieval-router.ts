@@ -1,6 +1,7 @@
 import type { NextFunction, Response } from "express";
 import { Router } from "express";
 import { RetrievalService } from "../../../application/retrieval/retrieval-service";
+import { ActorService } from "../../../application/auth/actor-service";
 import { HttpStatus } from "../shared/http-status";
 import type {
   ErrorResponseBody,
@@ -24,7 +25,7 @@ type RetrievalSearchResponse = TypedResponse<
 export class RetrievalRouter {
   readonly router: Router;
 
-  constructor(private readonly retrievalService: RetrievalService) {
+  constructor(private readonly retrievalService: RetrievalService, private readonly actorService: ActorService) {
     const router = Router();
 
     router.post("/retrieval/search", this.search);
@@ -51,7 +52,8 @@ export class RetrievalRouter {
         );
       }
 
-      const result = await this.retrievalService.search(parseResult.data);
+      const actor = await this.actorService.resolve(request.headers);
+      const result = await this.retrievalService.search({ ...parseResult.data, actor });
       const responseBody = RetrievalSearchResponseSchema.parse(result);
 
       return response.status(HttpStatus.OK).json(responseBody);

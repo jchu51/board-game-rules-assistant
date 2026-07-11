@@ -10,6 +10,44 @@ export const runPersistenceContract = (
   createPersistence: () => Promise<Persistence>,
 ) => {
   describe(name, () => {
+    test("supports stable local identities and owner-scoped library metadata", async () => {
+      const persistence = await createPersistence();
+      const stableId = "11111111-1111-4111-8111-111111111111";
+      const user = await persistence.identity.createUser({
+        id: stableId,
+        email: "local@example.com",
+        displayName: "Local User",
+        accountRole: "user",
+        planTier: "standard",
+      });
+      assert.equal(user.id, stableId);
+      const firstGame = await persistence.library.resolveGame({ name: "Root", slug: "root" });
+      const sameGame = await persistence.library.resolveGame({ name: "Root", slug: "root" });
+      assert.equal(sameGame.id, firstGame.id);
+      const document = await persistence.library.createDocument({
+        gameId: firstGame.id,
+        ownerId: user.id,
+        visibility: "private",
+        kind: "base_rules",
+        title: "root.pdf",
+        fileSizeBytes: 1234,
+      });
+      assert.equal(document.fileSizeBytes, 1234);
+      assert.deepEqual(
+        await persistence.library.listOwnedDocuments({ ownerId: user.id }),
+        [{ document, game: firstGame }],
+      );
+      const conversationId = "22222222-2222-4222-8222-222222222222";
+      const conversation = await persistence.conversations.createConversation({
+        id: conversationId,
+        actor: { kind: "user", userId: user.id, accountRole: "user", planTier: "standard" },
+        gameId: firstGame.id,
+        title: "Rules",
+      });
+      assert.equal(conversation.id, conversationId);
+      await persistence.close();
+    });
+
     test("returns seeded tier policies", async () => {
       const persistence = await createPersistence();
       await persistence.healthCheck();

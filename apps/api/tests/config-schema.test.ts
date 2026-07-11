@@ -26,6 +26,13 @@ describe("EnvSchema", () => {
     );
   });
 
+  it("rejects memory persistence in development", () => {
+    assert.throws(
+      () => EnvSchema.parse({ ...validEnv, NODE_ENV: "development", PERSISTENCE_DRIVER: "memory" }),
+      /development requires postgres/,
+    );
+  });
+
   it("requires DATABASE_URL for postgres", () => {
     assert.throws(
       () =>

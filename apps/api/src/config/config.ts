@@ -43,6 +43,7 @@ export const config: Config = {
     driver: env.PERSISTENCE_DRIVER,
     databaseUrl: env.DATABASE_URL,
   },
+  localUserId: env.LOCAL_USER_ID,
   publicSearch: {
     tavilyApiKey: env.TAVILY_API_KEY,
     includeDomains: env.PUBLIC_SEARCH_INCLUDE_DOMAINS?.split(",")

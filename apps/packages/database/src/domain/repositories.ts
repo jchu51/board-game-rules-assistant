@@ -20,6 +20,7 @@ import type {
 
 export type IdentityRepository = {
   createUser(input: {
+    id?: string;
     email: string;
     displayName: string;
     accountRole: AccountRole;
@@ -37,13 +38,18 @@ export type PolicyRepository = {
 export type LibraryRepository = {
   createGame(input: { name: string; slug: string }): Promise<GameRecord>;
   getGameById(input: { id: string }): Promise<GameRecord | null>;
+  resolveGame(input: { id?: string; name: string; slug: string }): Promise<GameRecord>;
   createDocument(input: {
     gameId: string;
     ownerId?: string | null;
     visibility: "global" | "private";
     kind: DocumentKind;
     title: string;
+    fileSizeBytes?: number;
   }): Promise<DocumentRecord>;
+  listOwnedDocuments(input: { ownerId: string }): Promise<
+    Array<{ document: DocumentRecord; game: GameRecord }>
+  >;
   countActivePrivateDocuments(input: { ownerId: string }): Promise<number>;
   listRetrievableDocuments(input: {
     gameId: string;
@@ -78,6 +84,7 @@ export type LibraryRepository = {
 
 export type ConversationRepository = {
   createConversation(input: {
+    id?: string;
     actor: Actor;
     gameId: string;
     title: string;

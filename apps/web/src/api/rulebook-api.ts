@@ -3,7 +3,7 @@ import type {
   UploadPdfsResponse,
 } from "@/domain/rulebook";
 
-import { API_BASE_URL } from "./api-config";
+import { ACTOR_HEADERS, API_BASE_URL } from "./api-config";
 
 type UploadRulebookPdfInput = {
   file: File;
@@ -24,6 +24,7 @@ export async function uploadRulebookPdf({
 
   const response = await fetch(`${API_BASE_URL}/rulebooks`, {
     method: "POST",
+    headers: ACTOR_HEADERS,
     body: formData,
   });
 
@@ -38,7 +39,7 @@ export async function uploadRulebookPdf({
 }
 
 export async function listRulebooks(): Promise<ListRulebooksResponse> {
-  const response = await fetch(`${API_BASE_URL}/rulebooks`);
+  const response = await fetch(`${API_BASE_URL}/rulebooks`, { headers: ACTOR_HEADERS });
 
   if (!response.ok) {
     const errorBody = (await response.json().catch(() => ({}))) as
@@ -53,6 +54,7 @@ export async function listRulebooks(): Promise<ListRulebooksResponse> {
 export async function deleteRulebook(id: string): Promise<void> {
   const response = await fetch(`${API_BASE_URL}/rulebooks/${id}`, {
     method: "DELETE",
+    headers: ACTOR_HEADERS,
   });
 
   if (!response.ok) {

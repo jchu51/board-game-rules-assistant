@@ -13,8 +13,8 @@ export const createPersistence = async (input: {
   embeddings: EmbeddingsInterface;
   expectedDimensions: number;
 }): Promise<Persistence> => {
-  if (input.nodeEnv === "production" && input.driver === "memory") {
-    throw new Error("production requires postgres persistence");
+  if (["development", "production"].includes(input.nodeEnv) && input.driver === "memory") {
+    throw new Error(`${input.nodeEnv} requires postgres persistence`);
   }
 
   if (input.driver === "memory") {

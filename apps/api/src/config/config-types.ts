@@ -21,6 +21,7 @@ export type Config = {
     driver: "memory" | "postgres";
     databaseUrl?: string;
   };
+  localUserId: string;
   publicSearch: {
     tavilyApiKey: string;
     includeDomains?: string[];

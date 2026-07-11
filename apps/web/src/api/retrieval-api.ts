@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "./api-config";
+import { ACTOR_HEADERS, API_BASE_URL } from "./api-config";
 
 type ApiErrorResponse = {
   error?: string;
@@ -36,6 +36,7 @@ export async function searchRulebooks({
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      ...ACTOR_HEADERS,
     },
     body: JSON.stringify({ conversationId, gameId, query }),
   });

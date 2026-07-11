@@ -89,11 +89,30 @@ export const createPostgresRepositories = (db: PostgresDatabase): {
     async getGameById({ id }) {
       return (await db.select().from(games).where(eq(games.id, id)).limit(1))[0] ?? null;
     },
+    async resolveGame(input) {
+      const inserted = await db
+        .insert(games)
+        .values(input)
+        .onConflictDoNothing({ target: games.slug })
+        .returning();
+      return inserted[0] ?? firstOrThrow(
+        await db.select().from(games).where(eq(games.slug, input.slug)).limit(1),
+        "game",
+      );
+    },
     async createDocument(input) {
       return firstOrThrow(
-        await db.insert(documents).values({ ...input, ownerId: input.ownerId ?? null }).returning(),
+        await db.insert(documents).values({ ...input, ownerId: input.ownerId ?? null, fileSizeBytes: input.fileSizeBytes ?? 0 }).returning(),
         "document",
       );
+    },
+    async listOwnedDocuments({ ownerId }) {
+      const rows = await db
+        .select({ document: documents, game: games })
+        .from(documents)
+        .innerJoin(games, eq(documents.gameId, games.id))
+        .where(and(eq(documents.ownerId, ownerId), isNull(documents.deletedAt)));
+      return rows;
     },
     async countActivePrivateDocuments({ ownerId }) {
       const row = firstOrThrow(
@@ -247,7 +266,7 @@ export const createPostgresRepositories = (db: PostgresDatabase): {
   };
 
   const conversationsRepository: ConversationRepository = {
-    async createConversation({ actor, gameId, title, expiresAt }) {
+    async createConversation({ id, actor, gameId, title, expiresAt }) {
       const actorColumns =
         actor.kind === "user"
           ? { userId: actor.userId, guestSessionId: null }
@@ -255,7 +274,7 @@ export const createPostgresRepositories = (db: PostgresDatabase): {
       return firstOrThrow(
         await db
           .insert(conversations)
-          .values({ gameId, title, expiresAt: expiresAt ?? null, ...actorColumns })
+          .values({ id, gameId, title, expiresAt: expiresAt ?? null, ...actorColumns })
           .returning(),
         "conversation",
       );

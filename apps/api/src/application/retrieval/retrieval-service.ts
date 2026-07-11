@@ -12,6 +12,7 @@ import type {
   ConversationMessage,
   ConversationRepository,
 } from "../../domain/conversation/conversation-repository";
+import type { PersistedConversationHistory } from "./persisted-conversation-history";
 import type { RequestClassifierService } from "./request-classifier-service";
 import type {
   RetrievalMatch,
@@ -28,7 +29,7 @@ export class RetrievalService {
     private readonly vectorStore: VectorStore,
     private readonly requestClassifier: RequestClassifierService,
     private readonly publicSearchService: PublicSearchService,
-    private readonly conversationRepository: ConversationRepository,
+    private readonly conversationRepository: ConversationRepository | PersistedConversationHistory,
     private readonly createRuleContextAgent: (
       context: string,
     ) => RuleContextAgent,
@@ -38,13 +39,20 @@ export class RetrievalService {
   ) {}
 
   async search({
+    actor,
     conversationId,
     gameId,
     query,
   }: RetrievalSearchInput): Promise<RetrievalSearchResult> {
-    const conversationMessages = this.conversationRepository
-      .getMessages(conversationId)
-      .slice(-MAX_CONTEXT_MESSAGES);
+    const persisted = "ensureConversation" in this.conversationRepository;
+    if (persisted) {
+      if (!actor) throw new Error("actor is required for persisted conversations");
+      await this.conversationRepository.ensureConversation(actor, conversationId, gameId);
+    }
+    const allMessages = persisted
+      ? await this.conversationRepository.getMessages(actor!, conversationId)
+      : this.conversationRepository.getMessages(conversationId);
+    const conversationMessages = allMessages.slice(-MAX_CONTEXT_MESSAGES);
     const contextualQuery = this.formatContextualQuery(
       query,
       conversationMessages,
@@ -56,7 +64,7 @@ export class RetrievalService {
     const classification = this.requestClassifier.classify(contextualQuery);
 
     if (!classification.isGameRuleQuestion) {
-      return this.completeTurn(conversationId, query, {
+      return this.completeTurn(actor, conversationId, query, {
         answer:
           "I can only answer board-game rules questions from indexed rulebook context. Ask about a specific game rule, turn, card, resource, scoring, setup, or movement question.",
         matches: [],
@@ -66,7 +74,7 @@ export class RetrievalService {
     const results = await this.vectorStore.similaritySearchVectorWithScore({
       query: classification.normalizedQuery,
       topK: DEFAULT_TOP_K,
-      scope: { gameId },
+      scope: { gameId, userId: actor?.kind === "user" ? actor.userId : undefined },
     });
 
     const matches: RetrievalMatch[] = results
@@ -82,7 +90,7 @@ export class RetrievalService {
       }));
 
     if (results.length > 0 && matches.length === 0) {
-      return this.completeTurn(conversationId, query, {
+      return this.completeTurn(actor, conversationId, query, {
         answer:
           "I found potentially related rulebook content, but it was not relevant enough to answer confidently. Please clarify the game and the specific rule, action, card, or situation you are asking about.",
         matches: [],
@@ -95,23 +103,29 @@ export class RetrievalService {
         classification.normalizedQuery,
       );
 
-      return this.completeTurn(conversationId, query, result);
+      return this.completeTurn(actor, conversationId, query, result);
     }
 
     const result = await this.answerFromMatches(conversationQuestion, matches);
 
-    return this.completeTurn(conversationId, query, result);
+    return this.completeTurn(actor, conversationId, query, result);
   }
 
-  private completeTurn(
+  private async completeTurn(
+    actor: RetrievalSearchInput["actor"],
     conversationId: string,
     query: string,
     result: RetrievalSearchResult,
-  ): RetrievalSearchResult {
-    this.conversationRepository.appendMessages(conversationId, [
+  ): Promise<RetrievalSearchResult> {
+    const turn = [
       { role: "user", content: query },
       { role: "assistant", content: result.answer },
-    ]);
+    ] as ConversationMessage[];
+    if ("ensureConversation" in this.conversationRepository) {
+      await this.conversationRepository.appendMessages(actor!, conversationId, turn);
+    } else {
+      this.conversationRepository.appendMessages(conversationId, turn);
+    }
 
     return result;
   }

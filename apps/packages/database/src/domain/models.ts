@@ -51,6 +51,7 @@ export type DocumentRecord = TimestampedRecord & {
   visibility: DocumentVisibility;
   kind: DocumentKind;
   title: string;
+  fileSizeBytes: number;
   deletedAt: Date | null;
 };
 

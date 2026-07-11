@@ -35,6 +35,7 @@ export const documents = pgTable("documents", {
   id: uuid("id").primaryKey().defaultRandom(), gameId: uuid("game_id").notNull().references(() => games.id),
   ownerId: uuid("owner_id").references(() => users.id), visibility: documentVisibilityEnum("visibility").notNull(),
   kind: documentKindEnum("kind").notNull(), title: text("title").notNull(),
+  fileSizeBytes: integer("file_size_bytes").notNull().default(0),
   deletedAt: timestamp("deleted_at", { withTimezone: true }), ...timestamps,
 }, (table) => [
   check("documents_visibility_owner_check", sql`(${table.visibility} = 'global' AND ${table.ownerId} IS NULL) OR (${table.visibility} = 'private' AND ${table.ownerId} IS NOT NULL)`),

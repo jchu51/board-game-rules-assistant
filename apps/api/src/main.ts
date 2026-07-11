@@ -9,11 +9,13 @@ import {
 } from "@board-game-rules-assistant/agent-core";
 
 import { IngestionService } from "./application/ingestion/ingestion-service";
+import { RulebookService } from "./application/ingestion/rulebook-service";
+import { ActorService } from "./application/auth/actor-service";
+import { preparePersistence, closePersistenceAfterServer } from "./application/runtime/persistence-lifecycle";
 import { RequestClassifierService } from "./application/retrieval/request-classifier-service";
 import { RetrievalService } from "./application/retrieval/retrieval-service";
 import { config } from "./config/config";
-import { InMemoryRulebookRepository } from "./infrastructure/persistence/rulebook/in-memory-rulebook-repository";
-import { InMemoryConversationRepository } from "./infrastructure/persistence/conversation/in-memory-conversation-repository";
+import { PersistedConversationHistory } from "./application/retrieval/persisted-conversation-history";
 import { TavilyPublicSearchService } from "./infrastructure/public-search/tavily-public-search-service";
 import { createApp } from "./presentation/http/app";
 import { HealthRouter } from "./presentation/http/health/health-router";
@@ -36,15 +38,19 @@ const persistence = await createPersistence({
   embeddings,
   expectedDimensions: config.ingestion.embeddingDimensions,
 });
-await persistence.healthCheck();
+await preparePersistence(persistence, config.nodeEnv, config.localUserId);
+const actorService = new ActorService(persistence.identity, { nodeEnv: config.nodeEnv, localUserId: config.localUserId });
 const vectorStore = persistence.vectorStore;
-const rulebookRepository = new InMemoryRulebookRepository();
-const conversationRepository = new InMemoryConversationRepository();
+const conversationRepository = new PersistedConversationHistory(persistence.conversations);
 const ingestionService = new IngestionService(vectorStore, {
   defaultSplitterParams: {
     chunkSize: config.ingestion.defaultChunkSize,
     chunkOverlap: config.ingestion.defaultChunkOverlap,
   },
+});
+const rulebookService = new RulebookService(persistence.library, ingestionService, {
+  embeddingModel: config.ingestion.embeddingModel,
+  embeddingDimensions: config.ingestion.embeddingDimensions,
 });
 const requestClassifier = new RequestClassifierService();
 const publicSearchService = new TavilyPublicSearchService({
@@ -63,15 +69,15 @@ const retrievalService = new RetrievalService(
 // Routers
 const healthRouter = new HealthRouter();
 const ingestionRouter = new IngestionRouter(
-  ingestionService,
-  rulebookRepository,
+  rulebookService,
+  actorService,
   {
     uploadDirectory: config.ingestion.uploadDirectory,
     maxUploadSizeBytes: config.ingestion.maxUploadSizeBytes,
     isProduction: config.nodeEnv === "production",
   },
 );
-const retrievalRouter = new RetrievalRouter(retrievalService);
+const retrievalRouter = new RetrievalRouter(retrievalService, actorService);
 const routers = [
   healthRouter.router,
   ingestionRouter.router,
@@ -91,23 +97,12 @@ const server = app.listen(config.port, config.host, () => {
 });
 
 let isShuttingDown = false;
-const shutdown = (signal: NodeJS.Signals) => {
+const shutdown = async (signal: NodeJS.Signals) => {
   if (isShuttingDown) return;
   isShuttingDown = true;
   console.log(`${signal} received. Closing API server.`);
-  server.close(async (error) => {
-    try {
-      await persistence.close();
-    } catch (closeError) {
-      console.error("Failed to close persistence:", closeError);
-      process.exitCode = 1;
-    }
-
-    if (error) {
-      console.error("Failed to close API server:", error);
-      process.exitCode = 1;
-    }
-  });
+  try { await closePersistenceAfterServer(server, persistence); }
+  catch (error) { console.error("Failed to close API:", error); process.exitCode = 1; }
 };
 
 process.on("SIGINT", shutdown);

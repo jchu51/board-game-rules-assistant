@@ -52,6 +52,7 @@ export const EnvSchema = z.object({
     z.enum(["memory", "postgres"]),
   ),
   DATABASE_URL: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
+  LOCAL_USER_ID: withDefault("11111111-1111-4111-8111-111111111111").pipe(z.string().uuid()),
   INGESTION_CHUNK_SIZE: numberWithDefault(500).pipe(
     z.number().int().positive(),
   ),
@@ -63,11 +64,11 @@ export const EnvSchema = z.object({
     z.number().int().positive(),
   ),
 }).superRefine((env, context) => {
-  if (env.NODE_ENV === "production" && env.PERSISTENCE_DRIVER === "memory") {
+  if (["development", "production"].includes(env.NODE_ENV) && env.PERSISTENCE_DRIVER === "memory") {
     context.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["PERSISTENCE_DRIVER"],
-      message: "production requires postgres persistence",
+      message: `${env.NODE_ENV} requires postgres persistence`,
     });
   }
 

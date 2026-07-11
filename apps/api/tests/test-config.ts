@@ -16,6 +16,7 @@ export const testConfig: Config = {
     uploadDirectory: "/tmp",
   },
   nodeEnv: "test",
+  localUserId: "11111111-1111-4111-8111-111111111111",
   port: 0,
   persistence: {
     driver: "memory",
