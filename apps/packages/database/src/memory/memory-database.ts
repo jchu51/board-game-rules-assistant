@@ -34,20 +34,17 @@ class MemoryVectorStore implements VectorStore {
   private documents: RulebookDocument[] = [];
 
   async upsert(records: RulebookDocument[]): Promise<void> {
-    for (const record of records) {
-      const documentId = record.metadata.documentId;
-      const existingIndex = documentId
-        ? this.documents.findIndex(
-            (document) => document.metadata.documentId === documentId,
-          )
-        : -1;
-
-      if (existingIndex === -1) {
-        this.documents.push(record);
-      } else {
-        this.documents[existingIndex] = record;
-      }
-    }
+    const documentIds = new Set(
+      records
+        .map((record) => record.metadata.documentId)
+        .filter((documentId): documentId is string => documentId !== undefined),
+    );
+    this.documents = this.documents.filter(
+      (document) =>
+        document.metadata.documentId === undefined ||
+        !documentIds.has(document.metadata.documentId),
+    );
+    this.documents.push(...records.map(clone));
   }
 
   async similaritySearch(
