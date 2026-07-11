@@ -1,4 +1,4 @@
-import type { Actor, ConversationRepository } from "@board-game-rules-assistant/database";
+import { PersistenceNotFoundError, type Actor, type ConversationRepository } from "@board-game-rules-assistant/database";
 import type { ConversationMessage } from "../../domain/conversation/conversation-repository";
 
 export class PersistedConversationHistory {
@@ -9,6 +9,9 @@ export class PersistedConversationHistory {
     if (existing) {
       if (existing.gameId !== gameId) throw new Error("conversation game does not match gameId");
       return;
+    }
+    if (await this.repository.getConversationById({ id: conversationId })) {
+      throw new PersistenceNotFoundError("conversation");
     }
     await this.repository.createConversation({ id: conversationId, actor, gameId, title: "Rules question" });
   }

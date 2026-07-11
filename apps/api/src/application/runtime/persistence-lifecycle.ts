@@ -25,8 +25,18 @@ export const closePersistenceAfterServer = async (
   server: { close(callback: (error?: Error) => void): void },
   persistence: Pick<Persistence, "close">,
 ): Promise<void> => {
-  await new Promise<void>((resolve, reject) => {
-    server.close((error) => error ? reject(error) : resolve());
+  const serverError = await new Promise<Error | undefined>((resolve) => {
+    server.close((error) => resolve(error));
   });
-  await persistence.close();
+  let persistenceError: unknown;
+  try {
+    await persistence.close();
+  } catch (error) {
+    persistenceError = error;
+  }
+  if (serverError && persistenceError) {
+    throw new AggregateError([serverError, persistenceError], "server and persistence close failed");
+  }
+  if (serverError) throw serverError;
+  if (persistenceError) throw persistenceError;
 };

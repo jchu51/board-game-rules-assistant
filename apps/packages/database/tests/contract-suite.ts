@@ -45,6 +45,17 @@ export const runPersistenceContract = (
         title: "Rules",
       });
       assert.equal(conversation.id, conversationId);
+      await persistence.conversations.appendUserMessage({ actor: { kind: "user", userId: user.id, accountRole: "user", planTier: "standard" }, conversationId, content: "Alice message" });
+      const bob = await persistence.identity.createUser({ email: "bob-stable@example.com", displayName: "Bob", accountRole: "user", planTier: "standard" });
+      const bobActor = { kind: "user" as const, userId: bob.id, accountRole: bob.accountRole, planTier: bob.planTier };
+      await assert.rejects(
+        persistence.conversations.createConversation({ id: conversationId, actor: bobActor, gameId: firstGame.id, title: "Takeover" }),
+      );
+      assert.equal((await persistence.conversations.listMessages({ actor: bobActor, conversationId })).length, 0);
+      assert.deepEqual(
+        (await persistence.conversations.listMessages({ actor: { kind: "user", userId: user.id, accountRole: "user", planTier: "standard" }, conversationId })).map(({ content }) => content),
+        ["Alice message"],
+      );
       await persistence.close();
     });
 

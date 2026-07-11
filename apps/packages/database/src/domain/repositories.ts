@@ -90,6 +90,7 @@ export type ConversationRepository = {
     title: string;
     expiresAt?: Date | null;
   }): Promise<ConversationRecord>;
+  getConversationById(input: { id: string }): Promise<ConversationRecord | null>;
   getOwnedConversation(input: {
     actor: Actor;
     conversationId: string;

@@ -351,6 +351,9 @@ export const createMemoryPersistence = async (): Promise<Persistence> => {
     },
     conversations: {
       async createConversation({ id, actor, gameId, title, expiresAt }) {
+        if (id && conversations.has(id)) {
+          throw new Error("conversation id already exists");
+        }
         const record: ConversationRecord = {
           id: id ?? randomUUID(),
           gameId,
@@ -363,6 +366,10 @@ export const createMemoryPersistence = async (): Promise<Persistence> => {
         };
         conversations.set(record.id, clone(record));
         return clone(record);
+      },
+      async getConversationById({ id }) {
+        const record = conversations.get(id);
+        return record ? clone(record) : null;
       },
       async getOwnedConversation({ actor, conversationId }) {
         const record = conversations.get(conversationId);

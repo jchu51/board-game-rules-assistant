@@ -19,3 +19,24 @@ test("closes persistence after the server", async () => {
   await closePersistenceAfterServer(server, { close: async () => { order.push("persistence"); } });
   assert.deepEqual(order, ["server", "persistence"]);
 });
+
+test("still closes persistence when server close reports an error", async () => {
+  const order: string[] = [];
+  const serverError = new Error("server close failed");
+  const server = { close(callback: (error?: Error) => void) { order.push("server"); callback(serverError); } };
+  await assert.rejects(
+    closePersistenceAfterServer(server, { close: async () => { order.push("persistence"); } }),
+    (error) => error === serverError,
+  );
+  assert.deepEqual(order, ["server", "persistence"]);
+});
+
+test("preserves both server and persistence close failures", async () => {
+  const serverError = new Error("server close failed");
+  const persistenceError = new Error("persistence close failed");
+  const server = { close(callback: (error?: Error) => void) { callback(serverError); } };
+  await assert.rejects(
+    closePersistenceAfterServer(server, { close: async () => { throw persistenceError; } }),
+    (error) => error instanceof AggregateError && error.errors[0] === serverError && error.errors[1] === persistenceError,
+  );
+});

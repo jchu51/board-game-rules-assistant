@@ -279,6 +279,9 @@ export const createPostgresRepositories = (db: PostgresDatabase): {
         "conversation",
       );
     },
+    async getConversationById({ id }) {
+      return (await db.select().from(conversations).where(eq(conversations.id, id)).limit(1))[0] ?? null;
+    },
     async getOwnedConversation({ actor, conversationId }) {
       return (
         await db
