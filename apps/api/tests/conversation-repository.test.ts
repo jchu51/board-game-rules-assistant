@@ -1,5 +1,4 @@
-import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, expect, it } from "vitest";
 
 import { InMemoryConversationRepository } from "../src/infrastructure/persistence/conversation/in-memory-conversation-repository";
 
@@ -21,15 +20,15 @@ describe("InMemoryConversationRepository", () => {
       { role: "user", content: "separate" },
     ]);
 
-    assert.deepEqual(repository.getMessages("conversation-a"), [
+    expect(repository.getMessages("conversation-a")).toEqual([
       { role: "assistant", content: "second" },
       { role: "user", content: "third" },
       { role: "assistant", content: "fourth" },
     ]);
-    assert.deepEqual(repository.getMessages("conversation-b"), [
+    expect(repository.getMessages("conversation-b")).toEqual([
       { role: "user", content: "separate" },
     ]);
-    assert.deepEqual(repository.getMessages("unknown"), []);
+    expect(repository.getMessages("unknown")).toEqual([]);
   });
 
   it("returns a copy that cannot mutate stored messages", () => {
@@ -45,7 +44,7 @@ describe("InMemoryConversationRepository", () => {
       content: "external mutation",
     });
 
-    assert.deepEqual(repository.getMessages("conversation-a"), [
+    expect(repository.getMessages("conversation-a")).toEqual([
       { role: "user", content: "original" },
     ]);
   });

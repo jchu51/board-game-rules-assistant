@@ -1,5 +1,4 @@
-import assert from "node:assert/strict";
-import { describe, it, mock } from "node:test";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type {
   ErrorRequestHandler,
   NextFunction,
@@ -40,69 +39,65 @@ const invokeMiddleware = (
   middleware(error, {} as Request, response, next);
 };
 
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
 describe("createErrorMiddleware", () => {
   it("returns a production-safe error body", () => {
     const captured: CapturedResponse = {};
-    const errorMock = mock.method(console, "error", () => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
 
-    try {
-      invokeMiddleware(
-        createErrorMiddleware({
-          ...testConfig,
-          nodeEnv: "production",
-        }),
-        new Error("sensitive failure"),
-        createMockResponse(captured),
-      );
-    } finally {
-      errorMock.mock.restore();
-    }
+    invokeMiddleware(
+      createErrorMiddleware({
+        ...testConfig,
+        nodeEnv: "production",
+      }),
+      new Error("sensitive failure"),
+      createMockResponse(captured),
+    );
 
-    assert.equal(captured.statusCode, 500);
-    assert.deepEqual(captured.body, {
+    expect(captured.statusCode).toBe(500);
+    expect(captured.body).toEqual({
       error: "Internal Server Error",
     });
   });
 
   it("includes error details outside production", () => {
     const captured: CapturedResponse = {};
-    const errorMock = mock.method(console, "error", () => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
 
-    try {
-      invokeMiddleware(
-        createErrorMiddleware(testConfig),
-        new Error("visible failure"),
-        createMockResponse(captured),
-      );
-    } finally {
-      errorMock.mock.restore();
-    }
+    invokeMiddleware(
+      createErrorMiddleware(testConfig),
+      new Error("visible failure"),
+      createMockResponse(captured),
+    );
 
-    assert.equal(captured.statusCode, 500);
-    assert.match((captured.body as { error: string }).error, /visible failure/);
-    assert.match((captured.body as { stack: string }).stack, /visible failure/);
+    expect(captured.statusCode).toBe(500);
+    expect((captured.body as { error: string }).error).toMatch(
+      /visible failure/,
+    );
+    expect((captured.body as { stack: string }).stack).toMatch(
+      /visible failure/,
+    );
   });
 
   it("delegates when headers were already sent", () => {
     const captured: CapturedResponse = {};
     const error = new Error("late failure");
     let nextError: unknown;
-    const errorMock = mock.method(console, "error", () => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
 
-    try {
-      invokeMiddleware(
-        createErrorMiddleware(testConfig),
-        error,
-        createMockResponse(captured, true),
-        (nextValue) => {
-          nextError = nextValue;
-        },
-      );
-    } finally {
-      errorMock.mock.restore();
-    }
+    invokeMiddleware(
+      createErrorMiddleware(testConfig),
+      error,
+      createMockResponse(captured, true),
+      (nextValue) => {
+        nextError = nextValue;
+      },
+    );
 
-    assert.equal(nextError, error);
-    assert.deepEqual(captured, {});
+    expect(nextError).toBe(error);
+    expect(captured).toEqual({});
   });
 });

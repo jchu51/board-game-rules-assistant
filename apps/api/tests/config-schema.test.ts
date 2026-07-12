@@ -1,5 +1,4 @@
-import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, expect, it } from "vitest";
 
 import { EnvSchema } from "../src/config/config-schema";
 
@@ -10,16 +9,16 @@ describe("EnvSchema", () => {
       TAVILY_API_KEY: "test-tavily-key",
     });
 
-    assert.equal(env.NODE_ENV, "local");
-    assert.equal(env.HOST, "127.0.0.1");
-    assert.equal(env.PORT, 8000);
-    assert.equal(env.CORS_ORIGIN, "http://localhost:5173");
-    assert.equal(env.AGENT_CHAT_MODEL, "openai:gpt-4o-mini");
-    assert.equal(env.INGESTION_EMBEDDING_MODEL, "text-embedding-3-large");
-    assert.equal(env.INGESTION_CHUNK_SIZE, 500);
-    assert.equal(env.INGESTION_CHUNK_OVERLAP, 100);
-    assert.equal(env.INGESTION_MAX_UPLOAD_SIZE_BYTES, 40 * 1024 * 1024);
-    assert.equal(env.TAVILY_API_KEY, "test-tavily-key");
+    expect(env.NODE_ENV).toBe("local");
+    expect(env.HOST).toBe("127.0.0.1");
+    expect(env.PORT).toBe(8000);
+    expect(env.CORS_ORIGIN).toBe("http://localhost:5173");
+    expect(env.AGENT_CHAT_MODEL).toBe("openai:gpt-4o-mini");
+    expect(env.INGESTION_EMBEDDING_MODEL).toBe("text-embedding-3-large");
+    expect(env.INGESTION_CHUNK_SIZE).toBe(500);
+    expect(env.INGESTION_CHUNK_OVERLAP).toBe(100);
+    expect(env.INGESTION_MAX_UPLOAD_SIZE_BYTES).toBe(40 * 1024 * 1024);
+    expect(env.TAVILY_API_KEY).toBe("test-tavily-key");
   });
 
   it("rejects a missing Tavily API key", () => {
@@ -27,7 +26,7 @@ describe("EnvSchema", () => {
       OPENAI_API_KEY: "test-key",
     });
 
-    assert.equal(result.success, false);
+    expect(result.success).toBe(false);
   });
 
   it("rejects an empty Tavily API key", () => {
@@ -36,7 +35,7 @@ describe("EnvSchema", () => {
       TAVILY_API_KEY: "",
     });
 
-    assert.equal(result.success, false);
+    expect(result.success).toBe(false);
   });
 
   it("rejects an empty OpenAI API key", () => {
@@ -45,7 +44,7 @@ describe("EnvSchema", () => {
       TAVILY_API_KEY: "test-tavily-key",
     });
 
-    assert.equal(result.success, false);
+    expect(result.success).toBe(false);
   });
 
   it("treats blank public search include domains as unset", () => {
@@ -55,6 +54,6 @@ describe("EnvSchema", () => {
       PUBLIC_SEARCH_INCLUDE_DOMAINS: "",
     });
 
-    assert.equal(env.PUBLIC_SEARCH_INCLUDE_DOMAINS, undefined);
+    expect(env.PUBLIC_SEARCH_INCLUDE_DOMAINS).toBe(undefined);
   });
 });

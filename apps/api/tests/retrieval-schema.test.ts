@@ -1,5 +1,4 @@
-import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, expect, it } from "vitest";
 
 import {
   RetrievalSearchRequestSchema,
@@ -8,16 +7,15 @@ import {
 
 describe("Retrieval schemas", () => {
   it("trims valid search requests and rejects extra fields", () => {
-    assert.deepEqual(
+    expect(
       RetrievalSearchRequestSchema.parse({
         conversationId: "11111111-1111-4111-8111-111111111111",
         query: "  How many resources does a city produce?  ",
       }),
-      {
-        conversationId: "11111111-1111-4111-8111-111111111111",
-        query: "How many resources does a city produce?",
-      },
-    );
+    ).toEqual({
+      conversationId: "11111111-1111-4111-8111-111111111111",
+      query: "How many resources does a city produce?",
+    });
 
     const result = RetrievalSearchRequestSchema.safeParse({
       conversationId: "11111111-1111-4111-8111-111111111111",
@@ -25,21 +23,19 @@ describe("Retrieval schemas", () => {
       topK: 10,
     });
 
-    assert.equal(result.success, false);
+    expect(result.success).toBe(false);
 
-    assert.equal(
+    expect(
       RetrievalSearchRequestSchema.safeParse({
         conversationId: "not-a-uuid",
         query: "How many resources does a city produce?",
       }).success,
-      false,
-    );
-    assert.equal(
+    ).toBe(false);
+    expect(
       RetrievalSearchRequestSchema.safeParse({
         query: "How many resources does a city produce?",
       }).success,
-      false,
-    );
+    ).toBe(false);
   });
 
   it("validates answer responses with retrieval match metadata", () => {
@@ -58,8 +54,8 @@ describe("Retrieval schemas", () => {
       ],
     });
 
-    assert.equal(response.answer, "A city produces two resources.");
-    assert.equal(response.matches[0]?.origin, "rulebook");
-    assert.equal(response.matches[0]?.metadata.pageNumber, 3);
+    expect(response.answer).toBe("A city produces two resources.");
+    expect(response.matches[0]?.origin).toBe("rulebook");
+    expect(response.matches[0]?.metadata.pageNumber).toBe(3);
   });
 });

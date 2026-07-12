@@ -1,5 +1,4 @@
-import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, expect, it } from "vitest";
 
 import { UploadPdfsRequestSchema } from "../src/presentation/http/ingestion/ingestion-schema";
 
@@ -9,7 +8,7 @@ describe("UploadPdfsRequestSchema", () => {
       gameName: "  Catan  ",
     });
 
-    assert.deepEqual(body, {
+    expect(body).toEqual({
       gameName: "Catan",
       splitterParams: undefined,
     });
@@ -22,7 +21,7 @@ describe("UploadPdfsRequestSchema", () => {
       gameName: "Pandemic",
     });
 
-    assert.deepEqual(validBody, {
+    expect(validBody).toEqual({
       gameName: "Pandemic",
       splitterParams: {
         chunkOverlap: 25,
@@ -36,6 +35,6 @@ describe("UploadPdfsRequestSchema", () => {
       gameName: "Pandemic",
     });
 
-    assert.equal(invalidBody.success, false);
+    expect(invalidBody.success).toBe(false);
   });
 });
