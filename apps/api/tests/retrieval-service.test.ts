@@ -66,6 +66,16 @@ describe("RetrievalService authorization", () => {
 });
 
 describe("RetrievalService persistence atomicity", () => {
+  it("fails explicitly and writes no assistant when a relevant ranked match has no chunk id", async () => {
+    const { persistence, actor, conversation } = await setup();
+    const vector = new RecordingVectorStore();
+    vector.results = [[new Document({ pageContent: "Deal five cards.", metadata: { documentId: crypto.randomUUID() } }), 0.9]];
+    await assert.rejects(
+      service(persistence.conversations, vector, new AccessPolicyService(persistence.policies, persistence.library)).search({ actor, conversationId: conversation.id, query: "How many cards are dealt?" }),
+      (error: any) => error?.code === "RETRIEVAL_INVARIANT_VIOLATION" && /documentChunkId/.test(error.message),
+    );
+    assert.deepEqual((await persistence.conversations.listMessages({ actor, conversationId: conversation.id })).map(({ role }) => role), ["user"]);
+  });
   it("keeps the user message but writes no assistant message when model work fails", async () => {
     const { persistence, actor, conversation } = await setup();
     const vector = new RecordingVectorStore();
@@ -88,5 +98,47 @@ describe("RetrievalService persistence atomicity", () => {
       { id: chunkIds[0], rank: 1, distance: 0.1, quote: "Rule 1" },
       { id: chunkIds[1], rank: 2, distance: 0.2, quote: "Rule 2" },
     ]);
+  });
+});
+
+describe("RetrievalService retained behavior", () => {
+  it("persists weak-result abstention without calling agents or public search", async () => {
+    const { persistence, actor, conversation } = await setup();
+    const vector = new RecordingVectorStore();
+    vector.results = [[new Document({ pageContent: "weak", metadata: { documentChunkId: crypto.randomUUID() } }), 0.5]];
+    let publicCalls = 0;
+    const retrieval = new RetrievalService(vector, new RequestClassifierService(), { search: async () => { publicCalls++; return []; } }, persistence.conversations, () => { throw new Error("agent called"); }, () => { throw new Error("agent called"); }, new AccessPolicyService(persistence.policies, persistence.library));
+    const result = await retrieval.search({ actor, conversationId: conversation.id, query: "How many cards are dealt?" });
+    assert.match(result.answer, /not relevant enough/i); assert.equal(publicCalls, 0);
+    assert.deepEqual((await persistence.conversations.listMessages({ actor, conversationId: conversation.id })).map(({ role }) => role), ["user", "assistant"]);
+  });
+
+  it("uses public fallback when vector results are empty and degrades when public search fails", async () => {
+    for (const fails of [false, true]) {
+      const { persistence, actor, conversation } = await setup();
+      const vector = new RecordingVectorStore(); let context = "";
+      const retrieval = new RetrievalService(vector, new RequestClassifierService(), { search: async () => { if (fails) throw new Error("down"); return [{ title: "FAQ", url: "https://example.test/faq", content: "Deal five cards.", score: 0.9 }]; } }, persistence.conversations, (value) => { context = value; return contextAgent(); }, answerAgent, new AccessPolicyService(persistence.policies, persistence.library));
+      const result = await retrieval.search({ actor, conversationId: conversation.id, query: "How many cards are dealt?" });
+      if (fails) assert.match(result.answer, /could not find/i); else { assert.equal(result.answer, "answer"); assert.match(context, /origin=public_web/); assert.match(context, /example\.test/); }
+      assert.deepEqual((await persistence.conversations.listMessages({ actor, conversationId: conversation.id })).map(({ role }) => role), ["user", "assistant"]);
+    }
+  });
+
+  it("classifies out-of-scope requests before retrieval and persists the abstention", async () => {
+    const { persistence, actor, conversation } = await setup(); const vector = new RecordingVectorStore();
+    const result = await service(persistence.conversations, vector, new AccessPolicyService(persistence.policies, persistence.library)).search({ actor, conversationId: conversation.id, query: "What is tomorrow's weather?" });
+    assert.match(result.answer, /only answer board-game rules/i); assert.equal(vector.searches.length, 0);
+    assert.deepEqual((await persistence.conversations.listMessages({ actor, conversationId: conversation.id })).map(({ role }) => role), ["user", "assistant"]);
+  });
+
+  it("formats rulebook agent context and includes durable multi-turn history", async () => {
+    const { persistence, actor, conversation } = await setup(); const vector = new RecordingVectorStore(); let context = ""; const questions: string[] = [];
+    vector.results = [[new Document({ pageContent: "Deal five cards.", metadata: { documentChunkId: crypto.randomUUID(), documentId: crypto.randomUUID(), source: "rules.pdf", loc: { pageNumber: 3 } } }), 0.9]];
+    const retrieval = new RetrievalService(vector, new RequestClassifierService(), publicSearch, persistence.conversations, (value) => { context = value; return { run: async (q: string) => { questions.push(q); return "rules"; } } as unknown as RuleContextAgent; }, () => ({ run: async (q: string) => { questions.push(q); return "answer"; } }) as unknown as RuleAnswerAgent, new AccessPolicyService(persistence.policies, persistence.library));
+    await retrieval.search({ actor, conversationId: conversation.id, query: "In Catan, how many cards are dealt?" });
+    await retrieval.search({ actor, conversationId: conversation.id, query: "How many cards are dealt on round two?" });
+    assert.match(context, /Chunk 1/); assert.match(context, /source=rules\.pdf/); assert.match(context, /page=3/);
+    assert.match(vector.searches[1]?.query ?? "", /how many cards are dealt/i); assert.match(questions.at(-1) ?? "", /Conversation context:/); assert.match(questions.at(-1) ?? "", /assistant: answer/);
+    assert.deepEqual((await persistence.conversations.listMessages({ actor, conversationId: conversation.id })).map(({ role }) => role), ["user", "assistant", "user", "assistant"]);
   });
 });

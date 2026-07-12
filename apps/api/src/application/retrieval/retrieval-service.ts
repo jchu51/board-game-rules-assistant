@@ -25,6 +25,15 @@ const MAX_CONTEXT_MESSAGES = 10;
 const MAX_QUOTED_TEXT_LENGTH = 500;
 type ConversationMessage = { role: "user" | "assistant"; content: string };
 
+export class RetrievalInvariantError extends Error {
+  readonly code = "RETRIEVAL_INVARIANT_VIOLATION";
+
+  constructor(message: string) {
+    super(message);
+    this.name = "RetrievalInvariantError";
+  }
+}
+
 export class RetrievalService {
   constructor(
     private readonly vectorStore: VectorStore,
@@ -88,9 +97,18 @@ export class RetrievalService {
         ...(actor.kind === "user" ? { userId: actor.userId } : {}),
       },
     });
+    const relevantResults = results.filter(
+      ([, score]) => score > MIN_RELEVANCE_SCORE,
+    );
+    for (const [document] of relevantResults) {
+      if (!document.metadata.documentChunkId) {
+        throw new RetrievalInvariantError(
+          "Relevant persisted retrieval match is missing documentChunkId",
+        );
+      }
+    }
 
-    const matches: RetrievalMatch[] = results
-      .filter(([, score]) => score > MIN_RELEVANCE_SCORE)
+    const matches: RetrievalMatch[] = relevantResults
       .map(([document]) => ({
         origin: CONTEXT_ORIGIN.rulebook,
         content: document.pageContent,
@@ -120,23 +138,13 @@ export class RetrievalService {
 
     const result = await this.answerFromMatches(conversationQuestion, matches);
 
-    const citations = results
-      .filter(([, score]) => score > MIN_RELEVANCE_SCORE)
-      .flatMap(([document, score], index) =>
-        document.metadata.documentChunkId
-          ? [
-              {
-                documentChunkId: document.metadata.documentChunkId,
-                rank: index + 1,
-                distance: Number((1 - score).toFixed(12)),
-                quotedText: document.pageContent.slice(
-                  0,
-                  MAX_QUOTED_TEXT_LENGTH,
-                ),
-              },
-            ]
-          : [],
-      );
+    const citations = relevantResults.map(([document, score], index) => ({
+      // Guarded above as a retrieval/persistence boundary invariant.
+      documentChunkId: document.metadata.documentChunkId!,
+      rank: index + 1,
+      distance: Number((1 - score).toFixed(12)),
+      quotedText: document.pageContent.slice(0, MAX_QUOTED_TEXT_LENGTH),
+    }));
     return this.completeTurn(actor, conversationId, result, citations);
   }
 
