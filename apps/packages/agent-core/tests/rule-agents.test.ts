@@ -1,5 +1,4 @@
-import assert from "node:assert/strict";
-import { describe, it, mock } from "node:test";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { BaseMessageLike } from "@langchain/core/messages";
 import type { ConfigurableModel } from "langchain/chat_models/universal";
 
@@ -9,6 +8,10 @@ import { RuleAnswerAgent } from "../src/agents/rule-answer-agent.js";
 import { RuleContextAgent } from "../src/agents/rule-context-agent.js";
 
 const fakeModel = {} as ConfigurableModel;
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 const contentAsText = (content: unknown): string => {
   if (typeof content === "string") {
@@ -61,9 +64,9 @@ describe("RuleContextAgent", () => {
 
     const result = await agent.run("How many resources does a city produce?");
 
-    assert.equal(result, "Cities produce two resources.");
-    assert.match(promptText, /Question: How many resources/);
-    assert.match(promptText, /Retrieved chunks: Chunk 1/);
+    expect(result).toBe("Cities produce two resources.");
+    expect(promptText).toMatch(/Question: How many resources/);
+    expect(promptText).toMatch(/Retrieved chunks: Chunk 1/);
   });
 
   it("wraps runtime failures as AgentError", async () => {
@@ -73,7 +76,7 @@ describe("RuleContextAgent", () => {
         throw cause;
       },
     };
-    const errorMock = mock.method(console, "error", () => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
     const agent = new RuleContextAgent(
       "rule-context-agent",
       fakeModel,
@@ -81,19 +84,14 @@ describe("RuleContextAgent", () => {
       runtime,
     );
 
-    try {
-      await assert.rejects(
-        () => agent.run("question"),
-        (error: unknown) => {
-          assert.ok(error instanceof AgentError);
-          assert.equal(error.agentName, "rule-context-agent");
-          assert.equal(error.cause, cause);
-          return true;
-        },
-      );
-    } finally {
-      errorMock.mock.restore();
-    }
+    const run = agent.run("question");
+
+    await expect(run).rejects.toBeInstanceOf(AgentError);
+    await expect(run).rejects.toMatchObject({
+      name: "AgentError",
+      agentName: "rule-context-agent",
+      cause,
+    });
   });
 });
 
@@ -121,10 +119,10 @@ describe("RuleAnswerAgent", () => {
 
     const result = await agent.run("How many resources does a city produce?");
 
-    assert.equal(result, "A city produces two resources.");
-    assert.match(systemPrompt, /Board Game Rule Master/);
-    assert.match(systemPrompt, /Page 3: Cities produce two resources/);
-    assert.equal(humanPrompt, "How many resources does a city produce?");
+    expect(result).toBe("A city produces two resources.");
+    expect(systemPrompt).toMatch(/Board Game Rule Master/);
+    expect(systemPrompt).toMatch(/Page 3: Cities produce two resources/);
+    expect(humanPrompt).toBe("How many resources does a city produce?");
   });
 
   it("returns a fallback when the runtime response has no final text", async () => {
@@ -142,6 +140,6 @@ describe("RuleAnswerAgent", () => {
 
     const result = await agent.run("question");
 
-    assert.equal(result, "No response");
+    expect(result).toBe("No response");
   });
 });

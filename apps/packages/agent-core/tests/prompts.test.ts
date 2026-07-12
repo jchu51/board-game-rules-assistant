@@ -1,5 +1,4 @@
-import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, expect, it } from "vitest";
 
 import { boardGameRuleMasterPrompt } from "../src/prompts/board-game-rule-master-prompt.js";
 import { ruleContextPrompt } from "../src/prompts/rule-context-prompt.js";
@@ -19,15 +18,15 @@ describe("ruleContextPrompt", () => {
       question: "How many resources does a city produce?",
     });
 
-    assert.equal(messages.length, 1);
+    expect(messages.length).toBe(1);
 
     const content = contentAsText(messages[0]?.content);
 
-    assert.match(content, /Question: How many resources/);
-    assert.match(content, /Retrieved chunks: Chunk 1/);
-    assert.match(content, /rulebook chunks come from/);
-    assert.match(content, /public_web chunks/);
-    assert.match(content, /Remove irrelevant rules/);
+    expect(content).toMatch(/Question: How many resources/);
+    expect(content).toMatch(/Retrieved chunks: Chunk 1/);
+    expect(content).toMatch(/rulebook chunks come from/);
+    expect(content).toMatch(/public_web chunks/);
+    expect(content).toMatch(/Remove irrelevant rules/);
   });
 });
 
@@ -38,18 +37,17 @@ describe("boardGameRuleMasterPrompt", () => {
       question: "How many resources does a city produce?",
     });
 
-    assert.equal(messages.length, 2);
+    expect(messages.length).toBe(2);
 
     const systemContent = contentAsText(messages[0]?.content);
     const humanContent = contentAsText(messages[1]?.content);
 
-    assert.match(systemContent, /using only the excerpts provided/);
-    assert.match(
-      systemContent,
+    expect(systemContent).toMatch(
       /rulebook: an excerpt from an officially uploaded rulebook/,
     );
-    assert.match(systemContent, /public_web: a public web search result/);
-    assert.match(systemContent, /Page 3: Cities produce two resources/);
-    assert.equal(humanContent, "How many resources does a city produce?");
+    expect(systemContent).toMatch(/using only the excerpts provided/);
+    expect(systemContent).toMatch(/public_web: a public web search result/);
+    expect(systemContent).toMatch(/Page 3: Cities produce two resources/);
+    expect(humanContent).toBe("How many resources does a city produce?");
   });
 });

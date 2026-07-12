@@ -1,5 +1,4 @@
-import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, expect, it } from "vitest";
 
 import { AgentError } from "../src/agents/agent-error.js";
 
@@ -8,9 +7,9 @@ describe("AgentError", () => {
     const cause = new Error("model failed");
     const error = AgentError.runFailed("rule-agent", cause);
 
-    assert.equal(error.name, "AgentError");
-    assert.equal(error.agentName, "rule-agent");
-    assert.equal(error.message, "rule-agent: failed to complete the request");
-    assert.equal(error.cause, cause);
+    expect(error.name).toBe("AgentError");
+    expect(error.agentName).toBe("rule-agent");
+    expect(error.message).toBe("rule-agent: failed to complete the request");
+    expect(error.cause).toBe(cause);
   });
 });
