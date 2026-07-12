@@ -18,6 +18,11 @@ export class ActorResolutionError extends Error {
   }
 }
 
+export class AuthenticationRequiredError extends Error {
+  readonly code = "AUTHENTICATION_REQUIRED";
+  constructor() { super("Verified authentication is required"); this.name = "AuthenticationRequiredError"; }
+}
+
 export class UnauthorizedResourceError extends Error {
   readonly code = "RESOURCE_NOT_FOUND";
 

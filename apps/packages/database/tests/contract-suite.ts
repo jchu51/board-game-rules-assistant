@@ -152,6 +152,20 @@ export const runPersistenceContract = (
       await persistence.close();
     });
 
+    test("allocates monotonic versions under concurrent private and global creation", async () => {
+      const persistence = await createPersistence();
+      const game = await persistence.library.createGame({ name: `Versions ${crypto.randomUUID()}`, slug: `versions-${crypto.randomUUID()}` });
+      const user = await persistence.identity.createUser({ email: `versions-${crypto.randomUUID()}@example.com`, displayName: "Versions", accountRole: "admin", planTier: "pro" });
+      const privateDocument = await persistence.library.createDocument({ gameId: game.id, ownerId: user.id, visibility: "private", kind: "other", title: "Private" });
+      const globalDocument = await persistence.library.createDocument({ gameId: game.id, ownerId: null, visibility: "global", kind: "other", title: "Global" });
+      const base = { embeddingProvider: "test", embeddingModel: "test", embeddingDimensions: 3072 };
+      const privateVersions = await Promise.all(Array.from({ length: 8 }, (_, index) => persistence.library.createVersion({ documentId: privateDocument.id, checksum: `p-${index}`, ...base })));
+      const globalVersions = await Promise.all(Array.from({ length: 8 }, (_, index) => persistence.library.createGlobalDraftVersion({ documentId: globalDocument.id, checksum: `g-${index}`, ...base })));
+      assert.deepEqual(privateVersions.map(({ versionNumber }) => versionNumber).sort((a, b) => a - b), [1,2,3,4,5,6,7,8]);
+      assert.deepEqual(globalVersions.map(({ versionNumber }) => versionNumber).sort((a, b) => a - b), [1,2,3,4,5,6,7,8]);
+      await persistence.close();
+    });
+
     test("never returns another owner's private document", async () => {
       const persistence = await createPersistence();
       const game = await persistence.library.createGame({

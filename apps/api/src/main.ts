@@ -43,7 +43,11 @@ const persistence = await createPersistence({
   expectedDimensions: config.ingestion.embeddingDimensions,
 });
 await preparePersistence(persistence, config.nodeEnv, config.localUserId);
-const actorService = new ActorService(persistence.identity, { nodeEnv: config.nodeEnv, localUserId: config.localUserId });
+const actorService = new ActorService(persistence.identity, {
+  nodeEnv: config.nodeEnv,
+  localUserId: config.localUserId,
+  allowDevelopmentHeaders: ["local", "test"].includes(config.nodeEnv),
+});
 const accessPolicyService = new AccessPolicyService(persistence.policies, persistence.library);
 const conversationService = new ConversationService(persistence.conversations);
 const vectorStore = persistence.vectorStore;

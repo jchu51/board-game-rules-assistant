@@ -5,6 +5,7 @@ import type { IngestPdfInput, IngestionResult } from "./ingestion-types";
 import type { AccessPolicyService } from "../access/access-policy-service";
 import { PlanLimitReachedError } from "../access/access-policy-service";
 import { UnauthorizedResourceError } from "../../domain/identity/actor";
+import { sanitizedIngestionFailure } from "./ingestion-failure";
 
 type PdfIngestion = { ingestPdf(input: IngestPdfInput): Promise<IngestionResult> };
 
@@ -84,7 +85,13 @@ export class RulebookService {
       return { ...result, id: document.id, versionId: version.id, gameId: game.id, gameName: game.name, pdfName: document.title, fileSize: document.fileSizeBytes, status: "completed" as const };
     } catch (error) {
       if (version) {
-        await this.library.markVersionFailed({ versionId: version.id, failureCode: "INGESTION_FAILED", failureMessage: error instanceof Error ? error.message : "Ingestion failed" });
+        try {
+          await this.library.markVersionFailed({ versionId: version.id, ...sanitizedIngestionFailure() });
+        } finally {
+          if (!existingDocument) {
+            await this.library.softDeleteDocument({ documentId: document.id, ownerId: user.userId });
+          }
+        }
       } else if (!existingDocument) {
         await this.library.softDeleteDocument({ documentId: document.id, ownerId: user.userId });
       }

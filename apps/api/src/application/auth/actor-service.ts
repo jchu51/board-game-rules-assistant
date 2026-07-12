@@ -4,7 +4,7 @@ import type {
   UserRecord,
 } from "@board-game-rules-assistant/database";
 import type { NodeEnv } from "../../config/config-types";
-import { ActorResolutionError, GuestSessionExpiredError } from "../../domain/identity/actor";
+import { ActorResolutionError, AuthenticationRequiredError, GuestSessionExpiredError } from "../../domain/identity/actor";
 
 type Headers = Record<string, string | string[] | undefined>;
 
@@ -29,10 +29,13 @@ export const bootstrapLocalUser = async (
 export class ActorService {
   constructor(
     private readonly identity: IdentityRepository,
-    private readonly options: { nodeEnv: NodeEnv; localUserId: string },
+    private readonly options: { nodeEnv: NodeEnv; localUserId: string; allowDevelopmentHeaders: boolean },
   ) {}
 
   async resolve(headers: Headers): Promise<Actor> {
+    if (!["local", "test"].includes(this.options.nodeEnv) || !this.options.allowDevelopmentHeaders) {
+      throw new AuthenticationRequiredError();
+    }
     const userId = singleHeader(headers["x-user-id"]);
     const guestSessionId = singleHeader(headers["x-guest-session-id"]);
     if (userId && guestSessionId) throw new ActorResolutionError("provide exactly one actor header");

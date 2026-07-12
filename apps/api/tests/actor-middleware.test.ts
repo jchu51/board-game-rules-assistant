@@ -9,7 +9,7 @@ import { createActorMiddleware } from "../src/presentation/http/middleware/actor
 test("resolves a registered user into response locals", async () => {
   const persistence = await createMemoryPersistence();
   const user = await persistence.identity.createUser({ email: "actor@example.com", displayName: "Actor", accountRole: "admin", planTier: "pro" });
-  const middleware = createActorMiddleware(new ActorService(persistence.identity, { nodeEnv: "production", localUserId: crypto.randomUUID() }));
+  const middleware = createActorMiddleware(new ActorService(persistence.identity, { nodeEnv: "test", localUserId: crypto.randomUUID(), allowDevelopmentHeaders: true }));
   const response = { locals: {} } as Response;
   await middleware({ headers: { "x-user-id": user.id } } as unknown as Request, response, (() => {}) as NextFunction);
   assert.deepEqual(response.locals.actor, { kind: "user", userId: user.id, accountRole: "admin", planTier: "pro" });
@@ -18,6 +18,6 @@ test("resolves a registered user into response locals", async () => {
 test("rejects expired guest sessions with the typed error", async () => {
   const persistence = await createMemoryPersistence();
   const guest = await persistence.identity.createGuestSession({ expiresAt: new Date(Date.now() - 1) });
-  const service = new ActorService(persistence.identity, { nodeEnv: "production", localUserId: crypto.randomUUID() });
+  const service = new ActorService(persistence.identity, { nodeEnv: "test", localUserId: crypto.randomUUID(), allowDevelopmentHeaders: true });
   await assert.rejects(service.resolve({ "x-guest-session-id": guest.id }), GuestSessionExpiredError);
 });

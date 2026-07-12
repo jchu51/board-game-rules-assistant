@@ -5,7 +5,7 @@ import { getErrorMessage } from "./get-error-message";
 import { HttpStatus } from "./http-status";
 import { DatabaseUnavailableError, PersistenceNotFoundError } from "@board-game-rules-assistant/database";
 import { AdminRequiredError, PlanLimitReachedError } from "../../../application/access/access-policy-service";
-import { ActorResolutionError, GuestSessionExpiredError, UnauthorizedResourceError } from "../../../domain/identity/actor";
+import { ActorResolutionError, AuthenticationRequiredError, GuestSessionExpiredError, UnauthorizedResourceError } from "../../../domain/identity/actor";
 import { InvalidLibraryTransitionError } from "../../../application/library/library-service";
 
 export const createErrorMiddleware =
@@ -29,7 +29,7 @@ export const createErrorMiddleware =
       response.status(HttpStatus.CONFLICT).json({ code: error.code });
       return;
     }
-    if (error instanceof GuestSessionExpiredError || error instanceof ActorResolutionError) {
+    if (error instanceof GuestSessionExpiredError || error instanceof ActorResolutionError || error instanceof AuthenticationRequiredError) {
       response.status(HttpStatus.UNAUTHORIZED).json({ code: error.code });
       return;
     }

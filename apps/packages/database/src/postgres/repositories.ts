@@ -176,6 +176,7 @@ export const createPostgresRepositories = (db: PostgresDatabase): {
     },
     async createVersion(input) {
       return db.transaction(async (tx) => {
+        await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${input.documentId}, 1))`);
         const latest = await tx
           .select({ versionNumber: documentVersions.versionNumber })
           .from(documentVersions)
@@ -198,6 +199,7 @@ export const createPostgresRepositories = (db: PostgresDatabase): {
     },
     async createGlobalDraftVersion(input) {
       return db.transaction(async (tx) => {
+        await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${input.documentId}, 1))`);
         const document = await tx.select({ id: documents.id }).from(documents).where(and(eq(documents.id, input.documentId), eq(documents.visibility, "global"))).limit(1);
         if (!document[0]) throw new PersistenceNotFoundError("global document");
         const latest = await tx.select({ versionNumber: documentVersions.versionNumber }).from(documentVersions)

@@ -47,3 +47,30 @@ test("atomically admits only three concurrent Standard documents and replacement
   await service.upload({ actor, documentId: first.id, filePath: "/tmp/replacement.pdf", pdfName: "replacement.pdf", fileSize: 12, gameName: "Root" });
   assert.equal(await persistence.library.countActivePrivateDocuments({ ownerId: actor.userId }), 3);
 });
+
+test("failed initial uploads release quota, sanitize persistence, and replacement failure preserves the document", async () => {
+  const persistence = await createMemoryPersistence();
+  await persistence.identity.createUser({ id: actor.userId, email: "recovery@example.com", displayName: "Recovery", accountRole: "user", planTier: "standard" });
+  let fail = true;
+  let persistedFailure: { failureMessage: string } | undefined;
+  const library = { ...persistence.library, async markVersionFailed(input: Parameters<typeof persistence.library.markVersionFailed>[0]) { persistedFailure = input; return persistence.library.markVersionFailed(input); } };
+  const service = new RulebookService(library, new AccessPolicyService(persistence.policies, library), {
+    async ingestPdf() {
+      if (fail) throw new Error("secret-key at /Users/private/rules.pdf with provider body");
+      return { documentCount: 1, chunkCount: 1 };
+    },
+  }, { embeddingModel: "test-model", embeddingDimensions: 3072 });
+  for (let index = 0; index < 3; index += 1) {
+    await assert.rejects(service.upload({ actor, filePath: `/private/${index}.pdf`, pdfName: `${index}.pdf`, fileSize: 1, gameName: "Root" }));
+  }
+  assert.equal(await persistence.library.countActivePrivateDocuments({ ownerId: actor.userId }), 0);
+  fail = false;
+  const original = await service.upload({ actor, filePath: "/tmp/good.pdf", pdfName: "good.pdf", fileSize: 1, gameName: "Root" });
+  fail = true;
+  await assert.rejects(service.upload({ actor, documentId: original.id, filePath: "/private/replacement.pdf", pdfName: "replacement.pdf", fileSize: 1, gameName: "Root" }));
+  assert.deepEqual((await service.list(actor)).map(({ id }) => id), [original.id]);
+  assert.equal(await persistence.library.countActivePrivateDocuments({ ownerId: actor.userId }), 1);
+  assert.equal(persistedFailure?.failureMessage, "Rulebook processing failed");
+  assert.doesNotMatch(persistedFailure?.failureMessage ?? "", /secret|Users|provider/i);
+  assert.ok((persistedFailure?.failureMessage.length ?? 999) <= 64);
+});

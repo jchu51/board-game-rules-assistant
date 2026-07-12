@@ -81,7 +81,12 @@ test("a failed replacement leaves the published version active", async () => {
   const first = await good.service.createGlobalDraft({ actor: admin, gameId: good.game.id, filePath: "/tmp/v1.pdf", pdfName: "v1.pdf", fileSize: 1, title: "Rules", kind: "base_rules" });
   await good.service.verifyGlobalVersion(admin, first.version.id);
   await good.service.publishGlobalVersion(admin, first.version.id);
-  const failing = new LibraryService(good.persistence.library, new AccessPolicyService(good.persistence.policies, good.persistence.library), { async ingestPdf() { throw new Error("bad pdf"); } }, { embeddingModel: "test", embeddingDimensions: 3072 });
-  await assert.rejects(() => failing.createGlobalDraft({ actor: admin, gameId: good.game.id, documentId: first.document.id, filePath: "/tmp/v2.pdf", pdfName: "v2.pdf", fileSize: 1, title: "Rules", kind: "base_rules" }), /bad pdf/);
+  let persistedFailure = "";
+  const library = { ...good.persistence.library, async markVersionFailed(input: Parameters<typeof good.persistence.library.markVersionFailed>[0]) { persistedFailure = input.failureMessage; return good.persistence.library.markVersionFailed(input); } };
+  const failing = new LibraryService(library, new AccessPolicyService(good.persistence.policies, library), { async ingestPdf() { throw new Error("secret-key /Users/private/provider-body"); } }, { embeddingModel: "test", embeddingDimensions: 3072 });
+  await assert.rejects(() => failing.createGlobalDraft({ actor: admin, gameId: good.game.id, documentId: first.document.id, filePath: "/tmp/v2.pdf", pdfName: "v2.pdf", fileSize: 1, title: "Rules", kind: "base_rules" }), /secret-key/);
   assert.equal((await good.persistence.library.getVersion({ versionId: first.version.id }))?.status, "published");
+  assert.equal(persistedFailure, "Rulebook processing failed");
+  assert.doesNotMatch(persistedFailure, /secret|Users|provider/i);
+  assert.ok(persistedFailure.length <= 64);
 });

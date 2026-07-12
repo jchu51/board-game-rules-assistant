@@ -4,6 +4,7 @@ import type { Actor, DocumentKind, LibraryRepository } from "@board-game-rules-a
 import type { IngestPdfInput, IngestionResult } from "../ingestion/ingestion-types";
 import type { AccessPolicyService } from "../access/access-policy-service";
 import { UnauthorizedResourceError } from "../../domain/identity/actor";
+import { sanitizedIngestionFailure } from "../ingestion/ingestion-failure";
 
 type PdfIngestion = { ingestPdf(input: IngestPdfInput): Promise<IngestionResult> };
 
@@ -51,7 +52,7 @@ export class LibraryService {
       return { document, version: await this.library.markGlobalVersionReady({ versionId: version.id, chunkCount: result.chunkCount }) };
     } catch (error) {
       assertTransition(version.status, "failed");
-      await this.library.markVersionFailed({ versionId: version.id, failureCode: "INGESTION_FAILED", failureMessage: error instanceof Error ? error.message : "Ingestion failed" });
+      await this.library.markVersionFailed({ versionId: version.id, ...sanitizedIngestionFailure() });
       throw error;
     }
   }

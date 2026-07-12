@@ -2,7 +2,10 @@ openapi: 3.1.0
 info:
   title: Board Game Rules Assistant API
   version: 1.0.0
-  description: API for rulebook upload, indexing, and rules Q&A.
+  description: >-
+    API for rulebook upload, indexing, and rules Q&A. Development actor headers are
+    accepted only in explicit local/test mode. Development and production fail protected
+    requests with AUTHENTICATION_REQUIRED until a verified authentication provider is integrated.
 servers:
   - url: http://127.0.0.1:8000
     description: Local development
@@ -71,7 +74,7 @@ paths:
       tags:
         - Ingestion
       summary: Create a rulebook from an uploaded PDF
-      description: Uploads a PDF rulebook, indexes its extracted text, and creates an in-memory rulebook record for the current API process.
+      description: Uploads and indexes a private PDF rulebook. PostgreSQL durability is the default; memory persistence is available only for local/test use.
       requestBody:
         required: true
         content:
@@ -121,7 +124,7 @@ paths:
       tags:
         - Ingestion
       summary: List indexed rulebooks
-      description: Returns the in-memory rulebook records created by successful uploads during the current API process.
+      description: Returns the actor's durable, active private rulebooks. Local/test memory mode is process-scoped.
       responses:
         "200":
           description: Indexed rulebooks
@@ -140,7 +143,7 @@ paths:
       tags:
         - Ingestion
       summary: Delete an indexed rulebook from the list
-      description: Removes the in-memory rulebook record. Vector-store deletion is not implemented yet.
+      description: Soft-deletes the private rulebook so it is immediately excluded from listing and vector retrieval.
       parameters:
         - name: id
           in: path
@@ -428,7 +431,7 @@ components:
         chunkCount:
           type: integer
           minimum: 0
-          description: Number of chunks indexed into the in-memory vector store.
+          description: Number of chunks indexed into the configured vector store.
       additionalProperties: false
     ListRulebooksResponse:
       type: object
@@ -437,7 +440,7 @@ components:
       properties:
         rulebooks:
           type: array
-          description: Rulebooks indexed during the current API process lifetime.
+          description: Active private rulebooks owned by the authenticated actor.
           items:
             $ref: "#/components/schemas/RulebookSummary"
       additionalProperties: false
