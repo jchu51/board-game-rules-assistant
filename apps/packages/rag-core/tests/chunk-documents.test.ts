@@ -22,9 +22,9 @@ describe("chunkDocuments", () => {
     });
 
     expect(chunks.length).toBeGreaterThan(1);
-    expect(
-      chunks.map((chunk) => chunk.pageContent).join(" "),
-    ).toBe(document.pageContent);
+    expect(chunks.map((chunk) => chunk.pageContent).join(" ")).toBe(
+      document.pageContent,
+    );
 
     for (const chunk of chunks) {
       expect(chunk.metadata.documentId).toBe(
