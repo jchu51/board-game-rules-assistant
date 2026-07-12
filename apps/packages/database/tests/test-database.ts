@@ -32,7 +32,8 @@ export class KeywordEmbeddings implements EmbeddingsInterface {
 }
 
 export const createTestDatabase = async (): Promise<TestDatabase> => {
-  const databaseUrl = process.env.TEST_DATABASE_URL ?? DEFAULT_TEST_DATABASE_URL;
+  const databaseUrl =
+    process.env.TEST_DATABASE_URL ?? DEFAULT_TEST_DATABASE_URL;
   const schema = `test_${randomUUID().replaceAll("-", "")}`;
   const adminPool = new Pool({ connectionString: databaseUrl });
   await adminPool.query(`CREATE SCHEMA "${schema}"`);

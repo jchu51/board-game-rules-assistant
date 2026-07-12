@@ -3,8 +3,8 @@
 A full-stack TypeScript app for uploading board-game rulebook PDFs and building
 toward source-backed rules Q&A.
 
-The current slice lets a user upload PDF rulebooks, index them into an in-memory
-vector store, search those indexed chunks, and use a prototype Ask screen that
+The current slice lets a user upload PDF rulebooks, index them into a selectable
+in-memory or PostgreSQL/pgvector store, search those indexed chunks, and use a prototype Ask screen that
 returns an agent-generated answer with retrieved source snippets. RAG primitives
 and agent primitives live in shared packages so the API can grow this flow
 without tying those pieces directly to Express.
@@ -22,6 +22,7 @@ without tying those pieces directly to Express.
 - In-memory rulebook repository for the current API process
 - Local Swagger UI for API exploration
 - Docker Compose setup for running web and API together
+- PostgreSQL/pgvector persistence for conversation history and rulebook vectors
 
 ## Architecture
 
@@ -52,6 +53,9 @@ board-game-rules-assistant/
           embeddings/             # embedding model factories
           loaders/                # PDF loading
           vector-store/           # vector-store interface/adapters
+      database/
+        src/                       # PostgreSQL repositories and pgvector adapter
+        migrations/                # ordered application SQL migrations
     web/
       src/
         api/                      # browser API clients
@@ -104,6 +108,9 @@ AGENT_CHAT_MODEL=openai:gpt-4o-mini
 INGESTION_EMBEDDING_MODEL=text-embedding-3-large
 INGESTION_UPLOAD_DIRECTORY=../../storage/uploads
 INGESTION_MAX_UPLOAD_SIZE_BYTES=41943040
+PERSISTENCE_DRIVER=memory
+DATABASE_URL=
+PERSISTENCE_MAX_MESSAGES=20
 ```
 
 For the web app, the default API URL is `http://127.0.0.1:8000`. Override it
@@ -145,6 +152,15 @@ http://localhost:5173
 ```bash
 ./scripts/docker.sh
 ```
+
+Docker Compose starts PostgreSQL 17 with pgvector, waits for it to become
+healthy, and starts the API with `PERSISTENCE_DRIVER=postgres`. PostgreSQL is
+available to the host on port `55432`; the API connects inside Compose at
+`postgres:5432`. Conversation messages and vectors survive container restarts
+in the named `postgres_data` volume. `docker compose down -v` removes that data.
+
+For a lightweight process-local run without PostgreSQL, use
+`PERSISTENCE_DRIVER=memory` and leave `DATABASE_URL` unset.
 
 Useful Docker commands:
 
@@ -191,9 +207,9 @@ http://127.0.0.1:8000/openapi.yml
 Swagger docs are only mounted when the API runs with `NODE_ENV=local`.
 
 The Ask page creates a conversation identifier and reuses it for follow-up
-questions. The API retains up to 20 recent messages per conversation in memory;
-selecting **New chat** creates a fresh thread. Conversation memory is process-local
-and resets when the API restarts.
+questions. The API retains up to 20 recent messages per conversation in the
+selected persistence adapter. Selecting **New chat** creates a fresh thread.
+History resets on API restart only when the memory driver is selected.
 
 ### Request classification and fallback search
 
@@ -225,9 +241,11 @@ npm run build -w web
 npm run build -w api
 npm run build -w @board-game-rules-assistant/agent-core
 npm run build -w @board-game-rules-assistant/rag-core
+npm run build -w @board-game-rules-assistant/database
 npm run typecheck -w api
 npm run typecheck -w @board-game-rules-assistant/agent-core
 npm run typecheck -w @board-game-rules-assistant/rag-core
+TEST_DATABASE_URL=postgresql://board_game_rules:board_game_rules@127.0.0.1:55432/board_game_rules npm test -w @board-game-rules-assistant/database
 ```
 
 ## Current Limitations
@@ -239,4 +257,6 @@ npm run typecheck -w @board-game-rules-assistant/rag-core
   source snippets.
 - Request classification uses a maintained keyword and known-game list rather
   than the indexed rulebook catalog or an LLM classifier.
-- Citation verification, auth, and persistence are planned future work.
+- Citation verification and auth are planned future work.
+- PostgreSQL vector callback filters and vector deduplication/replacement are
+  not supported in this slice; vector insertion is append-oriented.

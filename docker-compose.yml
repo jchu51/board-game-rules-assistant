@@ -6,11 +6,7 @@ services:
       POSTGRES_USER: board_game_rules
       POSTGRES_PASSWORD: board_game_rules
     healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "pg_isready -U board_game_rules -d board_game_rules",
-        ]
+      test: ["CMD-SHELL", "pg_isready -U board_game_rules -d board_game_rules"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -28,6 +24,12 @@ services:
       HOST: 0.0.0.0
       PORT: 8000
       CORS_ORIGIN: http://localhost:5173
+      PERSISTENCE_DRIVER: postgres
+      DATABASE_URL: postgresql://board_game_rules:board_game_rules@postgres:5432/board_game_rules
+      PERSISTENCE_MAX_MESSAGES: 20
+    depends_on:
+      postgres:
+        condition: service_healthy
     ports:
       - "8000:8000"
     volumes:

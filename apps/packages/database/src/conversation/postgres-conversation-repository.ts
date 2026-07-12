@@ -17,9 +17,7 @@ type ConversationMessageRow = {
   content: string;
 };
 
-export class PostgresConversationRepository
-  implements ConversationRepositoryLike
-{
+export class PostgresConversationRepository implements ConversationRepositoryLike {
   private readonly maxMessagesPerConversation: number;
 
   constructor(

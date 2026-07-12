@@ -48,7 +48,6 @@ export const createPersistence = async ({
   return (await createPostgresPersistence({
     databaseUrl,
     embeddings,
-    maxMessagesPerConversation:
-      config.persistence.maxMessagesPerConversation,
+    maxMessagesPerConversation: config.persistence.maxMessagesPerConversation,
   })) as PostgresPersistence;
 };

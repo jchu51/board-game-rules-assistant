@@ -3,7 +3,7 @@
 Express API for the Board Game Rules Assistant.
 
 The API accepts rulebook PDF uploads, extracts and chunks PDF text through
-`rag-core`, creates embeddings, stores vectors in memory, returns rulebook
+`rag-core`, creates embeddings, stores vectors in memory or PostgreSQL/pgvector, returns rulebook
 summaries for the frontend, and exposes similarity search over indexed chunks.
 
 ## Stack
@@ -39,6 +39,9 @@ INGESTION_CHUNK_SIZE=500
 INGESTION_CHUNK_OVERLAP=100
 INGESTION_UPLOAD_DIRECTORY=../../storage/uploads
 INGESTION_MAX_UPLOAD_SIZE_BYTES=41943040
+PERSISTENCE_DRIVER=memory
+DATABASE_URL=
+PERSISTENCE_MAX_MESSAGES=20
 ```
 
 `NODE_ENV=local` enables Swagger UI. Docs are not mounted in `development`,
@@ -47,6 +50,10 @@ INGESTION_MAX_UPLOAD_SIZE_BYTES=41943040
 `PUBLIC_SEARCH_INCLUDE_DOMAINS` is optional. When set, it is parsed as a
 comma-separated list and applied to Tavily fallback searches. Use trusted
 board-game domains; leaving it unset permits results from any domain.
+
+`PERSISTENCE_DRIVER=memory` is the lightweight local default and keeps vectors
+and conversations process-local. Set it to `postgres` with `DATABASE_URL` to
+persist both. Production configuration rejects the memory driver.
 
 ## Start
 
@@ -95,9 +102,9 @@ curl -X POST http://127.0.0.1:8000/retrieval/search \
 ```
 
 Reuse the same `conversationId` for follow-up questions. The API keeps the most
-recent 20 user and assistant messages for each conversation in memory. A new
-identifier starts an isolated chat. Conversation history is lost when the API
-process restarts.
+recent 20 user and assistant messages for each conversation in the selected
+persistence adapter. A new identifier starts an isolated chat. With PostgreSQL,
+conversation history and vectors survive API restarts.
 
 The retrieval flow first rejects clearly out-of-scope requests with a
 lightweight keyword classifier. Recognized `how to play <game>` requests, such
@@ -157,3 +164,5 @@ src/
 - Retrieval returns matching chunks, metadata, and an agent-generated answer.
 - Request classification relies on a maintained keyword and known-game list;
   it is not yet derived from indexed rulebooks or an LLM classifier.
+- PostgreSQL vector callback filters and vector deduplication/replacement are
+  not supported in this slice.
