@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { Document } from "@langchain/core/documents";
 import type { EmbeddingsInterface } from "@langchain/core/embeddings";
 import type {
@@ -170,10 +170,14 @@ describe("RetrievalService", () => {
 
   it("degrades to a not-found answer when public search fails", async () => {
     let createdAgent = false;
+    const publicSearchError = new Error("tavily is down");
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
     const vectorStore = await createVectorStore();
     const failingPublicSearchService: PublicSearchService = {
       search: async () => {
-        throw new Error("tavily is down");
+        throw publicSearchError;
       },
     };
     const service = new RetrievalService(
@@ -197,6 +201,10 @@ describe("RetrievalService", () => {
     });
 
     expect(createdAgent).toBe(false);
+    expect(consoleError).toHaveBeenCalledWith(
+      "public search failed:\n",
+      publicSearchError,
+    );
     expect(result.matches).toEqual([]);
     expect(result.answer).toMatch(/could not find relevant rulebook context/i);
   });

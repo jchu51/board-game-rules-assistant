@@ -10,6 +10,7 @@ export default defineConfig({
     ],
     coverage: {
       provider: "v8",
+      include: ["apps/{api,web,packages/*}/src/**/*.{ts,tsx}"],
       reporter: ["text", "html", "json", "lcov"],
       thresholds: {
         lines: 80,
