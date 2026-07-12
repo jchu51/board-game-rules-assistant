@@ -40,6 +40,29 @@ describe("config", () => {
         tavilyApiKey: "tavily",
         includeDomains: ["catan.com", "boardgamegeek.com"],
       },
+      persistence: {
+        driver: "memory",
+        maxMessagesPerConversation: 20,
+      },
+    });
+  });
+
+  it("maps PostgreSQL persistence settings", async () => {
+    for (const [name, value] of Object.entries({
+      ...validEnvironment,
+      PERSISTENCE_DRIVER: "postgres",
+      DATABASE_URL: "postgresql://localhost/rules",
+      PERSISTENCE_MAX_MESSAGES: "9",
+    })) {
+      vi.stubEnv(name, value);
+    }
+
+    const { config } = await import("../src/config/config");
+
+    expect(config.persistence).toEqual({
+      driver: "postgres",
+      databaseUrl: "postgresql://localhost/rules",
+      maxMessagesPerConversation: 9,
     });
   });
 

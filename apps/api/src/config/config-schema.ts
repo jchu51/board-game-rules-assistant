@@ -16,7 +16,8 @@ const numberWithDefault = (fallback: number) =>
     )
     .pipe(z.number());
 
-export const EnvSchema = z.object({
+export const EnvSchema = z
+  .object({
   NODE_ENV: z
     .preprocess(
       emptyToUndefined,
@@ -54,6 +55,33 @@ export const EnvSchema = z.object({
   INGESTION_MAX_UPLOAD_SIZE_BYTES: numberWithDefault(40 * 1024 * 1024).pipe(
     z.number().int().positive(),
   ),
-});
+    PERSISTENCE_DRIVER: z
+      .preprocess(emptyToUndefined, z.enum(["memory", "postgres"]))
+      .default("memory"),
+    DATABASE_URL: z.preprocess(
+      emptyToUndefined,
+      z.string().min(1).optional(),
+    ),
+    PERSISTENCE_MAX_MESSAGES: numberWithDefault(20).pipe(
+      z.number().int().positive(),
+    ),
+  })
+  .superRefine((env, context) => {
+    if (env.PERSISTENCE_DRIVER === "postgres" && !env.DATABASE_URL) {
+      context.addIssue({
+        code: "custom",
+        path: ["DATABASE_URL"],
+        message: "DATABASE_URL is required for PostgreSQL persistence",
+      });
+    }
+
+    if (env.NODE_ENV === "production" && env.PERSISTENCE_DRIVER === "memory") {
+      context.addIssue({
+        code: "custom",
+        path: ["PERSISTENCE_DRIVER"],
+        message: "Memory persistence is not allowed in production",
+      });
+    }
+  });
 
 export type Env = z.infer<typeof EnvSchema>;

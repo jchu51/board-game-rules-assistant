@@ -20,4 +20,9 @@ export type Config = {
     tavilyApiKey: string;
     includeDomains?: string[];
   };
+  persistence: {
+    driver: "memory" | "postgres";
+    databaseUrl?: string;
+    maxMessagesPerConversation: number;
+  };
 };

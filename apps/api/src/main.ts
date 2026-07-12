@@ -1,7 +1,4 @@
-import {
-  createOpenAIEmbeddings,
-  LangchainMemoryVectorStore,
-} from "@board-game-rules-assistant/rag-core";
+import { createOpenAIEmbeddings } from "@board-game-rules-assistant/rag-core";
 import {
   LLMService,
   RuleAnswerAgent,
@@ -13,7 +10,7 @@ import { RequestClassifierService } from "./application/retrieval/request-classi
 import { RetrievalService } from "./application/retrieval/retrieval-service";
 import { config } from "./config/config";
 import { InMemoryRulebookRepository } from "./infrastructure/persistence/rulebook/in-memory-rulebook-repository";
-import { InMemoryConversationRepository } from "./infrastructure/persistence/conversation/in-memory-conversation-repository";
+import { createPersistence } from "./infrastructure/persistence/create-persistence";
 import { TavilyPublicSearchService } from "./infrastructure/public-search/tavily-public-search-service";
 import { createApp } from "./presentation/http/app";
 import { HealthRouter } from "./presentation/http/health/health-router";
@@ -24,14 +21,16 @@ import { RetrievalRouter } from "./presentation/http/retrieval/retrieval-router"
 const embeddings = createOpenAIEmbeddings(config.ingestion.embeddingModel, {
   apiKey: config.ingestion.openAiApiKey,
 });
+const persistence = await createPersistence({ config, embeddings });
+await persistence.healthCheck();
 const llmService = new LLMService();
 const chatModel = await llmService.init(config.agent.chatModel, {
   apiKey: config.ingestion.openAiApiKey,
   temperature: 0,
 });
-const vectorStore = new LangchainMemoryVectorStore(embeddings);
+const vectorStore = persistence.vectorStore;
 const rulebookRepository = new InMemoryRulebookRepository();
-const conversationRepository = new InMemoryConversationRepository();
+const conversationRepository = persistence.conversationRepository;
 const ingestionService = new IngestionService(vectorStore, {
   defaultSplitterParams: {
     chunkSize: config.ingestion.defaultChunkSize,
@@ -82,11 +81,24 @@ const server = app.listen(config.port, config.host, () => {
   console.log(`API listening on http://${config.host}:${config.port}`);
 });
 
+let shutdownPromise: Promise<void> | undefined;
+
 const shutdown = (signal: NodeJS.Signals) => {
-  console.log(`${signal} received. Closing API server.`);
-  server.close(() => {
-    process.exit(0);
-  });
+  shutdownPromise ??= (async () => {
+    console.log(`${signal} received. Closing API server.`);
+    await new Promise<void>((resolve, reject) => {
+      server.close((error) => (error ? reject(error) : resolve()));
+    });
+    await persistence.close();
+  })();
+
+  void shutdownPromise.then(
+    () => process.exit(0),
+    (error) => {
+      console.error("Failed to close API cleanly:", error);
+      process.exit(1);
+    },
+  );
 };
 
 process.on("SIGINT", shutdown);

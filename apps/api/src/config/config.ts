@@ -44,4 +44,9 @@ export const config: Config = {
       .map((domain) => domain.trim())
       .filter(Boolean),
   },
+  persistence: {
+    driver: env.PERSISTENCE_DRIVER,
+    databaseUrl: env.DATABASE_URL,
+    maxMessagesPerConversation: env.PERSISTENCE_MAX_MESSAGES,
+  },
 };
