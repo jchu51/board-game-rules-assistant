@@ -19,14 +19,8 @@ services:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
-    environment:
-      NODE_ENV: local
-      HOST: 0.0.0.0
-      PORT: 8000
-      CORS_ORIGIN: http://localhost:5173
-      PERSISTENCE_DRIVER: postgres
-      DATABASE_URL: postgresql://board_game_rules:board_game_rules@postgres:5432/board_game_rules
-      PERSISTENCE_MAX_MESSAGES: 20
+    env_file:
+      - apps/api/.env
     depends_on:
       postgres:
         condition: service_healthy
@@ -35,18 +29,29 @@ services:
     volumes:
       - .:/workspace
       - api_node_modules:/workspace/node_modules
-    command: sh -c "npm install && npm run dev -w api"
+    command: >-
+      sh -c "npm run build -w @board-game-rules-assistant/rag-core &&
+      npm run build -w @board-game-rules-assistant/agent-core &&
+      npm run build -w @board-game-rules-assistant/database &&
+      npm run dev -w api"
 
   web:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
+    depends_on:
+      api:
+        condition: service_healthy
     ports:
       - "5173:5173"
     volumes:
       - .:/workspace
       - web_node_modules:/workspace/node_modules
-    command: sh -c "npm install && npm run dev -w web -- --host 0.0.0.0"
+    command: >-
+      sh -c "npm run build -w @board-game-rules-assistant/rag-core &&
+      npm run build -w @board-game-rules-assistant/agent-core &&
+      npm run build -w @board-game-rules-assistant/database &&
+      npm run dev -w web -- --host 0.0.0.0"
 
 volumes:
   postgres_data:
