@@ -7,7 +7,8 @@
     "dev": "nodemon",
     "build": "tsup src/main.ts --format esm --platform node --target node22 --out-dir dist --clean && cp openapi.yml dist/openapi.yml",
     "start": "node dist/main.js",
-    "test": "tsc --noEmit -p tsconfig.test.json && node --import tsx --test tests/*.test.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "lint": "oxlint"
   },
