@@ -1,4 +1,24 @@
 services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_DB: board_game_rules
+      POSTGRES_USER: board_game_rules
+      POSTGRES_PASSWORD: board_game_rules
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U board_game_rules -d board_game_rules",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    ports:
+      - "55432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
   api:
     build:
       context: .
@@ -27,5 +47,6 @@ services:
     command: sh -c "npm install && npm run dev -w web -- --host 0.0.0.0"
 
 volumes:
+  postgres_data:
   api_node_modules:
   web_node_modules:
