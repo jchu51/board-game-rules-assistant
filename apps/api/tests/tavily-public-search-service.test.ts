@@ -1,5 +1,4 @@
-import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, expect, it } from "vitest";
 
 import type {
   TavilySearchAPIRetrieverFields,
@@ -51,7 +50,7 @@ describe("TavilyPublicSearchService", () => {
       excludeDomains: ["reddit.com"],
     });
 
-    assert.deepEqual(calls, [
+    expect(calls).toEqual([
       {
         params: {
           tavilyApiKey: "test-tavily-key",
@@ -67,7 +66,7 @@ describe("TavilyPublicSearchService", () => {
         },
       },
     ]);
-    assert.deepEqual(results, [
+    expect(results).toEqual([
       {
         title: "Longest Road",
         url: "https://www.catan.com/longest-road",
@@ -102,11 +101,11 @@ describe("TavilyPublicSearchService", () => {
       includeDomains: ["catan.com"],
     });
 
-    assert.deepEqual(inputs[0]?.includeDomains, [
+    expect(inputs[0]?.includeDomains).toEqual([
       "catan.com",
       "boardgamegeek.com",
     ]);
-    assert.deepEqual(inputs[1]?.includeDomains, ["catan.com"]);
+    expect(inputs[1]?.includeDomains).toEqual(["catan.com"]);
   });
 
   it("returns no results for blank queries without calling Tavily", async () => {
@@ -119,7 +118,7 @@ describe("TavilyPublicSearchService", () => {
 
     const results = await service.search({ query: "   " });
 
-    assert.deepEqual(results, []);
+    expect(results).toEqual([]);
   });
 
   it("throws when Tavily returns an error payload", async () => {
@@ -130,9 +129,8 @@ describe("TavilyPublicSearchService", () => {
       }),
     });
 
-    await assert.rejects(
+    await expect(
       service.search({ query: "Catan longest road" }),
-      /Tavily failed/,
-    );
+    ).rejects.toThrow("Tavily failed");
   });
 });

@@ -1,5 +1,4 @@
-import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, expect, it } from "vitest";
 import { Document } from "@langchain/core/documents";
 import type { EmbeddingsInterface } from "@langchain/core/embeddings";
 import type {
@@ -125,10 +124,10 @@ describe("RetrievalService", () => {
       query: "How many resources does a city produce?",
     });
 
-    assert.equal(createdAgent, false);
-    assert.equal(publicSearchService.searches.length, 1);
-    assert.deepEqual(result.matches, []);
-    assert.match(result.answer, /could not find relevant rulebook context/i);
+    expect(createdAgent).toBe(false);
+    expect(publicSearchService.searches.length).toBe(1);
+    expect(result.matches).toEqual([]);
+    expect(result.answer).toMatch(/could not find relevant rulebook context/i);
   });
 
   it("asks for clarification when all vector matches are weak", async () => {
@@ -162,11 +161,11 @@ describe("RetrievalService", () => {
       query: "How many resources does a city produce?",
     });
 
-    assert.equal(createdAgent, false);
-    assert.equal(publicSearchService.searches.length, 0);
-    assert.deepEqual(result.matches, []);
-    assert.match(result.answer, /please clarify the game/i);
-    assert.match(result.answer, /not relevant enough to answer confidently/i);
+    expect(createdAgent).toBe(false);
+    expect(publicSearchService.searches.length).toBe(0);
+    expect(result.matches).toEqual([]);
+    expect(result.answer).toMatch(/please clarify the game/i);
+    expect(result.answer).toMatch(/not relevant enough to answer confidently/i);
   });
 
   it("degrades to a not-found answer when public search fails", async () => {
@@ -197,9 +196,9 @@ describe("RetrievalService", () => {
       query: "How many resources does a city produce?",
     });
 
-    assert.equal(createdAgent, false);
-    assert.deepEqual(result.matches, []);
-    assert.match(result.answer, /could not find relevant rulebook context/i);
+    expect(createdAgent).toBe(false);
+    expect(result.matches).toEqual([]);
+    expect(result.answer).toMatch(/could not find relevant rulebook context/i);
   });
 
   it("answers from public search results when no rulebook context is found", async () => {
@@ -240,10 +239,10 @@ describe("RetrievalService", () => {
       query: "How many resources does a city produce?",
     });
 
-    assert.equal(publicSearchService.searches.length, 1);
-    assert.match(contextAgentInput, /origin=public_web/);
-    assert.match(contextAgentInput, /source=https:\/\/www\.catan\.com\/faq/);
-    assert.deepEqual(result, {
+    expect(publicSearchService.searches.length).toBe(1);
+    expect(contextAgentInput).toMatch(/origin=public_web/);
+    expect(contextAgentInput).toMatch(/source=https:\/\/www\.catan\.com\/faq/);
+    expect(result).toEqual({
       answer: "A city produces two resources.",
       matches: [
         {
@@ -276,10 +275,10 @@ describe("RetrievalService", () => {
       query: "What is the weather tomorrow?",
     });
 
-    assert.equal(vectorStore.searches.length, 0);
-    assert.equal(publicSearchService.searches.length, 0);
-    assert.deepEqual(result.matches, []);
-    assert.match(result.answer, /only answer board-game rules questions/i);
+    expect(vectorStore.searches.length).toBe(0);
+    expect(publicSearchService.searches.length).toBe(0);
+    expect(result.matches).toEqual([]);
+    expect(result.answer).toMatch(/only answer board-game rules questions/i);
   });
 
   it("uses context and answer agents after formatting retrieved matches", async () => {
@@ -322,20 +321,16 @@ describe("RetrievalService", () => {
       query: "How many resources does a city produce?",
     });
 
-    assert.match(contextAgentInput, /Chunk 1/);
-    assert.match(contextAgentInput, /origin=rulebook/);
-    assert.match(contextAgentInput, /source=catan\.pdf/);
-    assert.match(contextAgentInput, /page=3/);
-    assert.match(contextAgentInput, /Cities produce two resources/);
-    assert.equal(
-      answerAgentContext,
+    expect(contextAgentInput).toMatch(/Chunk 1/);
+    expect(contextAgentInput).toMatch(/origin=rulebook/);
+    expect(contextAgentInput).toMatch(/source=catan\.pdf/);
+    expect(contextAgentInput).toMatch(/page=3/);
+    expect(contextAgentInput).toMatch(/Cities produce two resources/);
+    expect(answerAgentContext).toBe(
       "Relevant rule: Cities produce two resources.",
     );
-    assert.equal(
-      answerAgentQuestion,
-      "How many resources does a city produce?",
-    );
-    assert.deepEqual(result, {
+    expect(answerAgentQuestion).toBe("How many resources does a city produce?");
+    expect(result).toEqual({
       answer: "A city produces two resources.",
       matches: [
         {
@@ -397,23 +392,22 @@ describe("RetrievalService", () => {
       query: "And the second one?",
     });
 
-    assert.equal(vectorStore.searches.length, 2);
-    assert.match(
-      vectorStore.searches[1]?.query ?? "",
+    expect(vectorStore.searches.length).toBe(2);
+    expect(vectorStore.searches[1]?.query ?? "").toMatch(
       /In Everdell, how many cards does the first player start with\?/,
     );
-    assert.match(vectorStore.searches[1]?.query ?? "", /And the second one\?/);
-    assert.match(agentQuestions.at(-1) ?? "", /Conversation context:/);
-    assert.match(agentQuestions.at(-1) ?? "", /assistant:/);
-    assert.equal(
-      followUpResult.answer,
+    expect(vectorStore.searches[1]?.query ?? "").toMatch(
+      /And the second one\?/,
+    );
+    expect(agentQuestions.at(-1) ?? "").toMatch(/Conversation context:/);
+    expect(agentQuestions.at(-1) ?? "").toMatch(/assistant:/);
+    expect(followUpResult.answer).toBe(
       "The second player starts with six cards.",
     );
-    assert.match(
-      isolatedResult.answer,
+    expect(isolatedResult.answer).toMatch(
       /only answer board-game rules questions/i,
     );
-    assert.deepEqual(conversationRepository.getMessages(CONVERSATION_ID), [
+    expect(conversationRepository.getMessages(CONVERSATION_ID)).toEqual([
       {
         role: "user",
         content:
