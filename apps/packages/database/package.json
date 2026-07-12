@@ -16,6 +16,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/postgres/migrate.ts",
     "db:check": "drizzle-kit check",
+    "cleanup:guests": "tsx src/cleanup-expired-guests.ts",
     "typecheck": "tsc --noEmit",
     "test": "tsc --noEmit -p tests/tsconfig.json && node --import tsx --test tests/*.test.ts"
   },

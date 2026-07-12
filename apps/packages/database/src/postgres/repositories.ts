@@ -1,4 +1,4 @@
-import { and, asc, count, eq, isNull, or, sql } from "drizzle-orm";
+import { and, asc, count, eq, isNull, lte, or, sql } from "drizzle-orm";
 
 import { PersistenceNotFoundError } from "../domain/errors.js";
 import type {
@@ -60,6 +60,9 @@ export const createPostgresRepositories = (db: PostgresDatabase): {
       return (
         await db.select().from(guestSessions).where(eq(guestSessions.id, id)).limit(1)
       )[0] ?? null;
+    },
+    async deleteExpiredGuestSessions({ now }) {
+      return (await db.delete(guestSessions).where(lte(guestSessions.expiresAt, now)).returning({ id: guestSessions.id })).length;
     },
   };
 
@@ -328,15 +331,19 @@ export const createPostgresRepositories = (db: PostgresDatabase): {
   };
 
   const conversationsRepository: ConversationRepository = {
-    async createConversation({ id, actor, gameId, title, expiresAt }) {
+    async createConversation({ id, actor, gameId, title }) {
       const actorColumns =
         actor.kind === "user"
           ? { userId: actor.userId, guestSessionId: null }
           : { userId: null, guestSessionId: actor.guestSessionId };
+      const guestExpiry = actor.kind === "guest"
+        ? (await db.select({ expiresAt: guestSessions.expiresAt }).from(guestSessions).where(eq(guestSessions.id, actor.guestSessionId)).limit(1))[0]?.expiresAt
+        : null;
+      if (actor.kind === "guest" && !guestExpiry) throw new PersistenceNotFoundError("guest session");
       return firstOrThrow(
         await db
           .insert(conversations)
-          .values({ id, gameId, title, expiresAt: expiresAt ?? null, ...actorColumns })
+          .values({ id, gameId, title, expiresAt: actor.kind === "guest" ? guestExpiry : null, ...actorColumns })
           .returning(),
         "conversation",
       );
@@ -353,6 +360,15 @@ export const createPostgresRepositories = (db: PostgresDatabase): {
           .limit(1)
       )[0] ?? null;
     },
+    async listOwnedConversations({ actor }) {
+      const where = actor.kind === "user"
+        ? eq(conversations.userId, actor.userId)
+        : eq(conversations.guestSessionId, actor.guestSessionId);
+      return db.select().from(conversations).where(where).orderBy(asc(conversations.createdAt), asc(conversations.id));
+    },
+    async deleteOwnedConversation({ actor, conversationId }) {
+      return (await db.delete(conversations).where(ownedConversationWhere(actor, conversationId)).returning({ id: conversations.id })).length > 0;
+    },
     async listMessages({ actor, conversationId }) {
       const owned = await db
         .select({ id: conversations.id })
@@ -364,7 +380,7 @@ export const createPostgresRepositories = (db: PostgresDatabase): {
         .select()
         .from(messages)
         .where(eq(messages.conversationId, conversationId))
-        .orderBy(asc(messages.createdAt));
+        .orderBy(asc(messages.createdAt), asc(messages.id));
       const citationRows = await db
         .select()
         .from(messageCitations)

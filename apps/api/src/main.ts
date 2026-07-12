@@ -24,6 +24,8 @@ import { IngestionRouter } from "./presentation/http/ingestion/ingestion-router"
 import { RetrievalRouter } from "./presentation/http/retrieval/retrieval-router";
 import { LibraryService } from "./application/library/library-service";
 import { AdminLibraryRouter } from "./presentation/http/admin/admin-library-router";
+import { ConversationService } from "./application/conversations/conversation-service";
+import { ConversationRouter } from "./presentation/http/conversations/conversation-router";
 
 // Services
 const embeddings = createOpenAIEmbeddings(config.ingestion.embeddingModel, {
@@ -44,6 +46,7 @@ const persistence = await createPersistence({
 await preparePersistence(persistence, config.nodeEnv, config.localUserId);
 const actorService = new ActorService(persistence.identity, { nodeEnv: config.nodeEnv, localUserId: config.localUserId });
 const accessPolicyService = new AccessPolicyService(persistence.policies, persistence.library);
+const conversationService = new ConversationService(persistence.conversations);
 const vectorStore = persistence.vectorStore;
 const conversationRepository = new PersistedConversationHistory(persistence.conversations);
 const ingestionService = new IngestionService(vectorStore, {
@@ -91,11 +94,13 @@ const adminLibraryRouter = new AdminLibraryRouter(libraryService, actorService, 
   uploadDirectory: config.ingestion.uploadDirectory,
   maxUploadSizeBytes: config.ingestion.maxUploadSizeBytes,
 });
+const conversationRouter = new ConversationRouter(conversationService, actorService);
 const routers = [
   healthRouter.router,
   ingestionRouter.router,
   retrievalRouter.router,
   adminLibraryRouter.router,
+  conversationRouter.router,
 ];
 
 if (config.nodeEnv === "local") {

@@ -7,6 +7,8 @@ servers:
   - url: http://127.0.0.1:8000
     description: Local development
 tags:
+  - name: Conversations
+    description: Durable actor-owned rules conversations
   - name: Health
     description: API health checks
   - name: Ingestion
@@ -16,6 +18,41 @@ tags:
   - name: Admin Library
     description: Administrator-managed global rulebook publication
 paths:
+  /conversations:
+    post:
+      tags: [Conversations]
+      summary: Create a conversation for one game
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateConversationRequest" }
+      responses:
+        "201": { description: Conversation created, content: { application/json: { schema: { $ref: "#/components/schemas/Conversation" } } } }
+    get:
+      tags: [Conversations]
+      summary: List the current actor's conversations
+      responses:
+        "200":
+          description: Owned conversations
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/Conversation" } }
+  /conversations/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      tags: [Conversations]
+      summary: Get an owned conversation with ordered messages
+      responses:
+        "200": { description: Conversation detail, content: { application/json: { schema: { $ref: "#/components/schemas/ConversationDetail" } } } }
+        "404": { description: Missing or not owned }
+    delete:
+      tags: [Conversations]
+      summary: Delete an owned conversation
+      responses:
+        "204": { description: Deleted }
+        "404": { description: Missing or not owned }
   /health:
     get:
       tags:
@@ -202,6 +239,41 @@ paths:
         "409": { description: Version is not verified and ready, content: { application/json: { schema: { $ref: "#/components/schemas/TypedErrorResponse" } } } }
 components:
   schemas:
+    CreateConversationRequest:
+      type: object
+      required: [gameId, title]
+      properties:
+        gameId: { type: string, format: uuid }
+        title: { type: string, minLength: 1, maxLength: 200 }
+      additionalProperties: false
+    Conversation:
+      type: object
+      required: [id, gameId, title, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        gameId: { type: string, format: uuid }
+        userId: { type: [string, "null"], format: uuid }
+        guestSessionId: { type: [string, "null"], format: uuid }
+        title: { type: string }
+        expiresAt: { type: [string, "null"], format: date-time }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    Message:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        role: { type: string, enum: [user, assistant, system] }
+        content: { type: string }
+        model: { type: [string, "null"] }
+        citations: { type: array, items: { type: object } }
+        createdAt: { type: string, format: date-time }
+    ConversationDetail:
+      allOf:
+        - { $ref: "#/components/schemas/Conversation" }
+        - type: object
+          required: [messages]
+          properties:
+            messages: { type: array, items: { $ref: "#/components/schemas/Message" } }
     TypedErrorResponse:
       type: object
       required: [code]

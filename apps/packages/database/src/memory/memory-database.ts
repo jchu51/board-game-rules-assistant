@@ -161,6 +161,16 @@ export const createMemoryPersistence = async (): Promise<Persistence> => {
         const record = guestSessions.get(id);
         return record ? clone(record) : null;
       },
+      async deleteExpiredGuestSessions({ now: cutoff }) {
+        const expiredIds = [...guestSessions.values()].filter(({ expiresAt }) => expiresAt <= cutoff).map(({ id }) => id);
+        for (const id of expiredIds) guestSessions.delete(id);
+        const conversationIds = new Set([...conversations.values()].filter(({ guestSessionId }) => guestSessionId !== null && expiredIds.includes(guestSessionId)).map(({ id }) => id));
+        for (const id of conversationIds) conversations.delete(id);
+        const messageIds = new Set(messages.filter(({ conversationId }) => conversationIds.has(conversationId)).map(({ id }) => id));
+        for (let index = messages.length - 1; index >= 0; index--) if (conversationIds.has(messages[index]!.conversationId)) messages.splice(index, 1);
+        for (let index = citations.length - 1; index >= 0; index--) if (messageIds.has(citations[index]!.messageId)) citations.splice(index, 1);
+        return expiredIds.length;
+      },
     },
     policies: {
       async getTierPolicy(tier) {
@@ -420,10 +430,12 @@ export const createMemoryPersistence = async (): Promise<Persistence> => {
       },
     },
     conversations: {
-      async createConversation({ id, actor, gameId, title, expiresAt }) {
+      async createConversation({ id, actor, gameId, title }) {
         if (id && conversations.has(id)) {
           throw new Error("conversation id already exists");
         }
+        const guestSession = actor.kind === "guest" ? guestSessions.get(actor.guestSessionId) : undefined;
+        if (actor.kind === "guest" && !guestSession) throw new PersistenceNotFoundError("guest session");
         const record: ConversationRecord = {
           id: id ?? randomUUID(),
           gameId,
@@ -431,7 +443,7 @@ export const createMemoryPersistence = async (): Promise<Persistence> => {
           guestSessionId:
             actor.kind === "guest" ? actor.guestSessionId : null,
           title,
-          expiresAt: expiresAt ? clone(expiresAt) : null,
+          expiresAt: actor.kind === "guest" ? clone(guestSession!.expiresAt) : null,
           ...createTimestamped(),
         };
         conversations.set(record.id, clone(record));
@@ -444,6 +456,18 @@ export const createMemoryPersistence = async (): Promise<Persistence> => {
       async getOwnedConversation({ actor, conversationId }) {
         const record = conversations.get(conversationId);
         return record && ownsConversation(record, actor) ? clone(record) : null;
+      },
+      async listOwnedConversations({ actor }) {
+        return [...conversations.values()].filter((conversation) => ownsConversation(conversation, actor)).sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime() || a.id.localeCompare(b.id)).map(clone);
+      },
+      async deleteOwnedConversation({ actor, conversationId }) {
+        const conversation = conversations.get(conversationId);
+        if (!conversation || !ownsConversation(conversation, actor)) return false;
+        conversations.delete(conversationId);
+        const messageIds = new Set(messages.filter((message) => message.conversationId === conversationId).map(({ id }) => id));
+        for (let index = messages.length - 1; index >= 0; index--) if (messages[index]!.conversationId === conversationId) messages.splice(index, 1);
+        for (let index = citations.length - 1; index >= 0; index--) if (messageIds.has(citations[index]!.messageId)) citations.splice(index, 1);
+        return true;
       },
       async listMessages({ actor, conversationId }) {
         const conversation = conversations.get(conversationId);

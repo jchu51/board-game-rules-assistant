@@ -4,12 +4,25 @@ import { Document } from "@langchain/core/documents";
 import type { RulebookDocument } from "@board-game-rules-assistant/rag-core";
 
 import type { Persistence } from "../src/index.js";
+import { cleanupExpiredGuestSessions } from "../src/index.js";
 
 export const runPersistenceContract = (
   name: string,
   createPersistence: () => Promise<Persistence>,
 ) => {
   describe(name, () => {
+    test("cleans expired guests with cascading conversation deletion idempotently", async () => {
+      const persistence = await createPersistence();
+      const game = await persistence.library.createGame({ name: `Cleanup ${crypto.randomUUID()}`, slug: `cleanup-${crypto.randomUUID()}` });
+      const guest = await persistence.identity.createGuestSession({ expiresAt: new Date("2020-01-01T00:00:00Z") });
+      const actor = { kind: "guest" as const, guestSessionId: guest.id };
+      const conversation = await persistence.conversations.createConversation({ actor, gameId: game.id, title: "expired" });
+      await persistence.conversations.appendUserMessage({ actor, conversationId: conversation.id, content: "cascade" });
+      assert.deepEqual(await cleanupExpiredGuestSessions(persistence, new Date("2021-01-01T00:00:00Z")), { deletedSessions: 1 });
+      assert.equal(await persistence.conversations.getConversationById({ id: conversation.id }), null);
+      assert.deepEqual(await cleanupExpiredGuestSessions(persistence, new Date("2021-01-01T00:00:00Z")), { deletedSessions: 0 });
+      await persistence.close();
+    });
     test("supports stable local identities and owner-scoped library metadata", async () => {
       const persistence = await createPersistence();
       const stableId = "11111111-1111-4111-8111-111111111111";

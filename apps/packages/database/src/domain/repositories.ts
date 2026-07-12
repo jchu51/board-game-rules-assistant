@@ -29,6 +29,7 @@ export type IdentityRepository = {
   getUserById(input: { id: string }): Promise<UserRecord | null>;
   createGuestSession(input: { expiresAt: Date }): Promise<GuestSessionRecord>;
   getGuestSession(input: { id: string }): Promise<GuestSessionRecord | null>;
+  deleteExpiredGuestSessions(input: { now: Date }): Promise<number>;
 };
 
 export type PolicyRepository = {
@@ -116,13 +117,14 @@ export type ConversationRepository = {
     actor: Actor;
     gameId: string;
     title: string;
-    expiresAt?: Date | null;
   }): Promise<ConversationRecord>;
   getConversationById(input: { id: string }): Promise<ConversationRecord | null>;
   getOwnedConversation(input: {
     actor: Actor;
     conversationId: string;
   }): Promise<ConversationRecord | null>;
+  listOwnedConversations(input: { actor: Actor }): Promise<ConversationRecord[]>;
+  deleteOwnedConversation(input: { actor: Actor; conversationId: string }): Promise<boolean>;
   listMessages(input: {
     actor: Actor;
     conversationId: string;

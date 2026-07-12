@@ -7,3 +7,4 @@ export * from "./postgres/schema.js";
 export * from "./postgres/persistence.js";
 export * from "./postgres/run-migrations.js";
 export * from "./postgres/vector-store.js";
+export * from "./cleanup-expired-guests.js";
