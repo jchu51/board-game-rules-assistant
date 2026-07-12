@@ -12,6 +12,10 @@ docker compose up -d --wait postgres
 npm run build -w @board-game-rules-assistant/database
 node apps/packages/database/dist/postgres/migrate.js
 
+case "$BUILD_DIR" in
+  "$ROOT_DIR"/.superpowers/sdd/task-9-build/api) rm -rf -- "$BUILD_DIR" ;;
+  *) echo "Refusing to clear unexpected build directory: $BUILD_DIR" >&2; exit 1 ;;
+esac
 mkdir -p "$BUILD_DIR"
 npx tsc -p apps/api/tsconfig.test.json --noEmit false --outDir "$BUILD_DIR"
 LC_ALL=C find "$BUILD_DIR" -name '*.js' -exec perl -pi -e 's/(from "\.[^"]*?)(?<!\.js)"/$1.js"/g' {} +

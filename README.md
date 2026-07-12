@@ -19,7 +19,8 @@ without tying those pieces directly to Express.
 - Rule-question classification with a public-search fallback when indexed
   rulebook context has no relevant match
 - Agent-core package with prompt and LangChain agent primitives
-- In-memory rulebook repository for the current API process
+- Durable PostgreSQL persistence for rulebooks, vectors, conversations, and citations
+- Optional in-memory persistence for lightweight reset-on-restart development
 - Local Swagger UI for API exploration
 - Docker Compose setup for running web and API together
 
@@ -260,11 +261,11 @@ npm run typecheck -w @board-game-rules-assistant/rag-core
 
 ## Current Limitations
 
-- Rulebook records are stored in memory and reset when the API process restarts.
-- Uploaded PDF files are removed after ingestion.
-- Vector-store deletion is not implemented yet.
-- The Ask UI currently returns an agent-generated answer plus retrieval-backed
-  source snippets.
+- Uploaded PDF files are temporary and removed after ingestion; the original PDF
+  cannot be downloaded from PostgreSQL later.
+- Vector retrieval uses exact cosine search and does not yet use an approximate
+  HNSW index.
 - Request classification uses a maintained keyword and known-game list rather
   than the indexed rulebook catalog or an LLM classifier.
-- Citation verification, auth, and persistence are planned future work.
+- Local identity resolution is intended for development; production-grade
+  authentication and account provisioning remain deployment work.

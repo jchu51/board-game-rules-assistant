@@ -3,8 +3,10 @@
 Express API for the Board Game Rules Assistant.
 
 The API accepts rulebook PDF uploads, extracts and chunks PDF text through
-`rag-core`, creates embeddings, stores vectors in PostgreSQL/pgvector, returns rulebook
-summaries for the frontend, and exposes similarity search over indexed chunks.
+`rag-core`, creates embeddings, stores vectors in PostgreSQL/pgvector, returns
+rulebook summaries for the frontend, and exposes similarity search over indexed
+chunks. PostgreSQL is the durable default; memory mode is an optional local
+reset-on-restart mode.
 
 ## Stack
 
@@ -169,3 +171,4 @@ src/
 - Retrieval returns matching chunks, metadata, and an agent-generated answer.
 - Request classification relies on a maintained keyword and known-game list;
   it is not yet derived from indexed rulebooks or an LLM classifier.
+- Exact cosine retrieval is used; there is no approximate HNSW index yet.

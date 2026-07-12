@@ -31,7 +31,15 @@ async function createCleanDatabase() {
   await admin.unsafe(`CREATE DATABASE ${name}`);
   const url = new URL(base); url.pathname = `/${name}`;
   const migrationClient = postgres(url.toString(), { max: 1, onnotice: () => {} });
-  try { await runPostgresMigrations(migrationClient); } finally { await migrationClient.end(); }
+  try {
+    await runPostgresMigrations(migrationClient);
+    await migrationClient.end();
+  } catch (error) {
+    await migrationClient.end().catch(() => undefined);
+    await admin.unsafe(`DROP DATABASE ${name} WITH (FORCE)`).catch(() => undefined);
+    await admin.end().catch(() => undefined);
+    throw error;
+  }
   return {
     databaseUrl: url.toString(),
     async dispose() { await admin.unsafe(`DROP DATABASE ${name} WITH (FORCE)`); await admin.end(); },
@@ -45,19 +53,22 @@ test("durable PostgreSQL workflow survives restart and cleans expired guests", a
     driver: "postgres", nodeEnv: "test", databaseUrl: database.databaseUrl,
     embeddings, expectedDimensions: 3072,
   });
-  let persistence = await open();
+  let persistence: Awaited<ReturnType<typeof open>> | undefined;
+  let primaryError: unknown;
   try {
-    const adminRecord = await persistence.identity.createUser({ email: "smoke-admin@example.test", displayName: "Admin", accountRole: "admin", planTier: "standard" });
-    const standardRecord = await persistence.identity.createUser({ email: "smoke-standard@example.test", displayName: "Standard", accountRole: "user", planTier: "standard" });
-    await persistence.identity.createUser({ email: "smoke-pro@example.test", displayName: "Pro", accountRole: "user", planTier: "pro" });
+    const initialPersistence = await open();
+    persistence = initialPersistence;
+    const adminRecord = await initialPersistence.identity.createUser({ email: "smoke-admin@example.test", displayName: "Admin", accountRole: "admin", planTier: "standard" });
+    const standardRecord = await initialPersistence.identity.createUser({ email: "smoke-standard@example.test", displayName: "Standard", accountRole: "user", planTier: "standard" });
+    await initialPersistence.identity.createUser({ email: "smoke-pro@example.test", displayName: "Pro", accountRole: "user", planTier: "pro" });
     const admin: Actor = { kind: "user", userId: adminRecord.id, accountRole: adminRecord.accountRole, planTier: adminRecord.planTier };
     const standard: Actor = { kind: "user", userId: standardRecord.id, accountRole: standardRecord.accountRole, planTier: standardRecord.planTier };
-    const game = await persistence.library.createGame({ name: "Persistence Smoke", slug: `persistence-smoke-${crypto.randomUUID()}` });
-    const access = new AccessPolicyService(persistence.policies, persistence.library);
+    const game = await initialPersistence.library.createGame({ name: "Persistence Smoke", slug: `persistence-smoke-${crypto.randomUUID()}` });
+    const access = new AccessPolicyService(initialPersistence.policies, initialPersistence.library);
 
-    const library = new LibraryService(persistence.library, access, {
+    const library = new LibraryService(initialPersistence.library, access, {
       ingestPdf: async (input) => {
-        await persistence.vectorStore.upsert([new Document({
+        await initialPersistence.vectorStore.upsert([new Document({
           pageContent: "During setup each player receives five cards.",
           metadata: { ...input.metadata, documentChunkId: crypto.randomUUID(), source: input.source, loc: { pageNumber: 2 } },
         })]);
@@ -76,32 +87,32 @@ test("durable PostgreSQL workflow survives restart and cleans expired guests", a
       PlanLimitReachedError,
     );
 
-    const conversation = await persistence.conversations.createConversation({ actor: standard, gameId: game.id, title: "Setup" });
+    const conversation = await initialPersistence.conversations.createConversation({ actor: standard, gameId: game.id, title: "Setup" });
     const searches: VectorStoreSimilaritySearchInput[] = [];
     const recordingStore: VectorStore = {
-      upsert: (records) => persistence.vectorStore.upsert(records),
-      similaritySearch: (input) => persistence.vectorStore.similaritySearch(input),
+      upsert: (records) => initialPersistence.vectorStore.upsert(records),
+      similaritySearch: (input) => initialPersistence.vectorStore.similaritySearch(input),
       similaritySearchVectorWithScore: async (input) => {
         searches.push(input);
-        return persistence.vectorStore.similaritySearchVectorWithScore(input);
+        return initialPersistence.vectorStore.similaritySearchVectorWithScore(input);
       },
     };
     const retrieval = new RetrievalService(
       recordingStore, new RequestClassifierService(), { search: async () => { throw new Error("public search must not run"); } },
-      persistence.conversations,
+      initialPersistence.conversations,
       () => ({ run: async () => "Players receive five cards." }) as unknown as RuleContextAgent,
       () => ({ run: async () => "Each player receives five cards during setup." }) as unknown as RuleAnswerAgent,
       access,
     );
     await retrieval.search({ actor: standard, conversationId: conversation.id, query: "How many cards does each player receive during setup?" });
     assert.equal(searches[0]?.topK, 5);
-    assert.equal((await persistence.conversations.listMessages({ actor: standard, conversationId: conversation.id }))[1]?.citations.length, 1);
+    assert.equal((await initialPersistence.conversations.listMessages({ actor: standard, conversationId: conversation.id }))[1]?.citations.length, 1);
 
-    const guest = await persistence.identity.createGuestSession({ expiresAt: new Date("2020-01-01T00:00:00Z") });
+    const guest = await initialPersistence.identity.createGuestSession({ expiresAt: new Date("2020-01-01T00:00:00Z") });
     const guestActor: Actor = { kind: "guest", guestSessionId: guest.id };
-    const expiredConversation = await persistence.conversations.createConversation({ actor: guestActor, gameId: game.id, title: "Expired" });
+    const expiredConversation = await initialPersistence.conversations.createConversation({ actor: guestActor, gameId: game.id, title: "Expired" });
 
-    await persistence.close();
+    await initialPersistence.close();
     persistence = await open();
     assert.equal((await persistence.conversations.getOwnedConversation({ actor: standard, conversationId: conversation.id }))?.id, conversation.id);
     const durableMessages = await persistence.conversations.listMessages({ actor: standard, conversationId: conversation.id });
@@ -109,8 +120,13 @@ test("durable PostgreSQL workflow survives restart and cleans expired guests", a
     assert.equal(durableMessages[1]?.citations.length, 1);
     assert.deepEqual(await cleanupExpiredGuestSessions(persistence, new Date("2021-01-01T00:00:00Z")), { deletedSessions: 1 });
     assert.equal(await persistence.conversations.getConversationById({ id: expiredConversation.id }), null);
+  } catch (error) {
+    primaryError = error;
+    throw error;
   } finally {
-    await persistence.close().catch(() => undefined);
-    await database.dispose();
+    let cleanupError: unknown;
+    try { await persistence?.close(); } catch (error) { cleanupError = error; }
+    try { await database.dispose(); } catch (error) { cleanupError ??= error; }
+    if (!primaryError && cleanupError) throw cleanupError;
   }
 });
