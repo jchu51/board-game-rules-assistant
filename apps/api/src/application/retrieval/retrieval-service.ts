@@ -8,11 +8,10 @@ import type {
   PublicSearchResult,
   PublicSearchService,
 } from "../public-search/public-search-service";
-import type {
-  ConversationMessage,
-  ConversationRepository,
-} from "../../domain/conversation/conversation-repository";
-import type { PersistedConversationHistory } from "./persisted-conversation-history";
+import {
+  PersistenceNotFoundError,
+  type ConversationRepository,
+} from "@board-game-rules-assistant/database";
 import type { RequestClassifierService } from "./request-classifier-service";
 import type {
   RetrievalMatch,
@@ -21,40 +20,46 @@ import type {
 } from "./retrieval-types";
 import type { AccessPolicyService } from "../access/access-policy-service";
 
-const DEFAULT_TOP_K = 5;
 const MIN_RELEVANCE_SCORE = 0.65;
 const MAX_CONTEXT_MESSAGES = 10;
+const MAX_QUOTED_TEXT_LENGTH = 500;
+type ConversationMessage = { role: "user" | "assistant"; content: string };
 
 export class RetrievalService {
   constructor(
     private readonly vectorStore: VectorStore,
     private readonly requestClassifier: RequestClassifierService,
     private readonly publicSearchService: PublicSearchService,
-    private readonly conversationRepository: ConversationRepository | PersistedConversationHistory,
+    private readonly conversationRepository: ConversationRepository,
     private readonly createRuleContextAgent: (
       context: string,
     ) => RuleContextAgent,
     private readonly createRuleAnswerAgent: (
       context: string,
     ) => RuleAnswerAgent,
-    private readonly accessPolicy?: AccessPolicyService,
+    private readonly accessPolicy: AccessPolicyService,
   ) {}
 
   async search({
     actor,
     conversationId,
-    gameId,
     query,
   }: RetrievalSearchInput): Promise<RetrievalSearchResult> {
-    const persisted = "ensureConversation" in this.conversationRepository;
-    if (persisted) {
-      if (!actor) throw new Error("actor is required for persisted conversations");
-      await this.conversationRepository.ensureConversation(actor, conversationId, gameId);
-    }
-    const allMessages = persisted
-      ? await this.conversationRepository.getMessages(actor!, conversationId)
-      : this.conversationRepository.getMessages(conversationId);
+    const conversation =
+      await this.conversationRepository.getOwnedConversation({
+        actor,
+        conversationId,
+      });
+    if (!conversation) throw new PersistenceNotFoundError("conversation");
+    const allMessages = (await this.conversationRepository.listMessages({ actor, conversationId }))
+      .filter((message) => message.role === "user" || message.role === "assistant")
+      .map(({ role, content }) => ({ role: role as "user" | "assistant", content }));
     const conversationMessages = allMessages.slice(-MAX_CONTEXT_MESSAGES);
+    await this.conversationRepository.appendUserMessage({
+      actor,
+      conversationId,
+      content: query,
+    });
     const contextualQuery = this.formatContextualQuery(
       query,
       conversationMessages,
@@ -66,20 +71,22 @@ export class RetrievalService {
     const classification = this.requestClassifier.classify(contextualQuery);
 
     if (!classification.isGameRuleQuestion) {
-      return this.completeTurn(actor, conversationId, query, {
+      return this.completeTurn(actor, conversationId, {
         answer:
           "I can only answer board-game rules questions from indexed rulebook context. Ask about a specific game rule, turn, card, resource, scoring, setup, or movement question.",
         matches: [],
       });
     }
 
-    const topK = actor && this.accessPolicy
-      ? (await this.accessPolicy.getEffectivePolicy(actor)).retrievalTopK
-      : DEFAULT_TOP_K;
+    const topK = (await this.accessPolicy.getEffectivePolicy(actor))
+      .retrievalTopK;
     const results = await this.vectorStore.similaritySearchVectorWithScore({
       query: classification.normalizedQuery,
       topK,
-      scope: { gameId, userId: actor?.kind === "user" ? actor.userId : undefined },
+      scope: {
+        gameId: conversation.gameId,
+        ...(actor.kind === "user" ? { userId: actor.userId } : {}),
+      },
     });
 
     const matches: RetrievalMatch[] = results
@@ -95,7 +102,7 @@ export class RetrievalService {
       }));
 
     if (results.length > 0 && matches.length === 0) {
-      return this.completeTurn(actor, conversationId, query, {
+      return this.completeTurn(actor, conversationId, {
         answer:
           "I found potentially related rulebook content, but it was not relevant enough to answer confidently. Please clarify the game and the specific rule, action, card, or situation you are asking about.",
         matches: [],
@@ -108,29 +115,49 @@ export class RetrievalService {
         classification.normalizedQuery,
       );
 
-      return this.completeTurn(actor, conversationId, query, result);
+      return this.completeTurn(actor, conversationId, result);
     }
 
     const result = await this.answerFromMatches(conversationQuestion, matches);
 
-    return this.completeTurn(actor, conversationId, query, result);
+    const citations = results
+      .filter(([, score]) => score > MIN_RELEVANCE_SCORE)
+      .flatMap(([document, score], index) =>
+        document.metadata.documentChunkId
+          ? [
+              {
+                documentChunkId: document.metadata.documentChunkId,
+                rank: index + 1,
+                distance: Number((1 - score).toFixed(12)),
+                quotedText: document.pageContent.slice(
+                  0,
+                  MAX_QUOTED_TEXT_LENGTH,
+                ),
+              },
+            ]
+          : [],
+      );
+    return this.completeTurn(actor, conversationId, result, citations);
   }
 
   private async completeTurn(
     actor: RetrievalSearchInput["actor"],
     conversationId: string,
-    query: string,
     result: RetrievalSearchResult,
+    citations: Array<{
+      documentChunkId: string;
+      rank: number;
+      distance: number;
+      quotedText: string;
+    }> = [],
   ): Promise<RetrievalSearchResult> {
-    const turn = [
-      { role: "user", content: query },
-      { role: "assistant", content: result.answer },
-    ] as ConversationMessage[];
-    if ("ensureConversation" in this.conversationRepository) {
-      await this.conversationRepository.appendMessages(actor!, conversationId, turn);
-    } else {
-      this.conversationRepository.appendMessages(conversationId, turn);
-    }
+    await this.conversationRepository.appendAssistantMessageWithCitations({
+      actor,
+      conversationId,
+      content: result.answer,
+      model: "rules-assistant",
+      citations,
+    });
 
     return result;
   }

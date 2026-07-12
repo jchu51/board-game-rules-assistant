@@ -16,7 +16,6 @@ import { preparePersistence, closePersistenceAfterServer } from "./application/r
 import { RequestClassifierService } from "./application/retrieval/request-classifier-service";
 import { RetrievalService } from "./application/retrieval/retrieval-service";
 import { config } from "./config/config";
-import { PersistedConversationHistory } from "./application/retrieval/persisted-conversation-history";
 import { TavilyPublicSearchService } from "./infrastructure/public-search/tavily-public-search-service";
 import { createApp } from "./presentation/http/app";
 import { HealthRouter } from "./presentation/http/health/health-router";
@@ -48,7 +47,7 @@ const actorService = new ActorService(persistence.identity, { nodeEnv: config.no
 const accessPolicyService = new AccessPolicyService(persistence.policies, persistence.library);
 const conversationService = new ConversationService(persistence.conversations);
 const vectorStore = persistence.vectorStore;
-const conversationRepository = new PersistedConversationHistory(persistence.conversations);
+const conversationRepository = persistence.conversations;
 const ingestionService = new IngestionService(vectorStore, {
   defaultSplitterParams: {
     chunkSize: config.ingestion.defaultChunkSize,

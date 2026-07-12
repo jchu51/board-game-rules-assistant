@@ -1,9 +1,8 @@
 import type { Actor } from "@board-game-rules-assistant/database";
 
 export type RetrievalSearchInput = {
-  actor?: Actor;
+  actor: Actor;
   conversationId: string;
-  gameId: string;
   query: string;
 };
 

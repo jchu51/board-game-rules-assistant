@@ -506,7 +506,6 @@ export function AskPage() {
       }
       const response = await searchRulebooks({
         conversationId: conversationIdRef.current,
-        gameId,
         query: question,
       });
       if (isStaleSearch()) return;
