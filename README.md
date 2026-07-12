@@ -3,8 +3,8 @@
 A full-stack TypeScript app for uploading board-game rulebook PDFs and building
 toward source-backed rules Q&A.
 
-The current slice lets a user upload PDF rulebooks, index them into an in-memory
-vector store, search those indexed chunks, and use a prototype Ask screen that
+The current slice lets a user upload PDF rulebooks, durably index them in
+PostgreSQL with pgvector, search those indexed chunks, and use an Ask screen that
 returns an agent-generated answer with retrieved source snippets. RAG primitives
 and agent primitives live in shared packages so the API can grow this flow
 without tying those pieces directly to Express.
@@ -14,7 +14,7 @@ without tying those pieces directly to Express.
 - React Ask and Library pages
 - Express API with health, rulebook upload/list/delete, and retrieval endpoints
 - Multipart PDF upload with file type and size validation
-- PDF loading, chunking, embeddings, and in-memory vector-store indexing
+- PDF loading, chunking, embeddings, and PostgreSQL/pgvector indexing
 - Similarity search over indexed rulebook chunks
 - Rule-question classification with a public-search fallback when indexed
   rulebook context has no relevant match
@@ -114,7 +114,7 @@ Tavily. Configure it with trusted board-game sites to prevent fallback searches
 from returning unrelated domains. If it is unset, Tavily searches are not
 restricted by domain.
 
-## Start Locally
+## Persistence and local startup
 
 Install dependencies from the project root:
 
@@ -122,11 +122,39 @@ Install dependencies from the project root:
 npm install
 ```
 
-Start the API:
+Normal durable local mode:
 
 ```bash
+docker compose up -d postgres
+npm run db:migrate -w @board-game-rules-assistant/database
 npm run dev:api
 ```
+
+Migrations must finish before the API starts. Production must use PostgreSQL and
+must run the same migration command as a release step before deploying the new
+API. A managed PostgreSQL service must support the `vector` extension and permit
+`CREATE EXTENSION vector`; the migrations create it and the complete schema.
+
+For lightweight development that deliberately resets all users, documents,
+vectors, conversations, messages, and citations on every restart:
+
+```bash
+PERSISTENCE_DRIVER=memory npm run dev:api
+```
+
+Memory mode is rejected in production. To verify the durable workflow locally
+without OpenAI or Tavily credentials, run `npm run test:persistence`. It starts
+PostgreSQL, migrates both the normal database and a clean isolated test database,
+uses deterministic embeddings, proves restart durability and guest cleanup, and
+leaves PostgreSQL running for inspection.
+
+Account role and subscription tier are separate: `admin` grants global rulebook
+verification/publication, while `standard` and `pro` determine customer quotas.
+Standard users may own at most three active private PDF documents; Pro users are
+unlimited; guests cannot upload. Guest sessions and their conversations expire
+after seven days and should be removed by the cleanup job. Uploaded PDF bytes are
+temporary and are deleted after ingestion; PostgreSQL stores metadata, extracted
+chunks, vectors, conversation history, and citations, not the original PDF.
 
 Start the web app in another terminal:
 
@@ -191,9 +219,9 @@ http://127.0.0.1:8000/openapi.yml
 Swagger docs are only mounted when the API runs with `NODE_ENV=local`.
 
 The Ask page creates a conversation identifier and reuses it for follow-up
-questions. The API retains up to 20 recent messages per conversation in memory;
-selecting **New chat** creates a fresh thread. Conversation memory is process-local
-and resets when the API restarts.
+questions. PostgreSQL mode durably retains conversation messages and citations
+across API restarts; selecting **New chat** creates a fresh thread. Memory mode
+deliberately resets them when the API restarts.
 
 ### Request classification and fallback search
 

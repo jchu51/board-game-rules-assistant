@@ -3,7 +3,7 @@
 Express API for the Board Game Rules Assistant.
 
 The API accepts rulebook PDF uploads, extracts and chunks PDF text through
-`rag-core`, creates embeddings, stores vectors in memory, returns rulebook
+`rag-core`, creates embeddings, stores vectors in PostgreSQL/pgvector, returns rulebook
 summaries for the frontend, and exposes similarity search over indexed chunks.
 
 ## Stack
@@ -50,11 +50,19 @@ board-game domains; leaving it unset permits results from any domain.
 
 ## Start
 
-From the repository root:
+From the repository root, start and migrate PostgreSQL before the API:
 
 ```bash
+docker compose up -d postgres
+npm run db:migrate -w @board-game-rules-assistant/database
 npm run dev:api
 ```
+
+For a lightweight reset-on-restart process, use
+`PERSISTENCE_DRIVER=memory npm run dev:api`. Memory persistence is prohibited in
+production. Production releases must run migrations before starting the API,
+and managed PostgreSQL must provide pgvector with permission to create the
+`vector` extension.
 
 Or from this workspace:
 
@@ -94,10 +102,9 @@ curl -X POST http://127.0.0.1:8000/retrieval/search \
   -d '{"conversationId":"11111111-1111-4111-8111-111111111111","query":"How many resources does a city produce?"}'
 ```
 
-Reuse the same `conversationId` for follow-up questions. The API keeps the most
-recent 20 user and assistant messages for each conversation in memory. A new
-identifier starts an isolated chat. Conversation history is lost when the API
-process restarts.
+Reuse the same `conversationId` for follow-up questions. PostgreSQL mode keeps
+conversation messages and citations across API restarts. A new identifier starts
+an isolated chat; only memory mode loses conversation history on restart.
 
 The retrieval flow first rejects clearly out-of-scope requests with a
 lightweight keyword classifier. Recognized `how to play <game>` requests, such
@@ -139,7 +146,7 @@ src/
     rulebook/                    # rulebook repository contract
   infrastructure/                # adapters for external/storage concerns
     openapi/                     # OpenAPI document loading
-    persistence/rulebook/        # in-memory rulebook repository
+    persistence/                 # persistence and external-service adapters
   presentation/http/             # Express routers and HTTP schemas
     app.ts                       # Express app factory
     docs/                        # local-only Swagger/OpenAPI routes
@@ -149,11 +156,16 @@ src/
     shared/                      # HTTP status, typed responses, error middleware
 ```
 
-## Current Limitations
+## Persistence policy
 
-- Rulebook metadata is stored in memory only.
-- Vector-store deletion is not implemented yet.
-- Uploaded PDF files are deleted after ingestion.
+- Role and tier are independent. Admin role controls global publish; Standard
+  and Pro tiers control customer limits.
+- Standard users can own three active private PDFs, Pro users have no document
+  quota, and guests cannot upload.
+- Guest sessions expire after seven days; schedule the database package's
+  `cleanup:guests` command to cascade-delete their conversations.
+- Uploaded PDF files are temporary and deleted after ingestion. Only metadata,
+  extracted chunks/vectors, messages, and citations persist.
 - Retrieval returns matching chunks, metadata, and an agent-generated answer.
 - Request classification relies on a maintained keyword and known-game list;
   it is not yet derived from indexed rulebooks or an LLM classifier.
