@@ -1,11 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { Document } from "@langchain/core/documents";
-import postgres from "postgres";
 import {
   cleanupExpiredGuestSessions,
   createPersistence,
-  runPostgresMigrations,
   type Actor,
   type VectorStore,
 } from "@board-game-rules-assistant/database";
@@ -15,6 +13,7 @@ import { AccessPolicyService, PlanLimitReachedError } from "../src/application/a
 import { LibraryService } from "../src/application/library/library-service";
 import { RequestClassifierService } from "../src/application/retrieval/request-classifier-service";
 import { RetrievalService } from "../src/application/retrieval/retrieval-service";
+import { createCleanPostgresTestDatabase, retainCleanupError } from "./support/clean-postgres-test-database";
 
 class DeterministicEmbeddings {
   async embedQuery(text: string) {
@@ -24,30 +23,8 @@ class DeterministicEmbeddings {
   async embedDocuments(texts: string[]) { return Promise.all(texts.map((text) => this.embedQuery(text))); }
 }
 
-async function createCleanDatabase() {
-  const base = new URL(process.env.DATABASE_URL ?? "postgres://board_game_rules:board_game_rules@localhost:5432/board_game_rules");
-  const name = `persistence_smoke_${crypto.randomUUID().replaceAll("-", "")}`;
-  const admin = postgres(base.toString(), { max: 1, onnotice: () => {} });
-  await admin.unsafe(`CREATE DATABASE ${name}`);
-  const url = new URL(base); url.pathname = `/${name}`;
-  const migrationClient = postgres(url.toString(), { max: 1, onnotice: () => {} });
-  try {
-    await runPostgresMigrations(migrationClient);
-    await migrationClient.end();
-  } catch (error) {
-    await migrationClient.end().catch(() => undefined);
-    await admin.unsafe(`DROP DATABASE ${name} WITH (FORCE)`).catch(() => undefined);
-    await admin.end().catch(() => undefined);
-    throw error;
-  }
-  return {
-    databaseUrl: url.toString(),
-    async dispose() { await admin.unsafe(`DROP DATABASE ${name} WITH (FORCE)`); await admin.end(); },
-  };
-}
-
 test("durable PostgreSQL workflow survives restart and cleans expired guests", async () => {
-  const database = await createCleanDatabase();
+  const database = await createCleanPostgresTestDatabase();
   const embeddings = new DeterministicEmbeddings();
   const open = () => createPersistence({
     driver: "postgres", nodeEnv: "test", databaseUrl: database.databaseUrl,
@@ -124,9 +101,11 @@ test("durable PostgreSQL workflow survives restart and cleans expired guests", a
     primaryError = error;
     throw error;
   } finally {
-    let cleanupError: unknown;
-    try { await persistence?.close(); } catch (error) { cleanupError = error; }
-    try { await database.dispose(); } catch (error) { cleanupError ??= error; }
-    if (!primaryError && cleanupError) throw cleanupError;
+    const cleanupErrors: unknown[] = [];
+    try { await persistence?.close(); } catch (error) { cleanupErrors.push(error); }
+    try { await database.dispose(); } catch (error) { cleanupErrors.push(error); }
+    if (primaryError) cleanupErrors.forEach((error) => retainCleanupError(primaryError, error));
+    else if (cleanupErrors.length === 1) throw cleanupErrors[0];
+    else if (cleanupErrors.length > 1) throw new AggregateError(cleanupErrors, "Persistence smoke cleanup failed");
   }
 });
