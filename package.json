@@ -15,9 +15,11 @@
     "typecheck": "npm run typecheck --workspaces --if-present",
     "format": "prettier --write .",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "test:watch": "vitest"
   },
   "devDependencies": {
+    "@vitest/coverage-v8": "^4.1.10",
     "prettier": "3.9.4",
     "vitest": "4.1.10"
   },
