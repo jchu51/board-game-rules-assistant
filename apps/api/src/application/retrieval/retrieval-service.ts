@@ -41,9 +41,9 @@ export class RetrievalService {
     conversationId,
     query,
   }: RetrievalSearchInput): Promise<RetrievalSearchResult> {
-    const conversationMessages = this.conversationRepository
-      .getMessages(conversationId)
-      .slice(-MAX_CONTEXT_MESSAGES);
+    const conversationMessages = (
+      await this.conversationRepository.getMessages(conversationId)
+    ).slice(-MAX_CONTEXT_MESSAGES);
     const contextualQuery = this.formatContextualQuery(
       query,
       conversationMessages,
@@ -55,7 +55,7 @@ export class RetrievalService {
     const classification = this.requestClassifier.classify(contextualQuery);
 
     if (!classification.isGameRuleQuestion) {
-      return this.completeTurn(conversationId, query, {
+      return await this.completeTurn(conversationId, query, {
         answer:
           "I can only answer board-game rules questions from indexed rulebook context. Ask about a specific game rule, turn, card, resource, scoring, setup, or movement question.",
         matches: [],
@@ -80,7 +80,7 @@ export class RetrievalService {
       }));
 
     if (results.length > 0 && matches.length === 0) {
-      return this.completeTurn(conversationId, query, {
+      return await this.completeTurn(conversationId, query, {
         answer:
           "I found potentially related rulebook content, but it was not relevant enough to answer confidently. Please clarify the game and the specific rule, action, card, or situation you are asking about.",
         matches: [],
@@ -93,20 +93,20 @@ export class RetrievalService {
         classification.normalizedQuery,
       );
 
-      return this.completeTurn(conversationId, query, result);
+      return await this.completeTurn(conversationId, query, result);
     }
 
     const result = await this.answerFromMatches(conversationQuestion, matches);
 
-    return this.completeTurn(conversationId, query, result);
+    return await this.completeTurn(conversationId, query, result);
   }
 
-  private completeTurn(
+  private async completeTurn(
     conversationId: string,
     query: string,
     result: RetrievalSearchResult,
-  ): RetrievalSearchResult {
-    this.conversationRepository.appendMessages(conversationId, [
+  ): Promise<RetrievalSearchResult> {
+    await this.conversationRepository.appendMessages(conversationId, [
       { role: "user", content: query },
       { role: "assistant", content: result.answer },
     ]);

@@ -19,10 +19,10 @@ export class InMemoryConversationRepository implements ConversationRepository {
       DEFAULT_MAX_MESSAGES_PER_CONVERSATION;
   }
 
-  appendMessages(
+  async appendMessages(
     conversationId: string,
     messages: ConversationMessage[],
-  ): void {
+  ): Promise<void> {
     const currentMessages = this.conversations.get(conversationId) ?? [];
     const retainedMessages = [
       ...currentMessages,
@@ -32,7 +32,7 @@ export class InMemoryConversationRepository implements ConversationRepository {
     this.conversations.set(conversationId, retainedMessages);
   }
 
-  getMessages(conversationId: string): ConversationMessage[] {
+  async getMessages(conversationId: string): Promise<ConversationMessage[]> {
     return (this.conversations.get(conversationId) ?? []).map((message) => ({
       ...message,
     }));

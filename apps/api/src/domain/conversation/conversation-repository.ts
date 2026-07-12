@@ -6,6 +6,9 @@ export type ConversationMessage = {
 };
 
 export interface ConversationRepository {
-  appendMessages(conversationId: string, messages: ConversationMessage[]): void;
-  getMessages(conversationId: string): ConversationMessage[];
+  appendMessages(
+    conversationId: string,
+    messages: ConversationMessage[],
+  ): Promise<void>;
+  getMessages(conversationId: string): Promise<ConversationMessage[]>;
 }

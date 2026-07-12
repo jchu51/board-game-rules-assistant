@@ -415,7 +415,7 @@ describe("RetrievalService", () => {
     expect(isolatedResult.answer).toMatch(
       /only answer board-game rules questions/i,
     );
-    expect(conversationRepository.getMessages(CONVERSATION_ID)).toEqual([
+    expect(await conversationRepository.getMessages(CONVERSATION_ID)).toEqual([
       {
         role: "user",
         content:
