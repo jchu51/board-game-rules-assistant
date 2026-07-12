@@ -12,7 +12,9 @@
     }
   },
   "scripts": {
-    "build": "rm -rf dist && tsc && cp -R migrations dist/migrations",
+    "build": "npm run clean && tsc && cp -R migrations dist/migrations",
+    "clean": "rm -rf dist",
+    "prepare": "npm run build -w @board-game-rules-assistant/rag-core && npm run build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
