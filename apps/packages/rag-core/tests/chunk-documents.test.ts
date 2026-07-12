@@ -1,6 +1,5 @@
-import assert from "node:assert/strict";
-import { describe, it } from "node:test";
 import { Document } from "@langchain/core/documents";
+import { describe, expect, it } from "vitest";
 
 import { chunkDocuments } from "../src/chunking/chunk-documents.js";
 import type { RulebookDocument } from "../src/documents/rulebook-document.js";
@@ -22,19 +21,17 @@ describe("chunkDocuments", () => {
       chunkSize: 45,
     });
 
-    assert.ok(chunks.length > 1);
-    assert.equal(
+    expect(chunks.length).toBeGreaterThan(1);
+    expect(
       chunks.map((chunk) => chunk.pageContent).join(" "),
-      document.pageContent,
-    );
+    ).toBe(document.pageContent);
 
     for (const chunk of chunks) {
-      assert.equal(
-        chunk.metadata.documentId,
+      expect(chunk.metadata.documentId).toBe(
         "11111111-1111-4111-8111-111111111111",
       );
-      assert.equal(chunk.metadata.loc?.pageNumber, 3);
-      assert.equal(chunk.metadata.source, "catan.pdf");
+      expect(chunk.metadata.loc?.pageNumber).toBe(3);
+      expect(chunk.metadata.source).toBe("catan.pdf");
     }
   });
 });

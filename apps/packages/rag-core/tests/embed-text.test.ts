@@ -1,5 +1,4 @@
-import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, expect, it } from "vitest";
 
 import { createOpenAIEmbeddings } from "../src/embeddings/embed-text.js";
 
@@ -9,7 +8,7 @@ describe("createOpenAIEmbeddings", () => {
       apiKey: "test-api-key",
     });
 
-    assert.equal(embeddings.model, "text-embedding-3-small");
-    assert.equal(embeddings.modelName, "text-embedding-3-small");
+    expect(embeddings.model).toBe("text-embedding-3-small");
+    expect(embeddings.modelName).toBe("text-embedding-3-small");
   });
 });
