@@ -23,6 +23,8 @@ test("conversation routes create, list, get, delete and conceal another owner", 
   const address = server.address(); assert.ok(address && typeof address === "object");
   const base = `http://127.0.0.1:${address.port}`;
   try {
+    const missing = await fetch(`${base}/conversations`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ gameId: crypto.randomUUID(), title: "Missing" }) });
+    assert.equal(missing.status, 404); assert.deepEqual(await missing.json(), { code: "RESOURCE_NOT_FOUND" });
     const create = await fetch(`${base}/conversations`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ gameId: game.id, title: "Setup" }) });
     assert.equal(create.status, 201); const conversation = await create.json() as { id: string };
     assert.equal((await fetch(`${base}/conversations`)).status, 200);

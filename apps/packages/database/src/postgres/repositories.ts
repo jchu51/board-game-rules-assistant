@@ -62,7 +62,11 @@ export const createPostgresRepositories = (db: PostgresDatabase): {
       )[0] ?? null;
     },
     async deleteExpiredGuestSessions({ now }) {
-      return (await db.delete(guestSessions).where(lte(guestSessions.expiresAt, now)).returning({ id: guestSessions.id })).length;
+      const deleted = await db
+        .delete(guestSessions)
+        .where(lte(guestSessions.expiresAt, now))
+        .returning({ id: guestSessions.id });
+      return deleted.length;
     },
   };
 
@@ -332,21 +336,42 @@ export const createPostgresRepositories = (db: PostgresDatabase): {
 
   const conversationsRepository: ConversationRepository = {
     async createConversation({ id, actor, gameId, title }) {
-      const actorColumns =
-        actor.kind === "user"
+      return db.transaction(async (tx) => {
+        const selectedGame = await tx
+          .select({ id: games.id })
+          .from(games)
+          .where(eq(games.id, gameId))
+          .limit(1);
+        if (!selectedGame[0]) throw new PersistenceNotFoundError("game");
+
+        const actorColumns = actor.kind === "user"
           ? { userId: actor.userId, guestSessionId: null }
           : { userId: null, guestSessionId: actor.guestSessionId };
-      const guestExpiry = actor.kind === "guest"
-        ? (await db.select({ expiresAt: guestSessions.expiresAt }).from(guestSessions).where(eq(guestSessions.id, actor.guestSessionId)).limit(1))[0]?.expiresAt
-        : null;
-      if (actor.kind === "guest" && !guestExpiry) throw new PersistenceNotFoundError("guest session");
-      return firstOrThrow(
-        await db
-          .insert(conversations)
-          .values({ id, gameId, title, expiresAt: actor.kind === "guest" ? guestExpiry : null, ...actorColumns })
-          .returning(),
-        "conversation",
-      );
+        const guestExpiry = actor.kind === "guest"
+          ? (await tx
+              .select({ expiresAt: guestSessions.expiresAt })
+              .from(guestSessions)
+              .where(eq(guestSessions.id, actor.guestSessionId))
+              .limit(1))[0]?.expiresAt
+          : null;
+        if (actor.kind === "guest" && !guestExpiry) {
+          throw new PersistenceNotFoundError("guest session");
+        }
+
+        return firstOrThrow(
+          await tx
+            .insert(conversations)
+            .values({
+              id,
+              gameId,
+              title,
+              expiresAt: actor.kind === "guest" ? guestExpiry : null,
+              ...actorColumns,
+            })
+            .returning(),
+          "conversation",
+        );
+      });
     },
     async getConversationById({ id }) {
       return (await db.select().from(conversations).where(eq(conversations.id, id)).limit(1))[0] ?? null;
@@ -364,10 +389,18 @@ export const createPostgresRepositories = (db: PostgresDatabase): {
       const where = actor.kind === "user"
         ? eq(conversations.userId, actor.userId)
         : eq(conversations.guestSessionId, actor.guestSessionId);
-      return db.select().from(conversations).where(where).orderBy(asc(conversations.createdAt), asc(conversations.id));
+      return db
+        .select()
+        .from(conversations)
+        .where(where)
+        .orderBy(asc(conversations.createdAt), asc(conversations.id));
     },
     async deleteOwnedConversation({ actor, conversationId }) {
-      return (await db.delete(conversations).where(ownedConversationWhere(actor, conversationId)).returning({ id: conversations.id })).length > 0;
+      const deleted = await db
+        .delete(conversations)
+        .where(ownedConversationWhere(actor, conversationId))
+        .returning({ id: conversations.id });
+      return deleted.length > 0;
     },
     async listMessages({ actor, conversationId }) {
       const owned = await db

@@ -16,6 +16,20 @@ test("registered conversations are permanent and listed for only their owner", a
   await assert.rejects(service.get({ kind: "user", userId: bob.id, accountRole: bob.accountRole, planTier: bob.planTier }, created.id), PersistenceNotFoundError);
 });
 
+test("rejects a well-formed nonexistent selected game", async () => {
+  const persistence = await createMemoryPersistence();
+  const user = await persistence.identity.createUser({ email: "missing@x.test", displayName: "Missing", accountRole: "user", planTier: "standard" });
+  const service = new ConversationService(persistence.conversations);
+  await assert.rejects(
+    service.create({
+      actor: { kind: "user", userId: user.id, accountRole: user.accountRole, planTier: user.planTier },
+      gameId: crypto.randomUUID(),
+      title: "Missing",
+    }),
+    PersistenceNotFoundError,
+  );
+});
+
 test("guest conversations inherit the session's exact expiry and include ordered messages", async () => {
   const persistence = await createMemoryPersistence();
   const game = await persistence.library.createGame({ name: "Azul", slug: "azul" });

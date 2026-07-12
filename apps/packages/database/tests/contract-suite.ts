@@ -3,14 +3,53 @@ import { describe, test } from "node:test";
 import { Document } from "@langchain/core/documents";
 import type { RulebookDocument } from "@board-game-rules-assistant/rag-core";
 
-import type { Persistence } from "../src/index.js";
-import { cleanupExpiredGuestSessions } from "../src/index.js";
+import {
+  cleanupExpiredGuestSessions,
+  PersistenceNotFoundError,
+  type Persistence,
+} from "../src/index.js";
 
 export const runPersistenceContract = (
   name: string,
   createPersistence: () => Promise<Persistence>,
 ) => {
   describe(name, () => {
+    test("requires an existing selected game for conversations", async () => {
+      const persistence = await createPersistence();
+      const user = await persistence.identity.createUser({
+        email: `missing-game-${crypto.randomUUID()}@example.com`,
+        displayName: "Missing Game",
+        accountRole: "user",
+        planTier: "standard",
+      });
+      const actor = {
+        kind: "user" as const,
+        userId: user.id,
+        accountRole: user.accountRole,
+        planTier: user.planTier,
+      };
+      await assert.rejects(
+        persistence.conversations.createConversation({
+          actor,
+          gameId: crypto.randomUUID(),
+          title: "Unknown game",
+        }),
+        PersistenceNotFoundError,
+      );
+      const game = await persistence.library.createGame({
+        name: `Existing ${crypto.randomUUID()}`,
+        slug: `existing-${crypto.randomUUID()}`,
+      });
+      assert.equal(
+        (await persistence.conversations.createConversation({
+          actor,
+          gameId: game.id,
+          title: "Known game",
+        })).gameId,
+        game.id,
+      );
+      await persistence.close();
+    });
     test("cleans expired guests with cascading conversation deletion idempotently", async () => {
       const persistence = await createPersistence();
       const game = await persistence.library.createGame({ name: `Cleanup ${crypto.randomUUID()}`, slug: `cleanup-${crypto.randomUUID()}` });
