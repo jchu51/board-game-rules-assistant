@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import type { ConversationRepository } from "../../../domain/conversation/conversation-repository";
 import type {
   ConversationDetail,
+  ConversationMetadata,
   ConversationMessage,
   ConversationSummary,
 } from "../../../domain/conversation/conversation";
@@ -30,6 +31,7 @@ export class InMemoryConversationRepository implements ConversationRepository {
     this.chats.unshift({
       conversationId,
       title: "New chat",
+      game: null,
     });
     return conversationId;
   }
@@ -60,6 +62,21 @@ export class InMemoryConversationRepository implements ConversationRepository {
       messages: (this.conversations.get(conversationId) ?? []).map(
         (message) => ({ ...message }),
       ),
+    };
+  }
+
+  async updateMetadata(
+    conversationId: string,
+    metadata: ConversationMetadata,
+  ): Promise<void> {
+    const chatIndex = this.chats.findIndex(
+      (chat) => chat.conversationId === conversationId,
+    );
+    if (chatIndex === -1) return;
+
+    this.chats[chatIndex] = {
+      conversationId,
+      ...metadata,
     };
   }
 

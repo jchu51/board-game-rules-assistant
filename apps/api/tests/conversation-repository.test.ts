@@ -29,10 +29,12 @@ describe("InMemoryConversationRepository", () => {
       {
         conversationId: secondId,
         title: "New chat",
+        game: null,
       },
       {
         conversationId: firstId,
         title: "New chat",
+        game: null,
       },
     ]);
   });
@@ -50,6 +52,7 @@ describe("InMemoryConversationRepository", () => {
     expect(chat).toEqual({
       conversationId,
       title: "New chat",
+      game: null,
       messages: [
         { role: "user", content: "Question" },
         { role: "assistant", content: "Answer" },
@@ -63,6 +66,7 @@ describe("InMemoryConversationRepository", () => {
     expect(await repository.getChat(conversationId)).toEqual({
       conversationId,
       title: "New chat",
+      game: null,
       messages: [
         { role: "user", content: "Question" },
         { role: "assistant", content: "Answer" },
@@ -77,8 +81,46 @@ describe("InMemoryConversationRepository", () => {
     await expect(repository.getChat(conversationId)).resolves.toEqual({
       conversationId,
       title: "New chat",
+      game: null,
       messages: [],
     });
+    await expect(repository.getChat("missing")).resolves.toBeNull();
+  });
+
+  it("updates conversation title and nullable game metadata", async () => {
+    const repository = new InMemoryConversationRepository();
+    const conversationId = await repository.createConversation();
+
+    await repository.updateMetadata(conversationId, {
+      title: "Catan city production",
+      game: "Catan",
+    });
+
+    await expect(repository.getChat(conversationId)).resolves.toMatchObject({
+      conversationId,
+      title: "Catan city production",
+      game: "Catan",
+    });
+
+    await repository.updateMetadata(conversationId, {
+      title: "Catan city production",
+      game: null,
+    });
+
+    await expect(repository.getChat(conversationId)).resolves.toMatchObject({
+      game: null,
+    });
+  });
+
+  it("ignores metadata updates for missing conversations", async () => {
+    const repository = new InMemoryConversationRepository();
+
+    await expect(
+      repository.updateMetadata("missing", {
+        title: "Missing",
+        game: null,
+      }),
+    ).resolves.toBeUndefined();
     await expect(repository.getChat("missing")).resolves.toBeNull();
   });
 

@@ -26,14 +26,26 @@ describe("runMigrations", () => {
       ).toEqual([
         { version: "0001_conversation_messages" },
         { version: "0002_conversations" },
+        { version: "0003_conversation_game" },
       ]);
       expect(
         (
           await database.pool.query(
             "SELECT to_regclass('public.conversations') AS table_name",
           )
-        ).rows,
+      ).rows,
       ).toEqual([{ table_name: "public.conversations" }]);
+      expect(
+        (
+          await database.pool.query(
+            `SELECT is_nullable, column_default
+             FROM information_schema.columns
+             WHERE table_schema = 'public'
+               AND table_name = 'conversations'
+               AND column_name = 'game'`,
+          )
+        ).rows,
+      ).toEqual([{ is_nullable: "YES", column_default: null }]);
     } finally {
       await database.dispose();
     }
