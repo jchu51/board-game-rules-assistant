@@ -33,12 +33,12 @@ export function ChatView() {
           navigationOpen={mobileNavigationOpen}
           onMenuClick={openMobileNavigation}
         />
-        {chat.createChatError ? (
+        {chat.chatError ? (
           <p
             role="alert"
             className="shrink-0 border-b border-red-100 bg-red-50 px-4 py-2 text-sm text-red-700"
           >
-            {chat.createChatError}
+            {chat.chatError}
           </p>
         ) : null}
         {chat.activeConversation ? (

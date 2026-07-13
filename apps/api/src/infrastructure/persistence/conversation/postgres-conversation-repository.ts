@@ -4,6 +4,7 @@ import type { Pool } from "pg";
 import type {
   ConversationMessage,
   ConversationMessageRole,
+  ConversationSummary,
 } from "../../../domain/conversation/conversation";
 import type { ConversationRepository } from "../../../domain/conversation/conversation-repository";
 
@@ -16,6 +17,11 @@ type PostgresConversationRepositoryOptions = {
 type ConversationMessageRow = {
   role: ConversationMessageRole;
   content: string;
+};
+
+type ConversationSummaryRow = {
+  id: string;
+  title: string;
 };
 
 export class PostgresConversationRepository implements ConversationRepository {
@@ -44,6 +50,44 @@ export class PostgresConversationRepository implements ConversationRepository {
       [conversationId, "New chat"],
     );
     return conversationId;
+  }
+
+  async deleteConversation(conversationId: string): Promise<boolean> {
+    const client = await this.pool.connect();
+
+    try {
+      await client.query("BEGIN");
+      await client.query(
+        `DELETE FROM conversation_messages
+         WHERE conversation_id = $1`,
+        [conversationId],
+      );
+      const result = await client.query(
+        `DELETE FROM conversations
+         WHERE id = $1`,
+        [conversationId],
+      );
+      await client.query("COMMIT");
+      return result.rowCount === 1;
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  async getChats(): Promise<ConversationSummary[]> {
+    const result = await this.pool.query<ConversationSummaryRow>(
+      `SELECT id, title
+       FROM conversations
+       ORDER BY created_at DESC, id DESC`,
+    );
+
+    return result.rows.map((chat) => ({
+      conversationId: chat.id,
+      title: chat.title,
+    }));
   }
 
   async appendMessages(

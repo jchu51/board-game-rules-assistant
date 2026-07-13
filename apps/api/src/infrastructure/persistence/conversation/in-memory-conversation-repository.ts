@@ -1,7 +1,10 @@
 import { randomUUID } from "node:crypto";
 
 import type { ConversationRepository } from "../../../domain/conversation/conversation-repository";
-import type { ConversationMessage } from "../../../domain/conversation/conversation";
+import type {
+  ConversationMessage,
+  ConversationSummary,
+} from "../../../domain/conversation/conversation";
 
 const DEFAULT_MAX_MESSAGES_PER_CONVERSATION = 20;
 
@@ -10,6 +13,7 @@ type InMemoryConversationRepositoryOptions = {
 };
 
 export class InMemoryConversationRepository implements ConversationRepository {
+  private readonly chats: ConversationSummary[] = [];
   private readonly conversations = new Map<string, ConversationMessage[]>();
   private readonly maxMessagesPerConversation: number;
 
@@ -22,7 +26,26 @@ export class InMemoryConversationRepository implements ConversationRepository {
   async createConversation(): Promise<string> {
     const conversationId = randomUUID();
     this.conversations.set(conversationId, []);
+    this.chats.unshift({
+      conversationId,
+      title: "New chat",
+    });
     return conversationId;
+  }
+
+  async deleteConversation(conversationId: string): Promise<boolean> {
+    const chatIndex = this.chats.findIndex(
+      (chat) => chat.conversationId === conversationId,
+    );
+    if (chatIndex === -1) return false;
+
+    this.chats.splice(chatIndex, 1);
+    this.conversations.delete(conversationId);
+    return true;
+  }
+
+  async getChats(): Promise<ConversationSummary[]> {
+    return this.chats.map((chat) => ({ ...chat }));
   }
 
   async appendMessages(

@@ -21,6 +21,87 @@ describe("PostgresConversationRepository", () => {
     );
   });
 
+  it("lists newest chat titles", async () => {
+    const query = vi.fn().mockResolvedValue({
+      rows: [
+        {
+          id: "22222222-2222-4222-8222-222222222222",
+          title: "Trading rules",
+        },
+        {
+          id: "11111111-1111-4111-8111-111111111111",
+          title: "New chat",
+        },
+      ],
+    });
+    const repository = new PostgresConversationRepository(createPool(query));
+
+    await expect(repository.getChats()).resolves.toEqual([
+      {
+        conversationId: "22222222-2222-4222-8222-222222222222",
+        title: "Trading rules",
+      },
+      {
+        conversationId: "11111111-1111-4111-8111-111111111111",
+        title: "New chat",
+      },
+    ]);
+    expect(query).toHaveBeenCalledWith(
+      `SELECT id, title
+       FROM conversations
+       ORDER BY created_at DESC, id DESC`,
+    );
+  });
+
+  it("hard deletes messages and their conversation in one transaction", async () => {
+    const query = vi
+      .fn()
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rowCount: 2 })
+      .mockResolvedValueOnce({ rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [] });
+    const release = vi.fn();
+    const client = { query, release } as unknown as PoolClient;
+    const pool = {
+      connect: vi.fn().mockResolvedValue(client),
+    } as unknown as Pool;
+    const repository = new PostgresConversationRepository(pool);
+
+    await expect(
+      repository.deleteConversation("11111111-1111-4111-8111-111111111111"),
+    ).resolves.toBe(true);
+    expect(query.mock.calls).toEqual([
+      ["BEGIN"],
+      [
+        expect.stringContaining("DELETE FROM conversation_messages"),
+        ["11111111-1111-4111-8111-111111111111"],
+      ],
+      [
+        expect.stringContaining("DELETE FROM conversations"),
+        ["11111111-1111-4111-8111-111111111111"],
+      ],
+      ["COMMIT"],
+    ]);
+    expect(release).toHaveBeenCalledOnce();
+  });
+
+  it("returns false when the conversation does not exist", async () => {
+    const query = vi
+      .fn()
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rowCount: 0 })
+      .mockResolvedValueOnce({ rowCount: 0 })
+      .mockResolvedValueOnce({ rows: [] });
+    const release = vi.fn();
+    const client = { query, release } as unknown as PoolClient;
+    const pool = {
+      connect: vi.fn().mockResolvedValue(client),
+    } as unknown as Pool;
+    const repository = new PostgresConversationRepository(pool);
+
+    await expect(repository.deleteConversation("missing")).resolves.toBe(false);
+  });
+
   it("stores messages and trims older rows in one transaction", async () => {
     const query = vi.fn().mockResolvedValue({ rows: [] });
     const release = vi.fn();

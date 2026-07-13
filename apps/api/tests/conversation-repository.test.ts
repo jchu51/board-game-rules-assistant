@@ -19,6 +19,41 @@ describe("InMemoryConversationRepository", () => {
     expect(await repository.getMessages(firstId)).toEqual([]);
   });
 
+  it("lists newest conversation titles first", async () => {
+    const repository = new InMemoryConversationRepository();
+
+    const firstId = await repository.createConversation();
+    const secondId = await repository.createConversation();
+
+    expect(await repository.getChats()).toEqual([
+      {
+        conversationId: secondId,
+        title: "New chat",
+      },
+      {
+        conversationId: firstId,
+        title: "New chat",
+      },
+    ]);
+  });
+
+  it("hard deletes a conversation and its messages", async () => {
+    const repository = new InMemoryConversationRepository();
+    const conversationId = await repository.createConversation();
+    await repository.appendMessages(conversationId, [
+      { role: "user", content: "hello" },
+    ]);
+
+    await expect(repository.deleteConversation(conversationId)).resolves.toBe(
+      true,
+    );
+    await expect(repository.getChats()).resolves.toEqual([]);
+    await expect(repository.getMessages(conversationId)).resolves.toEqual([]);
+    await expect(repository.deleteConversation(conversationId)).resolves.toBe(
+      false,
+    );
+  });
+
   it("exposes an asynchronous contract", async () => {
     const repository = new InMemoryConversationRepository();
 

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
-import { createChat } from "@/api/chat-service";
+import { createChat, deleteChat, listChats } from "@/api/chat-service";
 import { searchRulebooks } from "@/api/retrieval-api";
 
 import {
@@ -27,7 +27,7 @@ export function useChatController() {
   const [guestAsked, setGuestAsked] = useState(0);
   const [isSearching, setIsSearching] = useState(false);
   const [isCreatingChat, setIsCreatingChat] = useState(false);
-  const [createChatError, setCreateChatError] = useState<string | null>(null);
+  const [chatError, setChatError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLElement | null>(null);
   const timersRef = useRef<Record<string, number>>({});
   const activeSearchIdRef = useRef(0);
@@ -40,6 +40,44 @@ export function useChatController() {
   const lastCitedMessage = getLastCitedMessage(
     activeConversation?.messages ?? [],
   );
+
+  useEffect(() => {
+    let isMounted = true;
+
+    void listChats()
+      .then(({ chats }) => {
+        if (!isMounted) return;
+
+        const loadedConversations: Conversation[] = chats.map((chat) => ({
+          id: chat.conversationId,
+          title: chat.title,
+          game: null,
+          messages: [],
+        }));
+        setConversations((current) => {
+          const currentIds = new Set(
+            current.map((conversation) => conversation.id),
+          );
+          return [
+            ...current,
+            ...loadedConversations.filter(
+              (conversation) => !currentIds.has(conversation.id),
+            ),
+          ];
+        });
+      })
+      .catch((error: unknown) => {
+        if (!isMounted) return;
+
+        setChatError(
+          error instanceof Error ? error.message : "Failed to load chats",
+        );
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     const scrollElement = scrollRef.current;
@@ -206,7 +244,7 @@ export function useChatController() {
   const handleNewChat = async () => {
     if (isCreatingChat) return;
     setIsCreatingChat(true);
-    setCreateChatError(null);
+    setChatError(null);
     try {
       const response = await createChat();
       activeSearchIdRef.current += 1;
@@ -226,7 +264,7 @@ export function useChatController() {
       setInput("");
       setIsSearching(false);
     } catch (error) {
-      setCreateChatError(
+      setChatError(
         error instanceof Error ? error.message : "Failed to create chat",
       );
     } finally {
@@ -234,12 +272,26 @@ export function useChatController() {
     }
   };
 
-  const deleteConversation = (conversationId: string) => {
-    setConversations((current) => {
-      const remaining = current.filter(({ id }) => id !== conversationId);
-      if (activeId === conversationId) setActiveId(remaining[0]?.id ?? null);
-      return remaining;
-    });
+  const deleteConversation = async (conversationId: string) => {
+    setChatError(null);
+    try {
+      await deleteChat(conversationId);
+      setConversations((current) =>
+        current.filter(({ id }) => id !== conversationId),
+      );
+      if (activeId === conversationId) {
+        activeSearchIdRef.current += 1;
+        clearTimers(timersRef.current);
+        timersRef.current = {};
+        setActiveId(null);
+        setInput("");
+        setIsSearching(false);
+      }
+    } catch (error) {
+      setChatError(
+        error instanceof Error ? error.message : "Failed to delete chat",
+      );
+    }
   };
 
   const searchTerm = search.trim().toLowerCase();
@@ -272,7 +324,7 @@ export function useChatController() {
   return {
     activeConversation,
     activeId,
-    createChatError,
+    chatError,
     deleteConversation,
     filteredConversations,
     gameGroups,

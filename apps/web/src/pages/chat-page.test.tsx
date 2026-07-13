@@ -2,13 +2,17 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { createChat, searchRulebooks } = vi.hoisted(() => ({
-  createChat: vi.fn(),
-  searchRulebooks: vi.fn(),
-}));
+const { createChat, deleteChat, listChats, searchRulebooks } = vi.hoisted(
+  () => ({
+    createChat: vi.fn(),
+    deleteChat: vi.fn(),
+    listChats: vi.fn(),
+    searchRulebooks: vi.fn(),
+  }),
+);
 
 vi.mock("@/api/retrieval-api", () => ({ searchRulebooks }));
-vi.mock("@/api/chat-service", () => ({ createChat }));
+vi.mock("@/api/chat-service", () => ({ createChat, deleteChat, listChats }));
 
 import { ChatPage } from "./chat-page";
 
@@ -38,6 +42,8 @@ beforeEach(() => {
   createChat.mockResolvedValue({
     conversationId: "conversation-1",
   });
+  deleteChat.mockResolvedValue(undefined);
+  listChats.mockResolvedValue({ chats: [] });
 });
 
 afterEach(() => {
@@ -68,6 +74,82 @@ describe("ChatPage", () => {
     expect(screen.queryByText(/No chats match/)).not.toBeInTheDocument();
     expect(screen.getByTestId("mobile-chat-menu-btn")).toBeInTheDocument();
     expect(screen.getByText("Chat")).toBeInTheDocument();
+  });
+
+  it("loads chat titles without selecting one until it is clicked", async () => {
+    listChats.mockResolvedValue({
+      chats: [
+        {
+          conversationId: "conversation-2",
+          title: "Pandemic outbreaks",
+        },
+        {
+          conversationId: "conversation-1",
+          title: "Catan road rules",
+        },
+      ],
+    });
+    renderChatPage();
+    await act(async () => {});
+
+    expect(screen.getByText("Pandemic outbreaks")).toBeInTheDocument();
+    expect(screen.getByText("Catan road rules")).toBeInTheDocument();
+    expect(screen.queryByText("Ask the Referee")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("chat-select-conversation-2-btn"));
+
+    expect(screen.getByText("Ask the Referee")).toBeInTheDocument();
+    expect(
+      screen.getByRole("textbox", { name: "Ask a rules question" }),
+    ).toBeInTheDocument();
+  });
+
+  it("shows chat loading failures", async () => {
+    listChats.mockRejectedValue(new Error("chat list unavailable"));
+
+    renderChatPage();
+    await act(async () => {});
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "chat list unavailable",
+    );
+  });
+
+  it("merges a chat created while the initial list is pending", async () => {
+    let resolveList:
+      | ((value: {
+          chats: Array<{ conversationId: string; title: string }>;
+        }) => void)
+      | undefined;
+    listChats.mockReturnValue(
+      new Promise((resolve) => {
+        resolveList = resolve;
+      }),
+    );
+    renderChatPage();
+
+    fireEvent.click(screen.getByTestId("ask-new-chat-btn"));
+    await act(async () => {});
+    await act(async () => {
+      resolveList?.({
+        chats: [
+          {
+            conversationId: "conversation-1",
+            title: "Duplicate server title",
+          },
+          {
+            conversationId: "older-conversation",
+            title: "Older chat",
+          },
+        ],
+      });
+    });
+
+    expect(screen.getByText("Older chat")).toBeInTheDocument();
+    expect(
+      screen.queryByText("Duplicate server title"),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText("Ask the Referee")).toBeInTheDocument();
   });
 
   it("uses the reference navigation labels", () => {
@@ -169,12 +251,62 @@ describe("ChatPage", () => {
     await renderCreatedChatPage();
 
     fireEvent.click(screen.getByRole("button", { name: "Delete New chat" }));
+    await act(async () => {});
 
     expect(createChat).toHaveBeenCalledOnce();
+    expect(deleteChat).toHaveBeenCalledWith("conversation-1");
     expect(screen.queryByText("Ask the Referee")).not.toBeInTheDocument();
     expect(
       screen.queryByRole("textbox", { name: "Ask a rules question" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("keeps a chat visible and shows an error when deletion fails", async () => {
+    listChats.mockResolvedValue({
+      chats: [
+        {
+          conversationId: "conversation-1",
+          title: "Catan road rules",
+        },
+      ],
+    });
+    deleteChat.mockRejectedValue(new Error("delete unavailable"));
+    renderChatPage();
+    await act(async () => {});
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Delete Catan road rules" }),
+    );
+    await act(async () => {});
+
+    expect(screen.getByText("Catan road rules")).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent("delete unavailable");
+  });
+
+  it("returns to the clean state after deleting the active chat", async () => {
+    listChats.mockResolvedValue({
+      chats: [
+        {
+          conversationId: "conversation-2",
+          title: "Pandemic outbreaks",
+        },
+        {
+          conversationId: "conversation-1",
+          title: "Catan road rules",
+        },
+      ],
+    });
+    renderChatPage();
+    await act(async () => {});
+    fireEvent.click(screen.getByTestId("chat-select-conversation-2-btn"));
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Delete Pandemic outbreaks" }),
+    );
+    await act(async () => {});
+
+    expect(screen.queryByText("Ask the Referee")).not.toBeInTheDocument();
+    expect(screen.getByText("Catan road rules")).toBeInTheDocument();
   });
 
   it("searches, streams an answer, and renders citations", async () => {

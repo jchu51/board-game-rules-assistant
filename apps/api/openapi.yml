@@ -17,6 +17,24 @@ tags:
     description: Similarity search over indexed rulebook chunks
 paths:
   /chats:
+    get:
+      tags:
+        - Chats
+      summary: List chat summaries
+      description: Returns conversation ids and titles ordered from newest to oldest.
+      responses:
+        "200":
+          description: Chat summaries
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetChatsResponse"
+        "500":
+          description: Unexpected chat listing failure
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
     post:
       tags:
         - Chats
@@ -31,6 +49,38 @@ paths:
                 $ref: "#/components/schemas/CreateChatResponse"
         "500":
           description: Unexpected conversation creation failure
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /chats/{id}:
+    delete:
+      tags:
+        - Chats
+      summary: Hard delete a chat
+      description: Permanently removes the conversation and all of its messages.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Chat deleted
+        "404":
+          description: Chat not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                notFound:
+                  value:
+                    error: Chat not found
+        "500":
+          description: Unexpected chat deletion failure
           content:
             application/json:
               schema:
@@ -195,6 +245,31 @@ components:
           type: string
           format: uuid
           description: Server-generated conversation identifier.
+      additionalProperties: false
+    ChatSummary:
+      type: object
+      required:
+        - conversationId
+        - title
+      properties:
+        conversationId:
+          type: string
+          format: uuid
+          description: Server-generated conversation identifier.
+        title:
+          type: string
+          minLength: 1
+          description: Conversation title.
+      additionalProperties: false
+    GetChatsResponse:
+      type: object
+      required:
+        - chats
+      properties:
+        chats:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChatSummary"
       additionalProperties: false
     ErrorResponse:
       type: object

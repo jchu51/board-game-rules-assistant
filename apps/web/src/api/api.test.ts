@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { searchRulebooks } from "./retrieval-api";
-import { createChat } from "./chat-service";
+import { createChat, deleteChat, listChats } from "./chat-service";
 import {
   deleteRulebook,
   listRulebooks,
@@ -30,6 +30,33 @@ describe("web API clients", () => {
     expect(fetchMock).toHaveBeenCalledWith(expect.stringMatching(/\/chats$/), {
       method: "POST",
     });
+  });
+
+  it("lists chat summaries", async () => {
+    const body = {
+      chats: [
+        {
+          conversationId: "11111111-1111-4111-8111-111111111111",
+          title: "Catan road rules",
+        },
+      ],
+    };
+    const fetchMock = vi.fn().mockResolvedValue(response(body));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(listChats()).resolves.toEqual(body);
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringMatching(/\/chats$/));
+  });
+
+  it("deletes a chat with an encoded conversation id", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(response(undefined));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(deleteChat("conversation/id")).resolves.toBeUndefined();
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringMatching(/\/chats\/conversation%2Fid$/),
+      { method: "DELETE" },
+    );
   });
 
   it("uploads, lists, and deletes rulebooks", async () => {
@@ -87,6 +114,8 @@ describe("web API clients", () => {
     ["delete", () => deleteRulebook("missing")],
     ["search", () => searchRulebooks({ conversationId: "c", query: "q" })],
     ["create chat", () => createChat()],
+    ["list chats", () => listChats()],
+    ["delete chat", () => deleteChat("missing")],
   ])("surfaces the API error for %s", async (_name, request) => {
     vi.stubGlobal(
       "fetch",
@@ -106,6 +135,8 @@ describe("web API clients", () => {
     ["delete", () => deleteRulebook("missing")],
     ["search", () => searchRulebooks({ conversationId: "c", query: "q" })],
     ["create chat", () => createChat()],
+    ["list chats", () => listChats()],
+    ["delete chat", () => deleteChat("missing")],
   ])(
     "uses the fallback when %s has no readable error",
     async (_name, request) => {

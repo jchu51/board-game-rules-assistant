@@ -40,6 +40,8 @@ const retrievalService = {
 } as unknown as RetrievalService;
 const conversationRepository = {
   createConversation: vi.fn(),
+  deleteConversation: vi.fn(),
+  getChats: vi.fn(),
   appendMessages: vi.fn(),
   getMessages: vi.fn(),
 } satisfies ConversationRepository;
@@ -80,6 +82,100 @@ describe("HTTP routers", () => {
     expect(next).toHaveBeenCalledWith(error);
   });
 
+  it("lists newest chat titles", async () => {
+    vi.mocked(conversationRepository.getChats).mockResolvedValue([
+      {
+        conversationId: "22222222-2222-4222-8222-222222222222",
+        title: "Trading rules",
+      },
+      {
+        conversationId: "11111111-1111-4111-8111-111111111111",
+        title: "New chat",
+      },
+    ]);
+    const router = new ChatRouter(conversationRepository);
+    const handler = router.router.stack.find(
+      (layer) => layer.route?.methods.get,
+    )?.route.stack[0]?.handle;
+    const response = createResponse();
+
+    await handler?.({} as Request, response, vi.fn());
+
+    expect(conversationRepository.getChats).toHaveBeenCalledOnce();
+    expect(response.status).toHaveBeenCalledWith(200);
+    expect(response.json).toHaveBeenCalledWith({
+      chats: [
+        {
+          conversationId: "22222222-2222-4222-8222-222222222222",
+          title: "Trading rules",
+        },
+        {
+          conversationId: "11111111-1111-4111-8111-111111111111",
+          title: "New chat",
+        },
+      ],
+    });
+  });
+
+  it("forwards chat listing failures", async () => {
+    const error = new Error("list failed");
+    vi.mocked(conversationRepository.getChats).mockRejectedValue(error);
+    const router = new ChatRouter(conversationRepository);
+    const handler = router.router.stack.find(
+      (layer) => layer.route?.methods.get,
+    )?.route.stack[0]?.handle;
+    const next = vi.fn();
+
+    await handler?.({} as Request, createResponse(), next);
+
+    expect(next).toHaveBeenCalledWith(error);
+  });
+
+  it("hard deletes a chat", async () => {
+    vi.mocked(conversationRepository.deleteConversation).mockResolvedValue(
+      true,
+    );
+    const router = new ChatRouter(conversationRepository);
+    const handler = router.router.stack.find(
+      (layer) => layer.route?.methods.delete,
+    )?.route.stack[0]?.handle;
+    const response = createResponse();
+
+    await handler?.(
+      {
+        params: { id: "11111111-1111-4111-8111-111111111111" },
+      } as unknown as Request,
+      response,
+      vi.fn(),
+    );
+
+    expect(conversationRepository.deleteConversation).toHaveBeenCalledWith(
+      "11111111-1111-4111-8111-111111111111",
+    );
+    expect(response.status).toHaveBeenCalledWith(204);
+    expect(response.send).toHaveBeenCalledOnce();
+  });
+
+  it("returns not found when deleting a missing chat", async () => {
+    vi.mocked(conversationRepository.deleteConversation).mockResolvedValue(
+      false,
+    );
+    const router = new ChatRouter(conversationRepository);
+    const handler = router.router.stack.find(
+      (layer) => layer.route?.methods.delete,
+    )?.route.stack[0]?.handle;
+    const response = createResponse();
+
+    await handler?.(
+      { params: { id: "missing" } } as unknown as Request,
+      response,
+      vi.fn(),
+    );
+
+    expect(response.status).toHaveBeenCalledWith(404);
+    expect(response.json).toHaveBeenCalledWith({ error: "Chat not found" });
+  });
+
   it("creates the app and serves health and OpenAPI handlers", () => {
     const health = new HealthRouter();
     const docs = new DocsRouter();
@@ -108,7 +204,13 @@ describe("HTTP routers", () => {
       expect.objectContaining({
         openapi: expect.any(String),
         paths: expect.objectContaining({
-          "/chats": expect.objectContaining({ post: expect.any(Object) }),
+          "/chats": expect.objectContaining({
+            get: expect.any(Object),
+            post: expect.any(Object),
+          }),
+          "/chats/{id}": expect.objectContaining({
+            delete: expect.any(Object),
+          }),
         }),
       }),
     );
@@ -123,6 +225,7 @@ describe("HTTP routers", () => {
     expect(yamlResponse.send).toHaveBeenCalledWith(
       expect.stringMatching(/openapi:/),
     );
+    expect(yamlResponse.send.mock.calls[0]?.[0]).not.toContain("gameTitle");
   });
 
   it("validates and completes retrieval searches", async () => {
