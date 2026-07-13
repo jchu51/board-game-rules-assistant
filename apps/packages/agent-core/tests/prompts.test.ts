@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { boardGameRuleMasterPrompt } from "../src/prompts/board-game-rule-master-prompt.js";
+import { conversationMetadataPrompt } from "../src/prompts/conversation-metadata-prompt.js";
 import { ruleContextPrompt } from "../src/prompts/rule-context-prompt.js";
 
 const contentAsText = (content: unknown): string => {
@@ -49,5 +50,26 @@ describe("boardGameRuleMasterPrompt", () => {
     expect(systemContent).toMatch(/public_web: a public web search result/);
     expect(systemContent).toMatch(/Page 3: Cities produce two resources/);
     expect(humanContent).toBe("How many resources does a city produce?");
+  });
+});
+
+describe("conversationMetadataPrompt", () => {
+  it("requires concise JSON metadata and includes the question", async () => {
+    const messages = await conversationMetadataPrompt.formatMessages({
+      question: "How many resources does a Catan city produce?",
+    });
+
+    expect(messages.length).toBe(2);
+    const systemContent = contentAsText(messages[0]?.content);
+    const humanContent = contentAsText(messages[1]?.content);
+
+    expect(systemContent).toMatch(/concise non-empty summary/i);
+    expect(systemContent).toMatch(/concrete board-game name/i);
+    expect(systemContent).toMatch(/otherwise null/i);
+    expect(systemContent).toMatch(/JSON only/i);
+    expect(systemContent).toMatch(/exactly two properties: title and game/i);
+    expect(humanContent).toBe(
+      "How many resources does a Catan city produce?",
+    );
   });
 });
