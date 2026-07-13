@@ -20,7 +20,7 @@ describe("InMemoryRulebookRepository", () => {
       id: "rulebook-1",
       pdfName: "catan.pdf",
     });
-    expect(repository.list()).toEqual([
+    await expect(repository.list()).resolves.toEqual([
       {
         fileSize: 1024,
         gameName: "Catan",
@@ -30,6 +30,6 @@ describe("InMemoryRulebookRepository", () => {
     ]);
     expect(repository.deleteById("missing")).toBe(false);
     expect(repository.deleteById("rulebook-1")).toBe(true);
-    expect(repository.list()).toEqual([]);
+    await expect(repository.list()).resolves.toEqual([]);
   });
 });

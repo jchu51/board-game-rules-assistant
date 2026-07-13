@@ -177,15 +177,20 @@ export class IngestionRouter {
     }
   };
 
-  private listRulebooks = (
+  private listRulebooks = async (
     _request: Request,
     response: ListRulebooksResponse,
+    next: NextFunction,
   ) => {
-    const responseBody = ListRulebooksResponseSchema.parse({
-      rulebooks: this.rulebookRepository.list(),
-    });
+    try {
+      const responseBody = ListRulebooksResponseSchema.parse({
+        rulebooks: await this.rulebookRepository.list(),
+      });
 
-    return response.status(HttpStatus.OK).json(responseBody);
+      return response.status(HttpStatus.OK).json(responseBody);
+    } catch (error) {
+      return next(error);
+    }
   };
 
   private deleteRulebook = (

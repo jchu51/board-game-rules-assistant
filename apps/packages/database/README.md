@@ -8,8 +8,8 @@ in the API package.
 
 The `rulebooks` table stores upload metadata and complete PDF bytes in a `BYTEA`
 column. Uploads are limited by the API to 40 MB, so direct `BYTEA` storage keeps
-the file lifecycle simple. Future list queries should select metadata columns
-without loading `pdf_data`.
+the file lifecycle simple. Rulebook list queries select metadata columns without
+loading `pdf_data`.
 
 ## Local PostgreSQL
 

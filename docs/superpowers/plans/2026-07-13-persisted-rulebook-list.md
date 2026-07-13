@@ -21,6 +21,7 @@
 ### Task 1: Asynchronous Repository Listing
 
 **Files:**
+
 - Modify: `apps/api/src/domain/rulebook/rulebook-repository.ts`
 - Modify: `apps/api/src/infrastructure/persistence/rulebook/in-memory-rulebook-repository.ts`
 - Modify: `apps/api/tests/rulebook-repository.test.ts`
@@ -28,6 +29,7 @@
 - Modify: `apps/api/tests/postgres-rulebook-repository.test.ts`
 
 **Interfaces:**
+
 - Produces: `RulebookRepository.list(): Promise<RulebookRecord[]>`.
 
 - [ ] **Step 1: Write failing repository tests**
@@ -59,10 +61,12 @@ Rerun Step 2 and expect both files to pass.
 ### Task 2: Await Listing in the HTTP Router
 
 **Files:**
+
 - Modify: `apps/api/src/presentation/http/ingestion/ingestion-router.ts`
 - Modify: `apps/api/tests/http-routers.test.ts`
 
 **Interfaces:**
+
 - Consumes: `RulebookRepository.list(): Promise<RulebookRecord[]>`.
 - Produces: unchanged `GET /rulebooks` JSON and error forwarding.
 
@@ -88,6 +92,7 @@ Rerun Step 2 and expect PASS.
 ### Task 3: Documentation and Verification
 
 **Files:**
+
 - Modify: `apps/api/openapi.yml`
 - Modify: `apps/api/README.md`
 - Modify: `apps/packages/database/README.md`

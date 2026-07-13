@@ -20,7 +20,7 @@ export class InMemoryRulebookRepository implements RulebookRepository {
     return this.rulebooks.delete(id);
   }
 
-  list(): RulebookRecord[] {
+  async list(): Promise<RulebookRecord[]> {
     return Array.from(this.rulebooks.values(), (record) =>
       this.toRulebookRecord(record),
     );

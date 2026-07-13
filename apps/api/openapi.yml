@@ -138,7 +138,7 @@ paths:
       tags:
         - Ingestion
       summary: Create a rulebook from an uploaded PDF
-      description: Uploads and indexes a PDF rulebook. With PostgreSQL persistence, a successful request also stores the original PDF and its metadata; the list record remains process-local in this phase.
+      description: Uploads and indexes a PDF rulebook. With PostgreSQL persistence, a successful request also stores the original PDF and its metadata for subsequent listing.
       requestBody:
         required: true
         content:
@@ -188,7 +188,7 @@ paths:
       tags:
         - Ingestion
       summary: List indexed rulebooks
-      description: Returns the in-memory rulebook records created by successful uploads during the current API process.
+      description: Returns rulebook metadata from the selected repository, newest first. PDF content is not loaded or returned.
       responses:
         "200":
           description: Indexed rulebooks

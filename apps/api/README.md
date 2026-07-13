@@ -153,7 +153,7 @@ src/
     rulebook/                    # rulebook repository contract
   infrastructure/                # adapters for external/storage concerns
     openapi/                     # OpenAPI document loading
-    persistence/rulebook/        # in-memory rulebook metadata and PDF stores
+    persistence/rulebook/        # in-memory and PostgreSQL rulebook repositories
   presentation/http/             # Express routers and HTTP schemas
     app.ts                       # Express app factory
     docs/                        # local-only Swagger/OpenAPI routes
@@ -165,8 +165,9 @@ src/
 
 ## Current Limitations
 
-- `GET /rulebooks` and `DELETE /rulebooks/:id` still use process-local metadata;
-  persisted listing and deletion are follow-up work.
+- `GET /rulebooks` lists persisted metadata without loading PDF bytes.
+- `DELETE /rulebooks/:id` still removes only process-local metadata; persisted
+  deletion is follow-up work.
 - Vector-store deletion is not implemented yet.
 - Temporary uploaded files are deleted after ingestion and repository
   persistence.

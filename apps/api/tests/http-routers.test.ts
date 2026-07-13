@@ -406,7 +406,11 @@ describe("HTTP routers", () => {
         response: Response,
         next: NextFunction,
       ) => Promise<unknown>;
-      listRulebooks: (request: Request, response: Response) => unknown;
+      listRulebooks: (
+        request: Request,
+        response: Response,
+        next: NextFunction,
+      ) => Promise<unknown>;
       deleteRulebook: (request: Request, response: Response) => unknown;
     };
     vi.mocked(ingestionService.ingestPdf).mockResolvedValue({
@@ -442,11 +446,11 @@ describe("HTTP routers", () => {
     expect(
       vi.mocked(ingestionService.ingestPdf).mock.invocationCallOrder[0],
     ).toBeLessThan(save.mock.invocationCallOrder[0]!);
-    const created = repository.list()[0];
+    const created = (await repository.list())[0];
     expect(created).toMatchObject({ gameName: "Catan", pdfName: "catan.pdf" });
 
     const listResponse = createResponse();
-    router.listRulebooks({} as Request, listResponse);
+    await router.listRulebooks({} as Request, listResponse, vi.fn());
     expect(listResponse.json).toHaveBeenCalledWith({ rulebooks: [created] });
 
     const deleteResponse = createResponse();
@@ -462,6 +466,28 @@ describe("HTTP routers", () => {
       missingResponse,
     );
     expect(missingResponse.status).toHaveBeenCalledWith(404);
+  });
+
+  it("forwards rulebook list failures", async () => {
+    const repository = new InMemoryRulebookRepository();
+    const error = new Error("list failed");
+    vi.spyOn(repository, "list").mockRejectedValue(error);
+    const router = new IngestionRouter(ingestionService, repository, {
+      uploadDirectory: "/tmp",
+      maxUploadSizeBytes: 1024,
+      isProduction: false,
+    }) as unknown as {
+      listRulebooks: (
+        request: Request,
+        response: Response,
+        next: NextFunction,
+      ) => Promise<unknown>;
+    };
+    const next = vi.fn();
+
+    await router.listRulebooks({} as Request, createResponse(), next);
+
+    expect(next).toHaveBeenCalledWith(error);
   });
 
   it("rejects missing files, invalid bodies, and invalid splitter settings", async () => {
@@ -513,7 +539,7 @@ describe("HTTP routers", () => {
     );
     expect(splitterResponse.status).toHaveBeenCalledWith(400);
     expect(save).not.toHaveBeenCalled();
-    expect(repository.list()).toEqual([]);
+    await expect(repository.list()).resolves.toEqual([]);
   });
 
   it("handles upload middleware failures and success", () => {

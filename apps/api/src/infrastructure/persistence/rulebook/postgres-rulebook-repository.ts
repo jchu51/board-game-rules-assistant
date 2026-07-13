@@ -7,6 +7,13 @@ import type {
 } from "../../../domain/rulebook/rulebook-repository";
 import { InMemoryRulebookRepository } from "./in-memory-rulebook-repository";
 
+type RulebookRow = {
+  id: string;
+  game_name: string;
+  pdf_name: string;
+  file_size: number;
+};
+
 export class PostgresRulebookRepository implements RulebookRepository {
   private readonly currentProcessRepository = new InMemoryRulebookRepository();
 
@@ -34,7 +41,18 @@ export class PostgresRulebookRepository implements RulebookRepository {
     return this.currentProcessRepository.deleteById(id);
   }
 
-  list(): RulebookRecord[] {
-    return this.currentProcessRepository.list();
+  async list(): Promise<RulebookRecord[]> {
+    const result = await this.pool.query<RulebookRow>(
+      `SELECT id, game_name, pdf_name, file_size
+       FROM rulebooks
+       ORDER BY created_at DESC, id DESC`,
+    );
+
+    return result.rows.map((row) => ({
+      id: row.id,
+      gameName: row.game_name,
+      pdfName: row.pdf_name,
+      fileSize: row.file_size,
+    }));
   }
 }
