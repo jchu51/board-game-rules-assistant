@@ -1,6 +1,7 @@
 import type { VectorStore } from "@board-game-rules-assistant/rag-core";
 import { CONTEXT_ORIGIN } from "@board-game-rules-assistant/agent-core";
 import type {
+  ConversationMetadataAgent,
   RuleAnswerAgent,
   RuleContextAgent,
 } from "@board-game-rules-assistant/agent-core";
@@ -8,11 +9,16 @@ import type {
   PublicSearchResult,
   PublicSearchService,
 } from "../public-search/public-search-service";
-import type { ConversationMessage } from "../../domain/conversation/conversation";
+import type {
+  ConversationDetail,
+  ConversationMessage,
+  ConversationMetadata,
+} from "../../domain/conversation/conversation";
 import type { ConversationRepository } from "../../domain/conversation/conversation-repository";
 import type { RequestClassifierService } from "./request-classifier-service";
 import type {
   RetrievalMatch,
+  RetrievalAnswerResult,
   RetrievalSearchInput,
   RetrievalSearchResult,
 } from "./retrieval-types";
@@ -33,15 +39,25 @@ export class RetrievalService {
     private readonly createRuleAnswerAgent: (
       context: string,
     ) => RuleAnswerAgent,
+    private readonly createConversationMetadataAgent?: () => ConversationMetadataAgent,
   ) {}
 
   async search({
     conversationId,
     query,
   }: RetrievalSearchInput): Promise<RetrievalSearchResult> {
-    const conversationMessages = (
-      await this.conversationRepository.getMessages(conversationId)
-    ).slice(-MAX_CONTEXT_MESSAGES);
+    const storedConversation =
+      await this.conversationRepository.getChat(conversationId);
+    const conversation: ConversationDetail = storedConversation ?? {
+      conversationId,
+      title: "New chat",
+      game: null,
+      messages:
+        await this.conversationRepository.getMessages(conversationId),
+    };
+    const conversationMessages = conversation.messages.slice(
+      -MAX_CONTEXT_MESSAGES,
+    );
     const contextualQuery = this.formatContextualQuery(
       query,
       conversationMessages,
@@ -53,7 +69,7 @@ export class RetrievalService {
     const classification = this.requestClassifier.classify(contextualQuery);
 
     if (!classification.isGameRuleQuestion) {
-      return await this.completeTurn(conversationId, query, {
+      return await this.completeTurn(conversation, query, {
         answer:
           "I can only answer board-game rules questions from indexed rulebook context. Ask about a specific game rule, turn, card, resource, scoring, setup, or movement question.",
         matches: [],
@@ -78,7 +94,7 @@ export class RetrievalService {
       }));
 
     if (results.length > 0 && matches.length === 0) {
-      return await this.completeTurn(conversationId, query, {
+      return await this.completeTurn(conversation, query, {
         answer:
           "I found potentially related rulebook content, but it was not relevant enough to answer confidently. Please clarify the game and the specific rule, action, card, or situation you are asking about.",
         matches: [],
@@ -91,25 +107,75 @@ export class RetrievalService {
         classification.normalizedQuery,
       );
 
-      return await this.completeTurn(conversationId, query, result);
+      return await this.completeTurn(conversation, query, result);
     }
 
     const result = await this.answerFromMatches(conversationQuestion, matches);
 
-    return await this.completeTurn(conversationId, query, result);
+    return await this.completeTurn(conversation, query, result);
   }
 
   private async completeTurn(
-    conversationId: string,
+    conversation: ConversationDetail,
     query: string,
-    result: RetrievalSearchResult,
+    result: RetrievalAnswerResult,
   ): Promise<RetrievalSearchResult> {
-    await this.conversationRepository.appendMessages(conversationId, [
+    const metadata = await this.resolveMetadata(conversation, query);
+
+    if (
+      metadata.title !== conversation.title ||
+      metadata.game !== conversation.game
+    ) {
+      await this.conversationRepository.updateMetadata(
+        conversation.conversationId,
+        metadata,
+      );
+    }
+
+    await this.conversationRepository.appendMessages(
+      conversation.conversationId,
+      [
       { role: "user", content: query },
       { role: "assistant", content: result.answer },
-    ]);
+      ],
+    );
 
-    return result;
+    return { title: metadata.title, ...result };
+  }
+
+  private async resolveMetadata(
+    conversation: ConversationDetail,
+    query: string,
+  ): Promise<ConversationMetadata> {
+    const currentMetadata: ConversationMetadata = {
+      title: conversation.title,
+      game: conversation.game,
+    };
+    const isFirstQuestion = conversation.messages.length === 0;
+    const gameIsUnresolved =
+      conversation.game === null ||
+      conversation.game.trim().toLowerCase() === "unknown";
+
+    if (
+      !this.createConversationMetadataAgent ||
+      (!isFirstQuestion && !gameIsUnresolved)
+    ) {
+      return currentMetadata;
+    }
+
+    try {
+      const generated = await this.createConversationMetadataAgent().run(
+        query,
+      );
+
+      return {
+        title: isFirstQuestion ? generated.title : conversation.title,
+        game: gameIsUnresolved ? generated.game : conversation.game,
+      };
+    } catch (error) {
+      console.error("conversation metadata generation failed:\n", error);
+      return currentMetadata;
+    }
   }
 
   private formatContextualQuery(
@@ -153,7 +219,7 @@ export class RetrievalService {
   private async searchPublicSources(
     query: string,
     normalizedQuery: string,
-  ): Promise<RetrievalSearchResult> {
+  ): Promise<RetrievalAnswerResult> {
     let publicResults: PublicSearchResult[];
 
     try {
@@ -187,7 +253,7 @@ export class RetrievalService {
   private async answerFromMatches(
     query: string,
     matches: RetrievalMatch[],
-  ): Promise<RetrievalSearchResult> {
+  ): Promise<RetrievalAnswerResult> {
     const retrievedContext = this.formatRetrievedContext(matches);
     const contextAgent = this.createRuleContextAgent(retrievedContext);
     const relevantRules = await contextAgent.run(query);

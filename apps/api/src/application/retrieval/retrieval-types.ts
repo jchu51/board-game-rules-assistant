@@ -18,6 +18,9 @@ export type RetrievalMatch = {
 };
 
 export type RetrievalSearchResult = {
+  title: string;
   answer: string;
   matches: RetrievalMatch[];
 };
+
+export type RetrievalAnswerResult = Omit<RetrievalSearchResult, "title">;

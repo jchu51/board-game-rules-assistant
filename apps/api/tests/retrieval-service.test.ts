@@ -2,6 +2,8 @@ import { describe, expect, it, vi } from "vitest";
 import { Document } from "@langchain/core/documents";
 import type { EmbeddingsInterface } from "@langchain/core/embeddings";
 import type {
+  ConversationMetadata,
+  ConversationMetadataAgent,
   RuleAnswerAgent,
   RuleContextAgent,
 } from "@board-game-rules-assistant/agent-core";
@@ -251,6 +253,7 @@ describe("RetrievalService", () => {
     expect(contextAgentInput).toMatch(/origin=public_web/);
     expect(contextAgentInput).toMatch(/source=https:\/\/www\.catan\.com\/faq/);
     expect(result).toEqual({
+      title: "New chat",
       answer: "A city produces two resources.",
       matches: [
         {
@@ -339,6 +342,7 @@ describe("RetrievalService", () => {
     );
     expect(answerAgentQuestion).toBe("How many resources does a city produce?");
     expect(result).toEqual({
+      title: "New chat",
       answer: "A city produces two resources.",
       matches: [
         {
@@ -431,5 +435,197 @@ describe("RetrievalService", () => {
         content: "The second player starts with six cards.",
       },
     ]);
+  });
+
+  it("generates title and game for the first question", async () => {
+    const conversationRepository = new InMemoryConversationRepository();
+    const conversationId = await conversationRepository.createConversation();
+    const metadata: ConversationMetadata = {
+      title: "Catan city production",
+      game: "Catan",
+    };
+    const metadataAgent = {
+      run: vi.fn().mockResolvedValue(metadata),
+    } as unknown as ConversationMetadataAgent;
+    const service = new RetrievalService(
+      new RecordingVectorStore(),
+      new RequestClassifierService(),
+      new StubPublicSearchService(),
+      conversationRepository,
+      () => {
+        throw new Error("should not create context agent");
+      },
+      () => {
+        throw new Error("should not create answer agent");
+      },
+      () => metadataAgent,
+    );
+
+    const result = await service.search({
+      conversationId,
+      query: "What is the weather tomorrow?",
+    });
+
+    expect(result.title).toBe("Catan city production");
+    expect(metadataAgent.run).toHaveBeenCalledWith(
+      "What is the weather tomorrow?",
+    );
+    await expect(conversationRepository.getChat(conversationId)).resolves.toMatchObject({
+      title: "Catan city production",
+      game: "Catan",
+    });
+  });
+
+  it("preserves the first title while retrying a null game", async () => {
+    const conversationRepository = new InMemoryConversationRepository();
+    const conversationId = await conversationRepository.createConversation();
+    const generated: ConversationMetadata[] = [
+      { title: "Trading question", game: null },
+      { title: "Replacement title", game: "Catan" },
+    ];
+    const run = vi
+      .fn<(question: string) => Promise<ConversationMetadata>>()
+      .mockImplementation(async () => generated.shift()!);
+    const service = new RetrievalService(
+      new RecordingVectorStore(),
+      new RequestClassifierService(),
+      new StubPublicSearchService(),
+      conversationRepository,
+      () => {
+        throw new Error("should not create context agent");
+      },
+      () => {
+        throw new Error("should not create answer agent");
+      },
+      () => ({ run }) as unknown as ConversationMetadataAgent,
+    );
+
+    await service.search({ conversationId, query: "Can I trade this?" });
+    const result = await service.search({
+      conversationId,
+      query: "This is Catan. Can I trade this?",
+    });
+
+    expect(result.title).toBe("Trading question");
+    expect(run).toHaveBeenCalledTimes(2);
+    await expect(conversationRepository.getChat(conversationId)).resolves.toMatchObject({
+      title: "Trading question",
+      game: "Catan",
+    });
+  });
+
+  it("treats a legacy Unknown game as unresolved", async () => {
+    const conversationRepository = new InMemoryConversationRepository();
+    const conversationId = await conversationRepository.createConversation();
+    await conversationRepository.updateMetadata(conversationId, {
+      title: "Existing title",
+      game: " uNkNoWn ",
+    });
+    await conversationRepository.appendMessages(conversationId, [
+      { role: "user", content: "Earlier question" },
+      { role: "assistant", content: "Earlier answer" },
+    ]);
+    const run = vi.fn().mockResolvedValue({
+      title: "Ignored title",
+      game: "Pandemic",
+    });
+    const service = new RetrievalService(
+      new RecordingVectorStore(),
+      new RequestClassifierService(),
+      new StubPublicSearchService(),
+      conversationRepository,
+      () => {
+        throw new Error("should not create context agent");
+      },
+      () => {
+        throw new Error("should not create answer agent");
+      },
+      () => ({ run }) as unknown as ConversationMetadataAgent,
+    );
+
+    const result = await service.search({
+      conversationId,
+      query: "How do Pandemic outbreaks work?",
+    });
+
+    expect(run).toHaveBeenCalledOnce();
+    expect(result.title).toBe("Existing title");
+    await expect(conversationRepository.getChat(conversationId)).resolves.toMatchObject({
+      title: "Existing title",
+      game: "Pandemic",
+    });
+  });
+
+  it("does not invoke metadata after a concrete game is stored", async () => {
+    const conversationRepository = new InMemoryConversationRepository();
+    const conversationId = await conversationRepository.createConversation();
+    await conversationRepository.updateMetadata(conversationId, {
+      title: "Catan trading",
+      game: "Catan",
+    });
+    await conversationRepository.appendMessages(conversationId, [
+      { role: "user", content: "Earlier question" },
+      { role: "assistant", content: "Earlier answer" },
+    ]);
+    const createMetadataAgent = vi.fn();
+    const service = new RetrievalService(
+      new RecordingVectorStore(),
+      new RequestClassifierService(),
+      new StubPublicSearchService(),
+      conversationRepository,
+      () => {
+        throw new Error("should not create context agent");
+      },
+      () => {
+        throw new Error("should not create answer agent");
+      },
+      createMetadataAgent,
+    );
+
+    const result = await service.search({
+      conversationId,
+      query: "Can I trade again?",
+    });
+
+    expect(result.title).toBe("Catan trading");
+    expect(createMetadataAgent).not.toHaveBeenCalled();
+  });
+
+  it("keeps retrieval successful when metadata generation fails", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const conversationRepository = new InMemoryConversationRepository();
+    const conversationId = await conversationRepository.createConversation();
+    const service = new RetrievalService(
+      new RecordingVectorStore(),
+      new RequestClassifierService(),
+      new StubPublicSearchService(),
+      conversationRepository,
+      () => {
+        throw new Error("should not create context agent");
+      },
+      () => {
+        throw new Error("should not create answer agent");
+      },
+      () =>
+        ({
+          run: vi.fn().mockRejectedValue(new Error("metadata unavailable")),
+        }) as unknown as ConversationMetadataAgent,
+    );
+
+    const result = await service.search({
+      conversationId,
+      query: "What is the weather tomorrow?",
+    });
+
+    expect(result.title).toBe("New chat");
+    expect(result.answer).toMatch(/only answer board-game rules questions/i);
+    await expect(conversationRepository.getChat(conversationId)).resolves.toMatchObject({
+      title: "New chat",
+      game: null,
+      messages: [
+        { role: "user", content: "What is the weather tomorrow?" },
+        { role: "assistant", content: result.answer },
+      ],
+    });
   });
 });
