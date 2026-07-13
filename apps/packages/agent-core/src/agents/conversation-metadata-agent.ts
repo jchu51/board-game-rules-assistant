@@ -40,8 +40,7 @@ const parseMetadata = (text: string): ConversationMetadata => {
   return {
     title: title.trim(),
     game:
-      normalizedGame.length === 0 ||
-      normalizedGame.toLowerCase() === "unknown"
+      normalizedGame.length === 0 || normalizedGame.toLowerCase() === "unknown"
         ? null
         : normalizedGame,
   };

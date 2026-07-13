@@ -139,10 +139,16 @@ describe("ChatPage", () => {
     const navigation = screen.getByRole("navigation", {
       name: "Conversations",
     });
-    expect(within(navigation).getByText("Pandemic outbreaks")).toBeInTheDocument();
+    expect(
+      within(navigation).getByText("Pandemic outbreaks"),
+    ).toBeInTheDocument();
     expect(within(navigation).getByText("Catan roads")).toBeInTheDocument();
-    expect(within(navigation).queryByText("New", { exact: true })).not.toBeInTheDocument();
-    expect(within(navigation).queryByText("Catan", { exact: true })).not.toBeInTheDocument();
+    expect(
+      within(navigation).queryByText("New", { exact: true }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(navigation).queryByText("Catan", { exact: true }),
+    ).not.toBeInTheDocument();
   });
 
   it("loads and renders persisted user and assistant text", async () => {
@@ -494,7 +500,9 @@ describe("ChatPage", () => {
       conversationId: "conversation-1",
       query: "In Catan, how many resources does a city produce?",
     });
-    expect(screen.getAllByText("Catan city production").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Catan city production").length).toBeGreaterThan(
+      0,
+    );
     expect(screen.getAllByText("Catan")[0]).toBeInTheDocument();
     expect(getChat).toHaveBeenCalledWith("conversation-1");
 

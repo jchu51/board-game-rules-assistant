@@ -22,7 +22,9 @@ describe("ConversationList", () => {
       />,
     );
 
-    expect(screen.queryByText("Catan", { exact: true })).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Catan", { exact: true }),
+    ).not.toBeInTheDocument();
     fireEvent.click(screen.getByTestId("chat-select-catan-btn"));
     expect(onSelect).toHaveBeenCalledWith("catan");
   });

@@ -68,8 +68,6 @@ describe("conversationMetadataPrompt", () => {
     expect(systemContent).toMatch(/otherwise null/i);
     expect(systemContent).toMatch(/JSON only/i);
     expect(systemContent).toMatch(/exactly two properties: title and game/i);
-    expect(humanContent).toBe(
-      "How many resources does a Catan city produce?",
-    );
+    expect(humanContent).toBe("How many resources does a Catan city produce?");
   });
 });

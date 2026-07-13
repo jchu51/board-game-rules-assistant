@@ -33,7 +33,7 @@ describe("runMigrations", () => {
           await database.pool.query(
             "SELECT to_regclass('public.conversations') AS table_name",
           )
-      ).rows,
+        ).rows,
       ).toEqual([{ table_name: "public.conversations" }]);
       expect(
         (

@@ -52,12 +52,10 @@ export class RetrievalService {
       conversationId,
       title: "New chat",
       game: null,
-      messages:
-        await this.conversationRepository.getMessages(conversationId),
+      messages: await this.conversationRepository.getMessages(conversationId),
     };
-    const conversationMessages = conversation.messages.slice(
-      -MAX_CONTEXT_MESSAGES,
-    );
+    const conversationMessages =
+      conversation.messages.slice(-MAX_CONTEXT_MESSAGES);
     const contextualQuery = this.formatContextualQuery(
       query,
       conversationMessages,
@@ -135,8 +133,8 @@ export class RetrievalService {
     await this.conversationRepository.appendMessages(
       conversation.conversationId,
       [
-      { role: "user", content: query },
-      { role: "assistant", content: result.answer },
+        { role: "user", content: query },
+        { role: "assistant", content: result.answer },
       ],
     );
 
@@ -164,9 +162,7 @@ export class RetrievalService {
     }
 
     try {
-      const generated = await this.createConversationMetadataAgent().run(
-        query,
-      );
+      const generated = await this.createConversationMetadataAgent().run(query);
 
       return {
         title: isFirstQuestion ? generated.title : conversation.title,

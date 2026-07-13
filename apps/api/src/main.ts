@@ -51,11 +51,7 @@ const retrievalService = new RetrievalService(
   conversationRepository,
   (context) => new RuleContextAgent("rule-context-agent", chatModel, context),
   (context) => new RuleAnswerAgent("rule-answer-agent", chatModel, context),
-  () =>
-    new ConversationMetadataAgent(
-      "conversation-metadata-agent",
-      chatModel,
-    ),
+  () => new ConversationMetadataAgent("conversation-metadata-agent", chatModel),
 );
 
 // Routers

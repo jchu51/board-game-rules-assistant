@@ -470,7 +470,9 @@ describe("RetrievalService", () => {
     expect(metadataAgent.run).toHaveBeenCalledWith(
       "What is the weather tomorrow?",
     );
-    await expect(conversationRepository.getChat(conversationId)).resolves.toMatchObject({
+    await expect(
+      conversationRepository.getChat(conversationId),
+    ).resolves.toMatchObject({
       title: "Catan city production",
       game: "Catan",
     });
@@ -508,7 +510,9 @@ describe("RetrievalService", () => {
 
     expect(result.title).toBe("Trading question");
     expect(run).toHaveBeenCalledTimes(2);
-    await expect(conversationRepository.getChat(conversationId)).resolves.toMatchObject({
+    await expect(
+      conversationRepository.getChat(conversationId),
+    ).resolves.toMatchObject({
       title: "Trading question",
       game: "Catan",
     });
@@ -550,7 +554,9 @@ describe("RetrievalService", () => {
 
     expect(run).toHaveBeenCalledOnce();
     expect(result.title).toBe("Existing title");
-    await expect(conversationRepository.getChat(conversationId)).resolves.toMatchObject({
+    await expect(
+      conversationRepository.getChat(conversationId),
+    ).resolves.toMatchObject({
       title: "Existing title",
       game: "Pandemic",
     });
@@ -619,7 +625,9 @@ describe("RetrievalService", () => {
 
     expect(result.title).toBe("New chat");
     expect(result.answer).toMatch(/only answer board-game rules questions/i);
-    await expect(conversationRepository.getChat(conversationId)).resolves.toMatchObject({
+    await expect(
+      conversationRepository.getChat(conversationId),
+    ).resolves.toMatchObject({
       title: "New chat",
       game: null,
       messages: [

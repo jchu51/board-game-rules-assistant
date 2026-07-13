@@ -22,9 +22,7 @@ describe("ConversationMetadataAgent", () => {
     const agent = new ConversationMetadataAgent(
       "conversation-metadata-agent",
       fakeModel,
-      runtimeWithText(
-        '{"title":"Catan city production","game":"Catan"}',
-      ),
+      runtimeWithText('{"title":"Catan city production","game":"Catan"}'),
     );
 
     await expect(
@@ -41,9 +39,7 @@ describe("ConversationMetadataAgent", () => {
       const agent = new ConversationMetadataAgent(
         "conversation-metadata-agent",
         fakeModel,
-        runtimeWithText(
-          JSON.stringify({ title: "Trading question", game }),
-        ),
+        runtimeWithText(JSON.stringify({ title: "Trading question", game })),
       );
 
       await expect(agent.run("Can I trade this?")).resolves.toEqual({
