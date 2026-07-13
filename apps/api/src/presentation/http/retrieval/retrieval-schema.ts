@@ -27,6 +27,7 @@ export const RetrievalMatchSchema = z
 
 export const RetrievalSearchResponseSchema = z
   .object({
+    title: z.string().min(1),
     answer: z.string(),
     matches: z.array(RetrievalMatchSchema),
   })

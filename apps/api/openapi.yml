@@ -286,6 +286,7 @@ components:
       required:
         - conversationId
         - title
+        - game
       properties:
         conversationId:
           type: string
@@ -295,6 +296,11 @@ components:
           type: string
           minLength: 1
           description: Conversation title.
+        game:
+          type:
+            - string
+            - "null"
+          description: Identified board game, or null while unresolved.
       additionalProperties: false
     GetChatsResponse:
       type: object
@@ -325,6 +331,7 @@ components:
       required:
         - conversationId
         - title
+        - game
         - messages
       properties:
         conversationId:
@@ -335,6 +342,11 @@ components:
           type: string
           minLength: 1
           description: Conversation title.
+        game:
+          type:
+            - string
+            - "null"
+          description: Identified board game, or null while unresolved.
         messages:
           type: array
           items:
@@ -530,9 +542,14 @@ components:
     RetrievalSearchResponse:
       type: object
       required:
+        - title
         - answer
         - matches
       properties:
+        title:
+          type: string
+          minLength: 1
+          description: Persisted conversation title.
         answer:
           type: string
           description: Agent-generated answer grounded in retrieved rulebook context.

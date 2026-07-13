@@ -40,6 +40,7 @@ describe("Retrieval schemas", () => {
 
   it("validates answer responses with retrieval match metadata", () => {
     const response = RetrievalSearchResponseSchema.parse({
+      title: "Catan city production",
       answer: "A city produces two resources.",
       matches: [
         {
@@ -54,8 +55,20 @@ describe("Retrieval schemas", () => {
       ],
     });
 
+    expect(response.title).toBe("Catan city production");
     expect(response.answer).toBe("A city produces two resources.");
     expect(response.matches[0]?.origin).toBe("rulebook");
     expect(response.matches[0]?.metadata.pageNumber).toBe(3);
+  });
+
+  it("rejects a game property in retrieval responses", () => {
+    expect(
+      RetrievalSearchResponseSchema.safeParse({
+        title: "Catan city production",
+        game: "Catan",
+        answer: "A city produces two resources.",
+        matches: [],
+      }).success,
+    ).toBe(false);
   });
 });
