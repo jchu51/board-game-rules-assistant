@@ -12,6 +12,9 @@ describe("createPostgresPersistence", () => {
       vectorTableName: `rulebook_vectors_${Date.now()}`,
     });
 
+    await expect(persistence.pool.query("SELECT 1")).resolves.toMatchObject({
+      rowCount: 1,
+    });
     await expect(persistence.healthCheck()).resolves.toBeUndefined();
     await expect(persistence.close()).resolves.toBeUndefined();
     await expect(persistence.close()).resolves.toBeUndefined();

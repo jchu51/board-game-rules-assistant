@@ -6,12 +6,14 @@ import { IngestionRouter } from "../src/presentation/http/ingestion/ingestion-ro
 import { RetrievalRouter } from "../src/presentation/http/retrieval/retrieval-router";
 import { HealthRouter } from "../src/presentation/http/health/health-router";
 import { DocsRouter } from "../src/presentation/http/docs/docs-router";
+import { ChatRouter } from "../src/presentation/http/chat/chat-router";
 import { createApp } from "../src/presentation/http/app";
 import { InMemoryRulebookRepository } from "../src/infrastructure/persistence/rulebook/in-memory-rulebook-repository";
 import type { IngestionService } from "../src/application/ingestion/ingestion-service";
 import type { RetrievalService } from "../src/application/retrieval/retrieval-service";
 import { InvalidSplitterParamsError } from "../src/domain/ingestion/ingestion-errors";
 import { testConfig } from "./test-config";
+import type { ConversationRepository } from "../src/domain/conversation/conversation-repository";
 
 const createResponse = () => {
   const response = {
@@ -36,12 +38,48 @@ const ingestionService = {
 const retrievalService = {
   search: vi.fn(),
 } as unknown as RetrievalService;
+const conversationRepository = {
+  createConversation: vi.fn(),
+  appendMessages: vi.fn(),
+  getMessages: vi.fn(),
+} satisfies ConversationRepository;
 
 beforeEach(() => {
   vi.clearAllMocks();
 });
 
 describe("HTTP routers", () => {
+  it("creates a conversation without a request body", async () => {
+    vi.mocked(conversationRepository.createConversation).mockResolvedValue(
+      "11111111-1111-4111-8111-111111111111",
+    );
+    const router = new ChatRouter(conversationRepository);
+    const handler = router.router.stack[0]?.route.stack[0]?.handle;
+    const response = createResponse();
+
+    await handler?.({} as Request, response, vi.fn());
+
+    expect(conversationRepository.createConversation).toHaveBeenCalledOnce();
+    expect(response.status).toHaveBeenCalledWith(201);
+    expect(response.json).toHaveBeenCalledWith({
+      conversationId: "11111111-1111-4111-8111-111111111111",
+    });
+  });
+
+  it("forwards conversation creation failures", async () => {
+    const error = new Error("create failed");
+    vi.mocked(conversationRepository.createConversation).mockRejectedValue(
+      error,
+    );
+    const router = new ChatRouter(conversationRepository);
+    const handler = router.router.stack[0]?.route.stack[0]?.handle;
+    const next = vi.fn();
+
+    await handler?.({} as Request, createResponse(), next);
+
+    expect(next).toHaveBeenCalledWith(error);
+  });
+
   it("creates the app and serves health and OpenAPI handlers", () => {
     const health = new HealthRouter();
     const docs = new DocsRouter();
@@ -67,7 +105,12 @@ describe("HTTP routers", () => {
       vi.fn(),
     );
     expect(jsonResponse.json).toHaveBeenCalledWith(
-      expect.objectContaining({ openapi: expect.any(String) }),
+      expect.objectContaining({
+        openapi: expect.any(String),
+        paths: expect.objectContaining({
+          "/chats": expect.objectContaining({ post: expect.any(Object) }),
+        }),
+      }),
     );
 
     const yamlResponse = createResponse();

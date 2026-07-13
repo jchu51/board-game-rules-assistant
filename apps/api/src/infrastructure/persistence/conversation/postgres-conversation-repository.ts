@@ -1,10 +1,11 @@
+import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
 
 import type {
   ConversationMessage,
   ConversationMessageRole,
-  ConversationRepositoryLike,
-} from "./conversation-types.js";
+} from "../../../domain/conversation/conversation";
+import type { ConversationRepository } from "../../../domain/conversation/conversation-repository";
 
 const DEFAULT_MAX_MESSAGES_PER_CONVERSATION = 20;
 
@@ -17,7 +18,7 @@ type ConversationMessageRow = {
   content: string;
 };
 
-export class PostgresConversationRepository implements ConversationRepositoryLike {
+export class PostgresConversationRepository implements ConversationRepository {
   private readonly maxMessagesPerConversation: number;
 
   constructor(
@@ -34,6 +35,15 @@ export class PostgresConversationRepository implements ConversationRepositoryLik
     ) {
       throw new Error("maxMessagesPerConversation must be a positive integer");
     }
+  }
+
+  async createConversation(): Promise<string> {
+    const conversationId = randomUUID();
+    await this.pool.query(
+      "INSERT INTO conversations (id, title) VALUES ($1, $2)",
+      [conversationId, "New chat"],
+    );
+    return conversationId;
   }
 
   async appendMessages(

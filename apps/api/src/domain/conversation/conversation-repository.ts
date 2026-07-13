@@ -1,11 +1,7 @@
-export type ConversationMessageRole = "user" | "assistant";
-
-export type ConversationMessage = {
-  role: ConversationMessageRole;
-  content: string;
-};
+import type { Conversation, ConversationMessage } from "./conversation";
 
 export interface ConversationRepository {
+  createConversation(): Promise<Conversation["id"]>;
   appendMessages(
     conversationId: string,
     messages: ConversationMessage[],

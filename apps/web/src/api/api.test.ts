@@ -21,13 +21,7 @@ afterEach(() => {
 describe("web API clients", () => {
   it("creates a chat without a request body", async () => {
     const body = {
-      chat: {
-        id: "11111111-1111-4111-8111-111111111111",
-        title: "New chat",
-        messageCount: 0,
-        createdAt: "2026-07-13T00:00:00.000Z",
-        updatedAt: "2026-07-13T00:00:00.000Z",
-      },
+      conversationId: "11111111-1111-4111-8111-111111111111",
     };
     const fetchMock = vi.fn().mockResolvedValue(response(body));
     vi.stubGlobal("fetch", fetchMock);

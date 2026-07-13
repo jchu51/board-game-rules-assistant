@@ -3,6 +3,22 @@ import { describe, expect, it } from "vitest";
 import { InMemoryConversationRepository } from "../src/infrastructure/persistence/conversation/in-memory-conversation-repository";
 
 describe("InMemoryConversationRepository", () => {
+  it("creates empty conversations with unique UUIDs", async () => {
+    const repository =
+      new InMemoryConversationRepository() as InMemoryConversationRepository & {
+        createConversation(): Promise<string>;
+      };
+
+    const firstId = await repository.createConversation();
+    const secondId = await repository.createConversation();
+
+    expect(firstId).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+    );
+    expect(secondId).not.toBe(firstId);
+    expect(await repository.getMessages(firstId)).toEqual([]);
+  });
+
   it("exposes an asynchronous contract", async () => {
     const repository = new InMemoryConversationRepository();
 

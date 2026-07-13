@@ -62,6 +62,7 @@ apps/api/src/
 ### Task 1: Make conversation persistence asynchronous
 
 **Files:**
+
 - Modify: `apps/api/src/domain/conversation/conversation-repository.ts`
 - Modify: `apps/api/src/infrastructure/persistence/conversation/in-memory-conversation-repository.ts`
 - Modify: `apps/api/src/application/retrieval/retrieval-service.ts`
@@ -69,6 +70,7 @@ apps/api/src/
 - Modify: `apps/api/tests/retrieval-service.test.ts`
 
 **Interfaces:**
+
 - Produces: `ConversationRepository.appendMessages(...): Promise<void>` and `getMessages(...): Promise<ConversationMessage[]>`.
 - Consumes: no new interfaces.
 
@@ -146,6 +148,7 @@ git commit -m "refactor: make conversation persistence async"
 ### Task 2: Create the database package and PostgreSQL conversation repository
 
 **Files:**
+
 - Create: `apps/packages/database/package.json`
 - Create: `apps/packages/database/tsconfig.json`
 - Create: `apps/packages/database/vitest.config.ts`
@@ -162,8 +165,9 @@ git commit -m "refactor: make conversation persistence async"
 - Modify: `package-lock.json`
 
 **Interfaces:**
+
 - Consumes: a `pg.Pool` or `pg.PoolClient` and async conversation method shapes from Task 1.
-- Produces: `runMigrations(pool)`, `PostgresConversationRepository`, `ConversationMessage`, and `ConversationRepositoryLike`.
+- Produces: `runMigrations(pool)`, `PostgresConversationRepository`, `ConversationMessage`, and `ConversationRepository`.
 
 - [ ] **Step 1: Scaffold the workspace manifest and TypeScript/Vitest configuration**
 
@@ -189,12 +193,17 @@ Expected: `docker compose ps postgres` reports `healthy`.
 The migration test must assert:
 
 ```ts
-expect((await pool.query("select extname from pg_extension where extname = 'vector'")).rows).toEqual([
-  { extname: "vector" },
-]);
-expect((await pool.query("select version from app_migrations order by version")).rows).toEqual([
-  { version: "0001_conversation_messages" },
-]);
+expect(
+  (
+    await pool.query(
+      "select extname from pg_extension where extname = 'vector'",
+    )
+  ).rows,
+).toEqual([{ extname: "vector" }]);
+expect(
+  (await pool.query("select version from app_migrations order by version"))
+    .rows,
+).toEqual([{ version: "0001_conversation_messages" }]);
 ```
 
 The reusable contract must test isolation, oldest-to-newest ordering, an empty unknown conversation, copied results, and retention. Invoke it with:
@@ -256,8 +265,11 @@ export type ConversationMessage = {
   content: string;
 };
 
-export type ConversationRepositoryLike = {
-  appendMessages(conversationId: string, messages: ConversationMessage[]): Promise<void>;
+export type ConversationRepository = {
+  appendMessages(
+    conversationId: string,
+    messages: ConversationMessage[],
+  ): Promise<void>;
   getMessages(conversationId: string): Promise<ConversationMessage[]>;
 };
 ```
@@ -295,6 +307,7 @@ git commit -m "feat: add postgres conversation repository"
 ### Task 3: Add the LangChain pgvector adapter and persistence lifecycle
 
 **Files:**
+
 - Create: `apps/packages/database/src/vector/langchain-pg-vector-store.ts`
 - Create: `apps/packages/database/src/persistence.ts`
 - Create: `apps/packages/database/tests/langchain-pg-vector-store.test.ts`
@@ -303,6 +316,7 @@ git commit -m "feat: add postgres conversation repository"
 - Modify: `apps/packages/database/tests/test-database.ts`
 
 **Interfaces:**
+
 - Consumes: `EmbeddingsInterface`, `PGVectorStore`, `VectorStore`, `Pool`, `runMigrations`, and `PostgresConversationRepository`.
 - Produces: `LangchainPgVectorStoreAdapter` and `createPostgresPersistence(options): Promise<PostgresPersistence>`.
 
@@ -313,11 +327,17 @@ Create a three-dimensional deterministic embedding double:
 ```ts
 class KeywordEmbeddings implements EmbeddingsInterface {
   private readonly terms = ["resource", "road", "infection"];
-  async embedDocuments(values: string[]) { return values.map((value) => this.embed(value)); }
-  async embedQuery(value: string) { return this.embed(value); }
+  async embedDocuments(values: string[]) {
+    return values.map((value) => this.embed(value));
+  }
+  async embedQuery(value: string) {
+    return this.embed(value);
+  }
   private embed(value: string) {
     const normalized = value.toLowerCase();
-    const vector = this.terms.map((term) => normalized.includes(term) ? 1 : 0);
+    const vector = this.terms.map((term) =>
+      normalized.includes(term) ? 1 : 0,
+    );
     return vector.some(Boolean) ? vector : [0.001, 0.001, 0.001];
   }
 }
@@ -326,10 +346,12 @@ class KeywordEmbeddings implements EmbeddingsInterface {
 Test unfiltered `upsert`, `similaritySearch`, scored ordering, metadata round-tripping, and rejection of a callback filter:
 
 ```ts
-await expect(adapter.similaritySearch({
-  query: "resources",
-  filter: () => true,
-})).rejects.toThrow("PostgreSQL vector search does not support callback filters");
+await expect(
+  adapter.similaritySearch({
+    query: "resources",
+    filter: () => true,
+  }),
+).rejects.toThrow("PostgreSQL vector search does not support callback filters");
 ```
 
 - [ ] **Step 2: Run vector tests and verify they fail**
@@ -355,7 +377,7 @@ export type CreatePostgresPersistenceOptions = {
 };
 
 export type PostgresPersistence = {
-  conversationRepository: ConversationRepositoryLike;
+  conversationRepository: ConversationRepository;
   vectorStore: VectorStore;
   healthCheck(): Promise<void>;
   close(): Promise<void>;
@@ -382,6 +404,7 @@ git commit -m "feat: add langchain pgvector persistence"
 ### Task 4: Add API driver configuration and composition
 
 **Files:**
+
 - Modify: `apps/api/package.json`
 - Modify: `apps/api/src/config/config-schema.ts`
 - Modify: `apps/api/src/config/config-types.ts`
@@ -395,6 +418,7 @@ git commit -m "feat: add langchain pgvector persistence"
 - Modify: `package-lock.json`
 
 **Interfaces:**
+
 - Consumes: `createPostgresPersistence`, memory repositories, `LangchainMemoryVectorStore`, and API embeddings.
 - Produces: `createPersistence({ config, embeddings })` returning a structurally common persistence bundle.
 
@@ -403,23 +427,29 @@ git commit -m "feat: add langchain pgvector persistence"
 Assert these defaults and guards:
 
 ```ts
-expect(EnvSchema.parse({
-  OPENAI_API_KEY: "test-key",
-  TAVILY_API_KEY: "test-tavily-key",
-}).PERSISTENCE_DRIVER).toBe("memory");
+expect(
+  EnvSchema.parse({
+    OPENAI_API_KEY: "test-key",
+    TAVILY_API_KEY: "test-tavily-key",
+  }).PERSISTENCE_DRIVER,
+).toBe("memory");
 
-expect(EnvSchema.safeParse({
-  OPENAI_API_KEY: "test-key",
-  TAVILY_API_KEY: "test-tavily-key",
-  PERSISTENCE_DRIVER: "postgres",
-}).success).toBe(false);
+expect(
+  EnvSchema.safeParse({
+    OPENAI_API_KEY: "test-key",
+    TAVILY_API_KEY: "test-tavily-key",
+    PERSISTENCE_DRIVER: "postgres",
+  }).success,
+).toBe(false);
 
-expect(EnvSchema.safeParse({
-  NODE_ENV: "production",
-  OPENAI_API_KEY: "test-key",
-  TAVILY_API_KEY: "test-tavily-key",
-  PERSISTENCE_DRIVER: "memory",
-}).success).toBe(false);
+expect(
+  EnvSchema.safeParse({
+    NODE_ENV: "production",
+    OPENAI_API_KEY: "test-key",
+    TAVILY_API_KEY: "test-tavily-key",
+    PERSISTENCE_DRIVER: "memory",
+  }).success,
+).toBe(false);
 ```
 
 Also test `DATABASE_URL`, `PERSISTENCE_MAX_MESSAGES`, and driver mapping in `config`.
@@ -487,12 +517,14 @@ git commit -m "feat: use selectable postgres persistence in api"
 ### Task 5: Add local pgvector service and end-to-end verification
 
 **Files:**
+
 - Modify: `docker-compose.yml`
 - Modify: `README.md`
 - Modify: `apps/api/README.md`
 - Create: `apps/packages/database/README.md`
 
 **Interfaces:**
+
 - Consumes: the database factory and API configuration from Tasks 3 and 4.
 - Produces: reproducible local PostgreSQL startup and documented verification commands.
 

@@ -1,7 +1,7 @@
-import type {
-  ConversationMessage,
-  ConversationRepository,
-} from "../../../domain/conversation/conversation-repository";
+import { randomUUID } from "node:crypto";
+
+import type { ConversationRepository } from "../../../domain/conversation/conversation-repository";
+import type { ConversationMessage } from "../../../domain/conversation/conversation";
 
 const DEFAULT_MAX_MESSAGES_PER_CONVERSATION = 20;
 
@@ -17,6 +17,12 @@ export class InMemoryConversationRepository implements ConversationRepository {
     this.maxMessagesPerConversation =
       options.maxMessagesPerConversation ??
       DEFAULT_MAX_MESSAGES_PER_CONVERSATION;
+  }
+
+  async createConversation(): Promise<string> {
+    const conversationId = randomUUID();
+    this.conversations.set(conversationId, []);
+    return conversationId;
   }
 
   async appendMessages(

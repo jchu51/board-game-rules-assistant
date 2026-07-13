@@ -1,7 +1,4 @@
-import {
-  createPostgresPersistence,
-  type PostgresPersistence,
-} from "@board-game-rules-assistant/database";
+import { createPostgresPersistence } from "@board-game-rules-assistant/database";
 import {
   LangchainMemoryVectorStore,
   type VectorStore,
@@ -11,6 +8,7 @@ import type { EmbeddingsInterface } from "@langchain/core/embeddings";
 import type { Config } from "../../config/config-types";
 import type { ConversationRepository } from "../../domain/conversation/conversation-repository";
 import { InMemoryConversationRepository } from "./conversation/in-memory-conversation-repository";
+import { PostgresConversationRepository } from "./conversation/postgres-conversation-repository";
 
 export type Persistence = {
   conversationRepository: ConversationRepository;
@@ -45,9 +43,21 @@ export const createPersistence = async ({
     throw new Error("PostgreSQL persistence requires a database URL");
   }
 
-  return (await createPostgresPersistence({
+  const postgresPersistence = await createPostgresPersistence({
     databaseUrl,
     embeddings,
-    maxMessagesPerConversation: config.persistence.maxMessagesPerConversation,
-  })) as PostgresPersistence;
+  });
+
+  return {
+    conversationRepository: new PostgresConversationRepository(
+      postgresPersistence.pool,
+      {
+        maxMessagesPerConversation:
+          config.persistence.maxMessagesPerConversation,
+      },
+    ),
+    vectorStore: postgresPersistence.vectorStore,
+    healthCheck: postgresPersistence.healthCheck,
+    close: postgresPersistence.close,
+  };
 };

@@ -23,7 +23,17 @@ describe("runMigrations", () => {
             "SELECT version FROM app_migrations ORDER BY version",
           )
         ).rows,
-      ).toEqual([{ version: "0001_conversation_messages" }]);
+      ).toEqual([
+        { version: "0001_conversation_messages" },
+        { version: "0002_conversations" },
+      ]);
+      expect(
+        (
+          await database.pool.query(
+            "SELECT to_regclass('public.conversations') AS table_name",
+          )
+        ).rows,
+      ).toEqual([{ table_name: "public.conversations" }]);
     } finally {
       await database.dispose();
     }

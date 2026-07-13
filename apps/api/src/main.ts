@@ -13,6 +13,7 @@ import { InMemoryRulebookRepository } from "./infrastructure/persistence/ruleboo
 import { createPersistence } from "./infrastructure/persistence/create-persistence";
 import { TavilyPublicSearchService } from "./infrastructure/public-search/tavily-public-search-service";
 import { createApp } from "./presentation/http/app";
+import { ChatRouter } from "./presentation/http/chat/chat-router";
 import { HealthRouter } from "./presentation/http/health/health-router";
 import { IngestionRouter } from "./presentation/http/ingestion/ingestion-router";
 import { RetrievalRouter } from "./presentation/http/retrieval/retrieval-router";
@@ -63,8 +64,10 @@ const ingestionRouter = new IngestionRouter(
   },
 );
 const retrievalRouter = new RetrievalRouter(retrievalService);
+const chatRouter = new ChatRouter(conversationRepository);
 const routers = [
   healthRouter.router,
+  chatRouter.router,
   ingestionRouter.router,
   retrievalRouter.router,
 ];

@@ -4,16 +4,8 @@ type ApiErrorResponse = {
   error?: string;
 };
 
-export type ChatSummary = {
-  id: string;
-  title: string;
-  messageCount: number;
-  createdAt: string;
-  updatedAt: string;
-};
-
 export type CreateChatResponse = {
-  chat: ChatSummary;
+  conversationId: string;
 };
 
 export async function createChat(): Promise<CreateChatResponse> {

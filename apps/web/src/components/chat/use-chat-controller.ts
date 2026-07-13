@@ -213,8 +213,8 @@ export function useChatController() {
       clearTimers(timersRef.current);
       timersRef.current = {};
       const conversation: Conversation = {
-        id: response.chat.id,
-        title: response.chat.title,
+        id: response.conversationId,
+        title: "New chat",
         game: null,
         messages: [],
       };

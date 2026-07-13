@@ -8,10 +8,8 @@ import type {
   PublicSearchResult,
   PublicSearchService,
 } from "../public-search/public-search-service";
-import type {
-  ConversationMessage,
-  ConversationRepository,
-} from "../../domain/conversation/conversation-repository";
+import type { ConversationMessage } from "../../domain/conversation/conversation";
+import type { ConversationRepository } from "../../domain/conversation/conversation-repository";
 import type { RequestClassifierService } from "./request-classifier-service";
 import type {
   RetrievalMatch,

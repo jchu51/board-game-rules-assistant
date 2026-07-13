@@ -36,13 +36,7 @@ const submitQuestion = async (question: string) => {
 beforeEach(() => {
   vi.useFakeTimers();
   createChat.mockResolvedValue({
-    chat: {
-      id: "conversation-1",
-      title: "New chat",
-      messageCount: 0,
-      createdAt: "2026-07-13T00:00:00.000Z",
-      updatedAt: "2026-07-13T00:00:00.000Z",
-    },
+    conversationId: "conversation-1",
   });
 });
 

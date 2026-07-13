@@ -2,7 +2,10 @@ import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import type { Pool } from "pg";
 
-const migrationVersions = ["0001_conversation_messages"] as const;
+const migrationVersions = [
+  "0001_conversation_messages",
+  "0002_conversations",
+] as const;
 
 const migrationUrl = (version: string): URL => {
   const sourceUrl = new URL(`../migrations/${version}.sql`, import.meta.url);

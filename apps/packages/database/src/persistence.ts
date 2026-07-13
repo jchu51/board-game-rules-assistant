@@ -3,20 +3,17 @@ import { PGVectorStore } from "@langchain/community/vectorstores/pgvector";
 import type { EmbeddingsInterface } from "@langchain/core/embeddings";
 import { Pool } from "pg";
 
-import { PostgresConversationRepository } from "./conversation/postgres-conversation-repository.js";
-import type { ConversationRepositoryLike } from "./conversation/conversation-types.js";
 import { runMigrations } from "./migrations.js";
 import { LangchainPgVectorStoreAdapter } from "./vector/langchain-pg-vector-store.js";
 
 export type CreatePostgresPersistenceOptions = {
   databaseUrl: string;
   embeddings: EmbeddingsInterface;
-  maxMessagesPerConversation?: number;
   vectorTableName?: string;
 };
 
 export type PostgresPersistence = {
-  conversationRepository: ConversationRepositoryLike;
+  pool: Pool;
   vectorStore: VectorStore;
   healthCheck(): Promise<void>;
   close(): Promise<void>;
@@ -43,9 +40,7 @@ export const createPostgresPersistence = async (
     let closePromise: Promise<void> | undefined;
 
     return {
-      conversationRepository: new PostgresConversationRepository(pool, {
-        maxMessagesPerConversation: options.maxMessagesPerConversation,
-      }),
+      pool,
       vectorStore: new LangchainPgVectorStoreAdapter(pgVectorStore),
       async healthCheck() {
         await pool.query("SELECT 1");
