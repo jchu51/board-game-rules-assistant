@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -115,6 +115,34 @@ describe("ChatPage", () => {
     expect(
       screen.getByRole("textbox", { name: "Ask a rules question" }),
     ).toBeInTheDocument();
+  });
+
+  it("renders all chats in one flat navigation section", async () => {
+    listChats.mockResolvedValue({
+      chats: [
+        {
+          conversationId: "conversation-2",
+          title: "Pandemic outbreaks",
+          game: null,
+        },
+        {
+          conversationId: "conversation-1",
+          title: "Catan roads",
+          game: "Catan",
+        },
+      ],
+    });
+
+    renderChatPage();
+    await act(async () => {});
+
+    const navigation = screen.getByRole("navigation", {
+      name: "Conversations",
+    });
+    expect(within(navigation).getByText("Pandemic outbreaks")).toBeInTheDocument();
+    expect(within(navigation).getByText("Catan roads")).toBeInTheDocument();
+    expect(within(navigation).queryByText("New", { exact: true })).not.toBeInTheDocument();
+    expect(within(navigation).queryByText("Catan", { exact: true })).not.toBeInTheDocument();
   });
 
   it("loads and renders persisted user and assistant text", async () => {

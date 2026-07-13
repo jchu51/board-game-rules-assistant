@@ -3,37 +3,28 @@ import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Conversation } from "./chat-types";
 
-export type ConversationGroupProps = {
+export type ConversationListProps = {
   activeId: string | null;
   conversations: Conversation[];
-  dotColor: string;
   idPrefix?: string;
-  label: string;
   onDelete: (id: string) => void;
   onSelect: (id: string) => void;
 };
 
-export function ConversationGroup(props: ConversationGroupProps) {
+export function ConversationList(props: ConversationListProps) {
   const {
     activeId,
     conversations,
-    dotColor,
     idPrefix = "chat",
-    label,
     onDelete,
     onSelect,
   } = props;
+
   return (
     <div className="flex flex-col gap-0.5">
-      <div className="flex items-center gap-1.5 px-2.5 pb-1.5 text-[10.5px] font-bold tracking-[0.08em] text-[#b8b2a6] uppercase">
-        <span
-          className="size-1.5 rounded-full"
-          style={{ backgroundColor: dotColor }}
-        />
-        {label}
-      </div>
       {conversations.map((conversation) => {
         const active = conversation.id === activeId;
+
         return (
           <div key={conversation.id} className="relative">
             <button

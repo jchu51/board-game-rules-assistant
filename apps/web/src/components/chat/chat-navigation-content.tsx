@@ -1,7 +1,7 @@
 import { FileText, MessageSquare, Search } from "lucide-react";
 import { NavLink } from "react-router";
 
-import { ConversationGroup } from "./conversation-group";
+import { ConversationList } from "./conversation-list";
 import type { ChatController } from "./use-chat-controller";
 
 export function ChatNavigationContent(props: {
@@ -36,13 +36,11 @@ export function ChatNavigationContent(props: {
             No chats match "{chat.search}".
           </div>
         ) : null}
-        {chat.ungrouped.length ? (
-          <ConversationGroup
+        {chat.filteredConversations.length > 0 ? (
+          <ConversationList
             activeId={chat.activeId}
-            conversations={chat.ungrouped}
-            dotColor="#d9d4e8"
+            conversations={chat.filteredConversations}
             idPrefix={idPrefix}
-            label="New"
             onDelete={chat.deleteConversation}
             onSelect={(conversationId) => {
               void chat.selectConversation(conversationId);
@@ -50,21 +48,6 @@ export function ChatNavigationContent(props: {
             }}
           />
         ) : null}
-        {chat.gameGroups.map(([game, conversations]) => (
-          <ConversationGroup
-            key={game}
-            activeId={chat.activeId}
-            conversations={conversations}
-            dotColor="#3fbfa8"
-            idPrefix={idPrefix}
-            label={game}
-            onDelete={chat.deleteConversation}
-            onSelect={(conversationId) => {
-              void chat.selectConversation(conversationId);
-              onNavigate?.();
-            }}
-          />
-        ))}
       </nav>
       <div className="mt-2 flex flex-col gap-0.5 border-t border-[#edeae3] pt-2">
         <NavLink

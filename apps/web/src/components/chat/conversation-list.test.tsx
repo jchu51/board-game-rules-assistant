@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import { ConversationGroup } from "./conversation-group";
+import { ConversationList } from "./conversation-list";
 
 const conversation = {
   id: "catan",
@@ -10,19 +10,19 @@ const conversation = {
   messages: [],
 };
 
-describe("ConversationGroup", () => {
-  it("selects a conversation", () => {
+describe("ConversationList", () => {
+  it("renders rows without a group heading and selects a conversation", () => {
     const onSelect = vi.fn();
     render(
-      <ConversationGroup
+      <ConversationList
         activeId="other"
         conversations={[conversation]}
-        dotColor="#fff"
-        label="Catan"
         onDelete={vi.fn()}
         onSelect={onSelect}
       />,
     );
+
+    expect(screen.queryByText("Catan", { exact: true })).not.toBeInTheDocument();
     fireEvent.click(screen.getByTestId("chat-select-catan-btn"));
     expect(onSelect).toHaveBeenCalledWith("catan");
   });
@@ -31,15 +31,14 @@ describe("ConversationGroup", () => {
     const onDelete = vi.fn();
     const onSelect = vi.fn();
     render(
-      <ConversationGroup
+      <ConversationList
         activeId="catan"
         conversations={[conversation]}
-        dotColor="#fff"
-        label="Catan"
         onDelete={onDelete}
         onSelect={onSelect}
       />,
     );
+
     fireEvent.click(screen.getByTestId("chat-delete-catan-btn"));
     expect(onDelete).toHaveBeenCalledWith("catan");
     expect(onSelect).not.toHaveBeenCalled();

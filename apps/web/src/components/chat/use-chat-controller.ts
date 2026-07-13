@@ -341,21 +341,6 @@ export function useChatController() {
       title.toLowerCase().includes(searchTerm) ||
       (game ?? "").toLowerCase().includes(searchTerm),
   );
-  const ungrouped = filteredConversations.filter(({ game }) => !game);
-  const gameGroups = Object.entries(
-    filteredConversations.reduce<Record<string, Conversation[]>>(
-      (groups, conversation) => {
-        if (conversation.game) {
-          groups[conversation.game] = [
-            ...(groups[conversation.game] ?? []),
-            conversation,
-          ];
-        }
-        return groups;
-      },
-      {},
-    ),
-  );
   const guestBannerText =
     guestAsked >= 3
       ? "You've used all 3 free Guest questions."
@@ -367,7 +352,6 @@ export function useChatController() {
     chatError,
     deleteConversation,
     filteredConversations,
-    gameGroups,
     guestBannerText,
     handleNewChat,
     hasMessages,
@@ -385,7 +369,6 @@ export function useChatController() {
     setInput,
     setRole,
     setSearch,
-    ungrouped,
   };
 }
 
