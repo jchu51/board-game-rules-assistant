@@ -10,6 +10,8 @@ coverage/
 storage/
 
 .superpowers/
+.docs/superpowers/
+
 .worktrees/
 .ua/
 

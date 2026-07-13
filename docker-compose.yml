@@ -21,6 +21,8 @@ services:
       dockerfile: apps/api/Dockerfile
     env_file:
       - apps/api/.env
+    environment:
+      DATABASE_URL: postgresql://board_game_rules:board_game_rules@postgres:5432/board_game_rules
     depends_on:
       postgres:
         condition: service_healthy
