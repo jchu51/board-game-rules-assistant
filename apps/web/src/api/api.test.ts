@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { searchRulebooks } from "./retrieval-api";
+import { createChat } from "./chat-service";
 import {
   deleteRulebook,
   listRulebooks,
@@ -18,6 +19,25 @@ afterEach(() => {
 });
 
 describe("web API clients", () => {
+  it("creates a chat without a request body", async () => {
+    const body = {
+      chat: {
+        id: "11111111-1111-4111-8111-111111111111",
+        title: "New chat",
+        messageCount: 0,
+        createdAt: "2026-07-13T00:00:00.000Z",
+        updatedAt: "2026-07-13T00:00:00.000Z",
+      },
+    };
+    const fetchMock = vi.fn().mockResolvedValue(response(body));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(createChat()).resolves.toEqual(body);
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringMatching(/\/chats$/), {
+      method: "POST",
+    });
+  });
+
   it("uploads, lists, and deletes rulebooks", async () => {
     const fetchMock = vi
       .fn()
@@ -72,6 +92,7 @@ describe("web API clients", () => {
     ["list", () => listRulebooks()],
     ["delete", () => deleteRulebook("missing")],
     ["search", () => searchRulebooks({ conversationId: "c", query: "q" })],
+    ["create chat", () => createChat()],
   ])("surfaces the API error for %s", async (_name, request) => {
     vi.stubGlobal(
       "fetch",
@@ -90,6 +111,7 @@ describe("web API clients", () => {
     ["list", () => listRulebooks()],
     ["delete", () => deleteRulebook("missing")],
     ["search", () => searchRulebooks({ conversationId: "c", query: "q" })],
+    ["create chat", () => createChat()],
   ])(
     "uses the fallback when %s has no readable error",
     async (_name, request) => {

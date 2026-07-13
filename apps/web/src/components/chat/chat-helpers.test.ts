@@ -1,8 +1,7 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import {
   buildRetrievalAnswer,
-  createNewConversation,
   detectGame,
   getLastCitedMessage,
 } from "./chat-helpers";
@@ -55,16 +54,5 @@ describe("chat helpers", () => {
         },
       ])?.id,
     ).toBe("answer");
-  });
-
-  it("creates a fresh empty conversation", () => {
-    vi.stubGlobal("crypto", { randomUUID: () => "new-id" });
-    expect(createNewConversation()).toEqual({
-      id: "new-id",
-      title: "New chat",
-      game: null,
-      messages: [],
-    });
-    vi.unstubAllGlobals();
   });
 });

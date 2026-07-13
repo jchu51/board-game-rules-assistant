@@ -9,6 +9,18 @@ import { useChatController } from "./use-chat-controller";
 export function ChatView() {
   const chat = useChatController();
 
+  if (!chat.activeConversation) {
+    return (
+      <div className="flex h-svh bg-[#fafafb] font-sans text-[#14171f] antialiased">
+        <ChatSidebar chat={chat} />
+        <main
+          aria-label="No chat selected"
+          className="flex min-w-0 flex-1 flex-col"
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-svh bg-[#fafafb] font-sans text-[#14171f] antialiased">
       <ChatSidebar chat={chat} />

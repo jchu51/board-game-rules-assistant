@@ -1,12 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
+import { createChat } from "@/api/chat-service";
 import { searchRulebooks } from "@/api/retrieval-api";
 
-import { seedConversations } from "./chat-config";
 import {
   buildRetrievalAnswer,
   clearTimers,
-  createNewConversation,
   detectGame,
   getLastCitedMessage,
 } from "./chat-helpers";
@@ -19,33 +18,33 @@ import type {
 } from "./chat-types";
 
 export function useChatController() {
-  const initialConversation = useMemo(createNewConversation, []);
-  const [conversations, setConversations] = useState<Conversation[]>([
-    initialConversation,
-    ...seedConversations,
-  ]);
-  const [activeId, setActiveId] = useState(initialConversation.id);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [search, setSearch] = useState("");
   const [role, setRole] = useState<Role>("pro");
   const [infoOpen, setInfoOpen] = useState(false);
   const [guestAsked, setGuestAsked] = useState(0);
   const [isSearching, setIsSearching] = useState(false);
+  const [isCreatingChat, setIsCreatingChat] = useState(false);
+  const [createChatError, setCreateChatError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLElement | null>(null);
   const timersRef = useRef<Record<string, number>>({});
   const activeSearchIdRef = useRef(0);
   const messageIdRef = useRef(0);
 
-  const activeConversation =
-    conversations.find((conversation) => conversation.id === activeId) ??
-    conversations[0];
-  const hasMessages = activeConversation.messages.length > 0;
-  const lastCitedMessage = getLastCitedMessage(activeConversation.messages);
+  const activeConversation = conversations.find(
+    (conversation) => conversation.id === activeId,
+  );
+  const hasMessages = Boolean(activeConversation?.messages.length);
+  const lastCitedMessage = getLastCitedMessage(
+    activeConversation?.messages ?? [],
+  );
 
   useEffect(() => {
     const scrollElement = scrollRef.current;
     if (scrollElement) scrollElement.scrollTop = scrollElement.scrollHeight;
-  }, [activeConversation.messages]);
+  }, [activeConversation?.messages]);
 
   useEffect(() => {
     const timers = timersRef.current;
@@ -152,7 +151,7 @@ export function useChatController() {
 
   const sendText = async (rawText = input) => {
     const question = rawText.trim();
-    if (!question || isSearching) return;
+    if (!activeConversation || !question || isSearching) return;
     const conversationId = activeConversation.id;
     const detectedGame = detectGame(question);
     const userMessage: UserMessage = {
@@ -204,23 +203,42 @@ export function useChatController() {
     }
   };
 
-  const handleNewChat = () => {
-    activeSearchIdRef.current += 1;
-    clearTimers(timersRef.current);
-    timersRef.current = {};
-    const conversation = createNewConversation();
-    setConversations((current) => [conversation, ...current]);
-    setActiveId(conversation.id);
-    setInput("");
-    setIsSearching(false);
+  const handleNewChat = async () => {
+    if (isCreatingChat) return;
+    setIsCreatingChat(true);
+    setCreateChatError(null);
+    try {
+      const response = await createChat();
+      activeSearchIdRef.current += 1;
+      clearTimers(timersRef.current);
+      timersRef.current = {};
+      const conversation: Conversation = {
+        id: response.chat.id,
+        title: response.chat.title,
+        game: null,
+        messages: [],
+      };
+      setConversations((current) => [
+        conversation,
+        ...current.filter(({ id }) => id !== conversation.id),
+      ]);
+      setActiveId(conversation.id);
+      setInput("");
+      setIsSearching(false);
+    } catch (error) {
+      setCreateChatError(
+        error instanceof Error ? error.message : "Failed to create chat",
+      );
+    } finally {
+      setIsCreatingChat(false);
+    }
   };
 
   const deleteConversation = (conversationId: string) => {
     setConversations((current) => {
       const remaining = current.filter(({ id }) => id !== conversationId);
-      const next = remaining.length ? remaining : [createNewConversation()];
-      if (activeId === conversationId) setActiveId(next[0].id);
-      return next;
+      if (activeId === conversationId) setActiveId(remaining[0]?.id ?? null);
+      return remaining;
     });
   };
 
@@ -254,6 +272,7 @@ export function useChatController() {
   return {
     activeConversation,
     activeId,
+    createChatError,
     deleteConversation,
     filteredConversations,
     gameGroups,
@@ -262,6 +281,7 @@ export function useChatController() {
     hasMessages,
     infoOpen,
     input,
+    isCreatingChat,
     isSearching,
     lastCitedMessage,
     role,

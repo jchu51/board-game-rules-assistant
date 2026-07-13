@@ -1,19 +1,7 @@
 import type { RetrievalSearchResponse } from "@/api/retrieval-api";
 
 import { gamesByToken } from "./chat-config";
-import type {
-  AssistantMessage,
-  Conversation,
-  Message,
-  RetrievalAnswer,
-} from "./chat-types";
-
-export const createNewConversation = (): Conversation => ({
-  id: crypto.randomUUID(),
-  title: "New chat",
-  game: null,
-  messages: [],
-});
+import type { AssistantMessage, Message, RetrievalAnswer } from "./chat-types";
 
 export const detectGame = (text: string): string | null => {
   const normalizedText = ` ${text.toLowerCase()} `;

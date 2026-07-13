@@ -2,11 +2,13 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { searchRulebooks } = vi.hoisted(() => ({
+const { createChat, searchRulebooks } = vi.hoisted(() => ({
+  createChat: vi.fn(),
   searchRulebooks: vi.fn(),
 }));
 
 vi.mock("@/api/retrieval-api", () => ({ searchRulebooks }));
+vi.mock("@/api/chat-service", () => ({ createChat }));
 
 import { ChatPage } from "./chat-page";
 
@@ -17,6 +19,13 @@ const renderChatPage = () =>
     </MemoryRouter>,
   );
 
+const renderCreatedChatPage = async () => {
+  const result = renderChatPage();
+  fireEvent.click(screen.getByRole("button", { name: "New chat" }));
+  await act(async () => {});
+  return result;
+};
+
 const submitQuestion = async (question: string) => {
   const input = screen.getByRole("textbox", { name: "Ask a rules question" });
   fireEvent.change(input, { target: { value: question } });
@@ -26,7 +35,15 @@ const submitQuestion = async (question: string) => {
 
 beforeEach(() => {
   vi.useFakeTimers();
-  vi.stubGlobal("crypto", { randomUUID: vi.fn(() => "conversation-1") });
+  createChat.mockResolvedValue({
+    chat: {
+      id: "conversation-1",
+      title: "New chat",
+      messageCount: 0,
+      createdAt: "2026-07-13T00:00:00.000Z",
+      updatedAt: "2026-07-13T00:00:00.000Z",
+    },
+  });
 });
 
 afterEach(() => {
@@ -37,7 +54,7 @@ afterEach(() => {
 });
 
 describe("ChatPage", () => {
-  it("preserves the empty state across a stable rerender", () => {
+  it("starts clean without creating a chat", () => {
     const { rerender } = renderChatPage();
 
     rerender(
@@ -46,10 +63,61 @@ describe("ChatPage", () => {
       </MemoryRouter>,
     );
 
+    expect(createChat).not.toHaveBeenCalled();
+    expect(screen.queryByText("Ask the Referee")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("textbox", { name: "Ask a rules question" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Catan - road through settlement"),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/No chats match/)).not.toBeInTheDocument();
+  });
+
+  it("creates and activates a server chat from the button", async () => {
+    await renderCreatedChatPage();
+
+    expect(createChat).toHaveBeenCalledOnce();
     expect(screen.getByText("Ask the Referee")).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Send question" }),
-    ).toBeDisabled();
+      screen.getByRole("textbox", { name: "Ask a rules question" }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByText("New chat").length).toBeGreaterThan(0);
+  });
+
+  it("prevents duplicate creates while pending", async () => {
+    createChat.mockReturnValue(new Promise(() => {}));
+    renderChatPage();
+    const button = screen.getByRole("button", { name: "New chat" });
+    fireEvent.click(button);
+    fireEvent.click(button);
+
+    expect(button).toBeDisabled();
+    expect(createChat).toHaveBeenCalledOnce();
+  });
+
+  it("keeps the clean state and shows create errors", async () => {
+    createChat.mockRejectedValue(new Error("creation unavailable"));
+    renderChatPage();
+    fireEvent.click(screen.getByRole("button", { name: "New chat" }));
+    await act(async () => {});
+
+    expect(screen.getByRole("alert")).toHaveTextContent("creation unavailable");
+    expect(
+      screen.queryByRole("textbox", { name: "Ask a rules question" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("returns to the clean state after deleting the final chat", async () => {
+    await renderCreatedChatPage();
+
+    fireEvent.click(screen.getByRole("button", { name: "Delete New chat" }));
+
+    expect(createChat).toHaveBeenCalledOnce();
+    expect(screen.queryByText("Ask the Referee")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("textbox", { name: "Ask a rules question" }),
+    ).not.toBeInTheDocument();
   });
 
   it("searches, streams an answer, and renders citations", async () => {
@@ -71,7 +139,7 @@ describe("ChatPage", () => {
         },
       ],
     });
-    renderChatPage();
+    await renderCreatedChatPage();
 
     await submitQuestion("In Catan, how many resources does a city produce?");
 
@@ -101,7 +169,7 @@ describe("ChatPage", () => {
       answer: "No matching rule was found.",
       matches: [],
     });
-    renderChatPage();
+    await renderCreatedChatPage();
 
     fireEvent.click(
       screen.getByRole("button", {
@@ -122,7 +190,7 @@ describe("ChatPage", () => {
 
   it("uses the fallback answer when an empty response has no matches", async () => {
     searchRulebooks.mockResolvedValue({ answer: "", matches: [] });
-    renderChatPage();
+    await renderCreatedChatPage();
 
     await submitQuestion("What happens next?");
     await act(async () => {
@@ -134,7 +202,7 @@ describe("ChatPage", () => {
 
   it("renders search errors and starts a fresh chat", async () => {
     searchRulebooks.mockRejectedValue(new Error("network unavailable"));
-    renderChatPage();
+    await renderCreatedChatPage();
 
     await submitQuestion("Pandemic infection rate");
 
@@ -142,13 +210,14 @@ describe("ChatPage", () => {
       screen.getByText(/could not search.*network unavailable/i),
     ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "New chat" }));
+    await act(async () => {});
     expect(screen.getByText("Ask the Referee")).toBeInTheDocument();
     expect(screen.queryByText(/network unavailable/i)).not.toBeInTheDocument();
   });
 
   it("submits on Enter but allows Shift+Enter", async () => {
     searchRulebooks.mockResolvedValue({ answer: "Answer", matches: [] });
-    renderChatPage();
+    await renderCreatedChatPage();
     const input = screen.getByRole("textbox", { name: "Ask a rules question" });
     fireEvent.change(input, { target: { value: "Azul scoring" } });
 
@@ -168,7 +237,7 @@ describe("ChatPage", () => {
         resolveSearch = resolve;
       }),
     );
-    renderChatPage();
+    await renderCreatedChatPage();
     await submitQuestion("Catan road rules");
 
     fireEvent.change(
@@ -188,7 +257,7 @@ describe("ChatPage", () => {
 
   it("uses the fallback message for non-Error failures", async () => {
     searchRulebooks.mockRejectedValue("offline");
-    renderChatPage();
+    await renderCreatedChatPage();
 
     await submitQuestion("Root battle");
 

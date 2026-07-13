@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import type { Conversation } from "./chat-types";
 
 export type ConversationGroupProps = {
-  activeId: string;
+  activeId: string | null;
   conversations: Conversation[];
   dotColor: string;
   label: string;

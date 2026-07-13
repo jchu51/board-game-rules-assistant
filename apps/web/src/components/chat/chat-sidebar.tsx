@@ -19,12 +19,18 @@ export function ChatSidebar({ chat }: { chat: ChatController }) {
         id="ask-new-chat-btn"
         data-testid="ask-new-chat-btn"
         type="button"
-        className="mb-3.5 flex h-10 items-center gap-2 rounded-xl border border-[#edeafb] bg-[#f7f5ff] px-3.5 text-[13.5px] font-semibold text-[#7b2ff7] outline-none hover:bg-[#f1e9ff] focus-visible:ring-2 focus-visible:ring-[#7b2ff7]"
+        disabled={chat.isCreatingChat}
+        className="mb-3.5 flex h-10 items-center gap-2 rounded-xl border border-[#edeafb] bg-[#f7f5ff] px-3.5 text-[13.5px] font-semibold text-[#7b2ff7] outline-none hover:bg-[#f1e9ff] focus-visible:ring-2 focus-visible:ring-[#7b2ff7] disabled:cursor-not-allowed disabled:opacity-60"
         onClick={chat.handleNewChat}
       >
         <Plus className="size-[15px]" aria-hidden="true" />
         New chat
       </button>
+      {chat.createChatError ? (
+        <p role="alert" className="mb-3 px-2 text-[12px] text-red-600">
+          {chat.createChatError}
+        </p>
+      ) : null}
       <div className="relative mb-3">
         <Search
           className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-[#9ca3af]"
@@ -44,7 +50,7 @@ export function ChatSidebar({ chat }: { chat: ChatController }) {
         aria-label="Conversations"
         className="ref-scroll flex flex-1 flex-col gap-3.5 overflow-y-auto"
       >
-        {chat.filteredConversations.length === 0 ? (
+        {chat.search.trim() && chat.filteredConversations.length === 0 ? (
           <div className="px-2.5 py-2 text-[12.5px] text-[#9ca3af]">
             No chats match "{chat.search}".
           </div>

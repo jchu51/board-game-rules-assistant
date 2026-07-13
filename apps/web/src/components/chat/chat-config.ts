@@ -1,4 +1,4 @@
-import type { Conversation, Role } from "./chat-types";
+import type { Role } from "./chat-types";
 
 export const roleLabels: Record<Role, string> = {
   admin: "Admin",
@@ -73,78 +73,5 @@ export const exampleQuestions = [
   {
     id: "ask-example-root-vagabond-btn",
     label: "Can the Vagabond be attacked while allied in Root?",
-  },
-];
-
-export const seedConversations: Conversation[] = [
-  {
-    id: "seed-catan",
-    title: "Catan - road through settlement",
-    game: "Catan",
-    messages: [
-      {
-        id: "seed-catan-user",
-        role: "user",
-        text: "Can I build a road through an opponent's settlement?",
-      },
-      {
-        id: "seed-catan-assistant",
-        role: "assistant",
-        phase: "done",
-        revealed: 999,
-        text: "No - in Catan you may never build a road through or past a settlement or city belonging to another player. [[1]] A settlement placed on one of your road's intersections breaks the connection there, so a segment on the far side no longer counts as part of your network. This is also how Longest Road can be interrupted. [[2]]",
-        cites: [
-          {
-            n: 1,
-            book: "Catan Base Game Almanac",
-            page: 7,
-            quote:
-              "A road may not be built past a settlement or city belonging to another player.",
-          },
-          {
-            n: 2,
-            book: "Catan Base Game Almanac",
-            page: 9,
-            quote:
-              "An opponent settlement placed on your road interrupts it for Longest Road.",
-          },
-        ],
-      },
-    ],
-  },
-  {
-    id: "seed-gloomhaven",
-    title: "Gloomhaven - elemental infusion",
-    game: "Gloomhaven",
-    messages: [
-      {
-        id: "seed-gloomhaven-user",
-        role: "user",
-        text: "How does elemental infusion work?",
-      },
-      {
-        id: "seed-gloomhaven-assistant",
-        role: "assistant",
-        phase: "done",
-        revealed: 999,
-        text: "When an ability creates an element, its token goes in the Strong column of the elemental infusion table. [[1]] At the end of that round it moves to Waning, and at the end of the following round it is consumed. [[2]]",
-        cites: [
-          {
-            n: 1,
-            book: "Gloomhaven Rulebook",
-            page: 20,
-            quote:
-              "Infused elements are placed in the Strong area of the element table.",
-          },
-          {
-            n: 2,
-            book: "Gloomhaven Rulebook",
-            page: 21,
-            quote:
-              "At the end of the next round, any element still present is removed.",
-          },
-        ],
-      },
-    ],
   },
 ];
