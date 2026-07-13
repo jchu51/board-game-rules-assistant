@@ -1,13 +1,13 @@
 import { BookOpen, FileText, MessageSquare } from "lucide-react";
-import { NavLink, Outlet } from "react-router";
+import { NavLink, Outlet, useLocation } from "react-router";
 
 import { cn } from "@/lib/utils";
 
 const navItems = [
   {
-    id: "app-nav-ask-link",
-    to: "/ask",
-    label: "Ask",
+    id: "app-nav-chat-link",
+    to: "/chat",
+    label: "Chat",
     Icon: MessageSquare,
   },
   {
@@ -19,13 +19,19 @@ const navItems = [
 ];
 
 export function AppShell() {
+  const location = useLocation();
+
+  if (location.pathname.startsWith("/chat")) {
+    return <Outlet />;
+  }
+
   return (
     <div className="flex h-svh min-h-svh flex-col bg-background text-foreground md:flex-row">
       <aside className="flex shrink-0 flex-col gap-7 border-b border-sidebar-border bg-sidebar px-4 py-5 md:h-svh md:w-[296px] md:border-r md:border-b-0">
         <NavLink
           id="app-brand-link"
           data-testid="app-brand-link"
-          to="/ask"
+          to="/chat"
           className="flex min-w-0 items-center gap-3 rounded-lg px-2 py-1 text-sidebar-foreground outline-none transition-colors hover:bg-sidebar-accent focus-visible:ring-3 focus-visible:ring-sidebar-ring/50"
         >
           <span className="flex size-9 shrink-0 items-center justify-center rounded-[10px] bg-sidebar-primary text-sidebar-primary-foreground">

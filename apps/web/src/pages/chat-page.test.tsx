@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const { searchRulebooks } = vi.hoisted(() => ({
@@ -7,7 +8,14 @@ const { searchRulebooks } = vi.hoisted(() => ({
 
 vi.mock("@/api/retrieval-api", () => ({ searchRulebooks }));
 
-import { AskPage } from "./ask-page";
+import { ChatPage } from "./chat-page";
+
+const renderChatPage = () =>
+  render(
+    <MemoryRouter>
+      <ChatPage />
+    </MemoryRouter>,
+  );
 
 const submitQuestion = async (question: string) => {
   const input = screen.getByRole("textbox", { name: "Ask a rules question" });
@@ -28,13 +36,17 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe("AskPage", () => {
+describe("ChatPage", () => {
   it("preserves the empty state across a stable rerender", () => {
-    const { rerender } = render(<AskPage />);
+    const { rerender } = renderChatPage();
 
-    rerender(<AskPage />);
+    rerender(
+      <MemoryRouter>
+        <ChatPage />
+      </MemoryRouter>,
+    );
 
-    expect(screen.getByText("Ask the Rules Assistant")).toBeInTheDocument();
+    expect(screen.getByText("Ask the Referee")).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Send question" }),
     ).toBeDisabled();
@@ -59,7 +71,7 @@ describe("AskPage", () => {
         },
       ],
     });
-    render(<AskPage />);
+    renderChatPage();
 
     await submitQuestion("In Catan, how many resources does a city produce?");
 
@@ -67,7 +79,7 @@ describe("AskPage", () => {
       conversationId: "conversation-1",
       query: "In Catan, how many resources does a city produce?",
     });
-    expect(screen.getByText("Catan")).toBeInTheDocument();
+    expect(screen.getAllByText("Catan")[0]).toBeInTheDocument();
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(10_000);
@@ -89,7 +101,7 @@ describe("AskPage", () => {
       answer: "No matching rule was found.",
       matches: [],
     });
-    render(<AskPage />);
+    renderChatPage();
 
     fireEvent.click(
       screen.getByRole("button", {
@@ -101,14 +113,16 @@ describe("AskPage", () => {
       await vi.advanceTimersByTimeAsync(10_000);
     });
 
-    expect(screen.getByText("Gloomhaven")).toBeInTheDocument();
+    expect(screen.getAllByText("Gloomhaven")[0]).toBeInTheDocument();
     expect(screen.getByText(/No matching rule was found/)).toBeInTheDocument();
-    expect(screen.queryByText("Sources")).not.toBeInTheDocument();
+    expect(
+      screen.getByText(/Rulebook citations for the latest answer/),
+    ).toBeInTheDocument();
   });
 
   it("uses the fallback answer when an empty response has no matches", async () => {
     searchRulebooks.mockResolvedValue({ answer: "", matches: [] });
-    render(<AskPage />);
+    renderChatPage();
 
     await submitQuestion("What happens next?");
     await act(async () => {
@@ -120,7 +134,7 @@ describe("AskPage", () => {
 
   it("renders search errors and starts a fresh chat", async () => {
     searchRulebooks.mockRejectedValue(new Error("network unavailable"));
-    render(<AskPage />);
+    renderChatPage();
 
     await submitQuestion("Pandemic infection rate");
 
@@ -128,13 +142,13 @@ describe("AskPage", () => {
       screen.getByText(/could not search.*network unavailable/i),
     ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "New chat" }));
-    expect(screen.getByText("Ask the Rules Assistant")).toBeInTheDocument();
+    expect(screen.getByText("Ask the Referee")).toBeInTheDocument();
     expect(screen.queryByText(/network unavailable/i)).not.toBeInTheDocument();
   });
 
   it("submits on Enter but allows Shift+Enter", async () => {
     searchRulebooks.mockResolvedValue({ answer: "Answer", matches: [] });
-    render(<AskPage />);
+    renderChatPage();
     const input = screen.getByRole("textbox", { name: "Ask a rules question" });
     fireEvent.change(input, { target: { value: "Azul scoring" } });
 
@@ -154,7 +168,7 @@ describe("AskPage", () => {
         resolveSearch = resolve;
       }),
     );
-    render(<AskPage />);
+    renderChatPage();
     await submitQuestion("Catan road rules");
 
     fireEvent.change(
@@ -169,12 +183,12 @@ describe("AskPage", () => {
       resolveSearch?.({ answer: "Stale answer", matches: [] });
     });
     expect(screen.queryByText("Stale answer")).not.toBeInTheDocument();
-    expect(screen.getByText("Ask the Rules Assistant")).toBeInTheDocument();
+    expect(screen.getByText("Ask the Referee")).toBeInTheDocument();
   });
 
   it("uses the fallback message for non-Error failures", async () => {
     searchRulebooks.mockRejectedValue("offline");
-    render(<AskPage />);
+    renderChatPage();
 
     await submitQuestion("Root battle");
 
