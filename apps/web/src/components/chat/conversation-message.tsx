@@ -26,7 +26,7 @@ const renderAnswerText = (message: AssistantMessage): ReactNode => {
     nodes.push(
       <span
         key="cursor"
-        className="ml-0.5 inline-block h-[15px] w-[7px] align-text-bottom bg-[#7b2ff7] ref-blink"
+        className="ml-0.5 inline-block h-[15px] w-[7px] align-text-bottom bg-[#6d5ef0] ref-blink"
       />,
     );
   }
@@ -37,7 +37,7 @@ export function ConversationMessage({ message }: { message: Message }) {
   if (message.role === "user") {
     return (
       <div className="flex justify-end">
-        <div className="max-w-[78%] rounded-[16px_16px_4px_16px] bg-[#f1e9ff] px-4 py-3 text-[14.5px] leading-6 whitespace-pre-wrap text-[#14171f]">
+        <div className="max-w-[78%] rounded-[16px_16px_4px_16px] bg-[#efebfc] px-4 py-3 text-[14.5px] leading-6 whitespace-pre-wrap text-[#14171f]">
           {message.text}
         </div>
       </div>
@@ -45,7 +45,7 @@ export function ConversationMessage({ message }: { message: Message }) {
   }
   return (
     <div className="flex items-start gap-3">
-      <div className="flex size-[30px] shrink-0 items-center justify-center rounded-[10px] bg-[linear-gradient(135deg,#7b2ff7,#00c4cc)] text-white">
+      <div className="flex size-[30px] shrink-0 items-center justify-center rounded-[10px] bg-[linear-gradient(135deg,#6d5ef0,#3fbfa8)] text-white">
         <BookOpen className="size-[15px]" aria-hidden="true" />
       </div>
       <div className="min-w-0 flex-1 pt-1">

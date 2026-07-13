@@ -1,4 +1,4 @@
-import { BookOpen, X } from "lucide-react";
+import { BookOpen, Plus, X } from "lucide-react";
 import { useEffect, useRef, type RefObject } from "react";
 
 import { ChatNavigationContent } from "./chat-navigation-content";
@@ -56,7 +56,7 @@ export function MobileChatDrawer(props: {
         className="absolute inset-y-0 left-0 flex w-[min(86vw,320px)] flex-col bg-white px-3 py-4 shadow-2xl"
       >
         <div className="flex items-center gap-2.5 px-2 pt-1 pb-3.5">
-          <div className="flex size-8 shrink-0 items-center justify-center rounded-[10px] bg-[linear-gradient(135deg,#7b2ff7,#00c4cc)] text-white">
+          <div className="flex size-8 shrink-0 items-center justify-center rounded-[10px] bg-[linear-gradient(135deg,#6d5ef0,#3fbfa8)] text-white">
             <BookOpen className="size-4" aria-hidden="true" />
           </div>
           <span className="font-heading flex-1 text-[15px] font-bold text-[#14171f]">
@@ -68,12 +68,26 @@ export function MobileChatDrawer(props: {
             data-testid="mobile-chat-close-btn"
             type="button"
             aria-label="Close chat navigation"
-            className="flex size-9 items-center justify-center rounded-[10px] text-[#5e6572] outline-none hover:bg-[#f7f5ff] focus-visible:ring-2 focus-visible:ring-[#7b2ff7]"
+            className="flex size-9 items-center justify-center rounded-[10px] text-[#5b5648] outline-none hover:bg-[#f8f6ff] focus-visible:ring-2 focus-visible:ring-[#6d5ef0]"
             onClick={closeNavigation}
           >
             <X className="size-4" aria-hidden="true" />
           </button>
         </div>
+        <button
+          id="mobile-new-chat-btn"
+          data-testid="mobile-new-chat-btn"
+          type="button"
+          disabled={chat.isCreatingChat}
+          className="mb-3.5 flex h-10 items-center gap-2 rounded-xl border border-[#edeae3] bg-[#f8f6ff] px-3.5 text-[13.5px] font-semibold text-[#6d5ef0] outline-none hover:bg-[#efebfc] focus-visible:ring-2 focus-visible:ring-[#6d5ef0] disabled:cursor-not-allowed disabled:opacity-60"
+          onClick={async () => {
+            await chat.handleNewChat();
+            closeNavigation();
+          }}
+        >
+          <Plus className="size-[15px]" aria-hidden="true" />
+          New chat
+        </button>
         <ChatNavigationContent
           chat={chat}
           idPrefix="mobile-chat"

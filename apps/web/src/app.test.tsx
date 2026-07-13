@@ -32,7 +32,7 @@ describe("App", () => {
     expect(screen.getByRole("heading", { name: heading })).toBeInTheDocument();
     if (route === "/library") {
       expect(
-        screen.getByRole("link", { name: /Rulebook Referee/ }),
+        screen.getByRole("navigation", { name: "Sections" }),
       ).toBeInTheDocument();
     }
   });
@@ -48,7 +48,7 @@ describe("App", () => {
     expect(
       screen.getByRole("heading", { name: "Library page" }),
     ).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("link", { name: "Chat" }));
+    fireEvent.click(screen.getByRole("link", { name: "Ask" }));
     expect(
       screen.getByRole("heading", { name: "Chat page" }),
     ).toBeInTheDocument();

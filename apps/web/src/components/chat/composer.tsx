@@ -38,7 +38,7 @@ export function Composer(props: ComposerProps) {
     <form
       id={`${idPrefix}-composer-form`}
       data-testid={`${idPrefix}-composer-form`}
-      className="rounded-[20px] border border-[#edeafb] bg-white p-3.5 pb-3 shadow-[0_10px_30px_-14px_rgba(123,47,247,0.18)]"
+      className="rounded-[20px] border border-[#edeae3] bg-white p-3.5 pb-3 shadow-[0_10px_30px_-14px_rgba(109,94,240,0.18)]"
       onSubmit={submit}
     >
       <label
@@ -55,7 +55,7 @@ export function Composer(props: ComposerProps) {
         value={input}
         rows={1}
         placeholder={placeholder}
-        className="max-h-40 min-h-9 w-full resize-none border-0 bg-transparent px-1.5 py-1.5 text-[15px] leading-6 text-[#14171f] outline-none placeholder:text-[#9ca3af]"
+        className="max-h-40 min-h-9 w-full resize-none border-0 bg-transparent px-1.5 py-1.5 text-[15px] leading-6 text-[#14171f] outline-none placeholder:text-[#b8b2a6]"
         onChange={(event) => {
           onInputChange(event.target.value);
           event.target.style.height = "auto";
@@ -64,7 +64,7 @@ export function Composer(props: ComposerProps) {
         onKeyDown={keyDown}
       />
       <div className="mt-1.5 flex items-center justify-between gap-3">
-        <span className="pl-1.5 text-xs text-[#9ca3af]">{helperText}</span>
+        <span className="pl-1.5 text-xs text-[#b8b2a6]">{helperText}</span>
         <button
           id={`${idPrefix}-send-btn`}
           data-testid={`${idPrefix}-send-btn`}
@@ -72,7 +72,7 @@ export function Composer(props: ComposerProps) {
           disabled={!canSend}
           aria-label={isSubmitting ? "Searching rulebooks" : "Send question"}
           className={cn(
-            "inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-[#7b2ff7] text-white outline-none transition-opacity focus-visible:ring-2 focus-visible:ring-[#7b2ff7] focus-visible:ring-offset-2",
+            "inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-[#6d5ef0] text-white outline-none transition-opacity focus-visible:ring-2 focus-visible:ring-[#6d5ef0] focus-visible:ring-offset-2",
             canSend
               ? "cursor-pointer opacity-100 hover:bg-[#6620db]"
               : "cursor-not-allowed opacity-35",

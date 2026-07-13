@@ -25,7 +25,7 @@ export function ConversationGroup(props: ConversationGroupProps) {
   } = props;
   return (
     <div className="flex flex-col gap-0.5">
-      <div className="flex items-center gap-1.5 px-2.5 pb-1.5 text-[10.5px] font-bold tracking-[0.08em] text-[#9ca3af] uppercase">
+      <div className="flex items-center gap-1.5 px-2.5 pb-1.5 text-[10.5px] font-bold tracking-[0.08em] text-[#b8b2a6] uppercase">
         <span
           className="size-1.5 rounded-full"
           style={{ backgroundColor: dotColor }}
@@ -42,9 +42,9 @@ export function ConversationGroup(props: ConversationGroupProps) {
               type="button"
               aria-current={active ? "true" : undefined}
               className={cn(
-                "flex h-9 w-full items-center gap-2 rounded-[10px] pr-8 pl-2.5 text-left text-[13.5px] outline-none hover:bg-[#f7f5ff] focus-visible:ring-2 focus-visible:ring-[#7b2ff7]",
+                "flex h-9 w-full items-center gap-2 rounded-[10px] pr-8 pl-2.5 text-left text-[13.5px] outline-none hover:bg-[#f8f6ff] focus-visible:ring-2 focus-visible:ring-[#6d5ef0]",
                 active
-                  ? "bg-[#f1e9ff] font-semibold text-[#7b2ff7]"
+                  ? "bg-[#efebfc] font-semibold text-[#6d5ef0]"
                   : "bg-transparent font-medium text-[#14171f]",
               )}
               onClick={() => onSelect(conversation.id)}
@@ -58,7 +58,7 @@ export function ConversationGroup(props: ConversationGroupProps) {
               data-testid={`${idPrefix}-delete-${conversation.id}-btn`}
               type="button"
               aria-label={`Delete ${conversation.title}`}
-              className="absolute top-1/2 right-1.5 flex size-[26px] -translate-y-1/2 items-center justify-center rounded-lg text-[#9ca3af] hover:bg-[#edeafb] hover:text-[#c0362c]"
+              className="absolute top-1/2 right-1.5 flex size-[26px] -translate-y-1/2 items-center justify-center rounded-lg text-[#b8b2a6] hover:bg-[#edeae3] hover:text-[#c0362c]"
               onClick={(event) => {
                 event.stopPropagation();
                 onDelete(conversation.id);

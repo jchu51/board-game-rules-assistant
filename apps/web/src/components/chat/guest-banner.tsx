@@ -13,7 +13,7 @@ export function GuestBanner({
         id="chat-upgrade-standard-btn"
         data-testid="chat-upgrade-standard-btn"
         type="button"
-        className="text-xs font-bold text-[#7b2ff7] hover:text-[#6620db]"
+        className="text-xs font-bold text-[#6d5ef0] hover:text-[#6620db]"
         onClick={onUpgrade}
       >
         Upgrade to Standard

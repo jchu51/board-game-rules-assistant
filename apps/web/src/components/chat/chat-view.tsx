@@ -24,7 +24,7 @@ export function ChatView() {
   );
 
   return (
-    <div className="flex h-svh bg-[#fafafb] font-sans text-[#14171f] antialiased">
+    <div className="flex min-h-0 flex-1 bg-[#fcfbfa] font-sans text-[#14171f] antialiased">
       <ChatSidebar chat={chat} />
       <div className="flex min-w-0 flex-1 flex-col">
         <MobileChatHeader
@@ -82,8 +82,12 @@ export function ChatView() {
         ) : (
           <main
             aria-label="No chat selected"
-            className="flex min-w-0 flex-1 flex-col"
-          />
+            className="flex min-w-0 flex-1 flex-col items-center justify-center px-6 text-center"
+          >
+            <p className="max-w-sm text-sm leading-6 text-[#b8b2a6]">
+              Create a new chat from the chat list to ask a rulebook question.
+            </p>
+          </main>
         )}
       </div>
       <MobileChatDrawer

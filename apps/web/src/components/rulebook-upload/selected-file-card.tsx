@@ -11,14 +11,14 @@ type SelectedFileCardProps = {
 
 export function SelectedFileCard({ file, onClear }: SelectedFileCardProps) {
   return (
-    <Card className="rounded-2xl border-border bg-background shadow-[0_1px_2px_rgb(0_0_0_/0.04)]">
+    <Card className="rounded-[14px] border-[#edeae3] bg-[#f8f6ff] shadow-none">
       <CardContent className="flex items-center gap-3 p-4">
-        <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-muted text-foreground">
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-[10px] bg-[#efebfc] text-[#6d5ef0]">
           <FileIcon stroke="currentColor" />
         </div>
         <div className="min-w-0 flex-1">
-          <div className="truncate text-base font-bold">{file.name}</div>
-          <div className="text-base text-muted-foreground">
+          <div className="truncate text-sm font-semibold">{file.name}</div>
+          <div className="text-[13.5px] text-[#5b5648]">
             {formatSize(file.size)} · ready to upload
           </div>
         </div>

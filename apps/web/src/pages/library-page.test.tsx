@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { deleteRulebook, listRulebooks, uploadRulebookPdf } = vi.hoisted(() => ({
@@ -22,6 +23,13 @@ const selectFile = (file: File) => {
   });
 };
 
+const renderLibraryPage = () =>
+  render(
+    <MemoryRouter initialEntries={["/library"]}>
+      <LibraryPage />
+    </MemoryRouter>,
+  );
+
 beforeEach(() => {
   vi.clearAllMocks();
   listRulebooks.mockResolvedValue({ rulebooks: [] });
@@ -40,7 +48,7 @@ describe("LibraryPage", () => {
         },
       ],
     });
-    render(<LibraryPage />);
+    renderLibraryPage();
 
     expect(await screen.findByText("Catan")).toBeInTheDocument();
     expect(screen.getByText("1 document")).toBeInTheDocument();
@@ -62,7 +70,7 @@ describe("LibraryPage", () => {
       documentCount: 4,
       chunkCount: 10,
     });
-    render(<LibraryPage />);
+    renderLibraryPage();
     await screen.findByText("No rulebooks yet");
 
     fireEvent.change(screen.getByTestId("library-game-name-input"), {
@@ -87,7 +95,7 @@ describe("LibraryPage", () => {
   });
 
   it("rejects non-PDF and oversized files", async () => {
-    render(<LibraryPage />);
+    renderLibraryPage();
     await screen.findByText("No rulebooks yet");
 
     selectFile(new File(["notes"], "notes.txt", { type: "text/plain" }));
@@ -103,7 +111,7 @@ describe("LibraryPage", () => {
 
   it("shows loading and upload failures", async () => {
     listRulebooks.mockRejectedValueOnce(new Error("load unavailable"));
-    const { unmount } = render(<LibraryPage />);
+    const { unmount } = renderLibraryPage();
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "load unavailable",
     );
@@ -111,7 +119,7 @@ describe("LibraryPage", () => {
 
     listRulebooks.mockResolvedValue({ rulebooks: [] });
     uploadRulebookPdf.mockRejectedValue("upload unavailable");
-    render(<LibraryPage />);
+    renderLibraryPage();
     await screen.findByText("No rulebooks yet");
     fireEvent.change(screen.getByTestId("library-game-name-input"), {
       target: { value: "Root" },
@@ -137,7 +145,7 @@ describe("LibraryPage", () => {
       ],
     });
     deleteRulebook.mockRejectedValue("delete unavailable");
-    render(<LibraryPage />);
+    renderLibraryPage();
     await screen.findByText("Root");
 
     fireEvent.click(screen.getByRole("button", { name: "Remove Root" }));
@@ -160,7 +168,7 @@ describe("LibraryPage", () => {
         documentCount: 1,
         chunkCount: 2,
       });
-    render(<LibraryPage />);
+    renderLibraryPage();
     await screen.findByText("No rulebooks yet");
     fireEvent.change(screen.getByTestId("library-game-name-input"), {
       target: { value: "Root" },
@@ -176,7 +184,7 @@ describe("LibraryPage", () => {
 
   it("removes a failed local upload without calling delete", async () => {
     uploadRulebookPdf.mockRejectedValue(new Error("upload failed"));
-    render(<LibraryPage />);
+    renderLibraryPage();
     await screen.findByText("No rulebooks yet");
     fireEvent.change(screen.getByTestId("library-game-name-input"), {
       target: { value: "Azul" },
@@ -188,5 +196,21 @@ describe("LibraryPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Remove Azul" }));
     expect(screen.getByText("No rulebooks yet")).toBeInTheDocument();
     expect(deleteRulebook).not.toHaveBeenCalled();
+  });
+
+  it("renders the reference header and mobile navigation", async () => {
+    renderLibraryPage();
+    await screen.findByText("No rulebooks yet");
+
+    expect(screen.getByRole("banner")).toHaveTextContent("Library");
+    fireEvent.click(screen.getByTestId("library-mobile-menu-btn"));
+    expect(
+      screen.getByRole("dialog", { name: "Main navigation" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Ask" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Library" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
   });
 });

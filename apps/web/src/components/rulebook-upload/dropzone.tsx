@@ -37,8 +37,8 @@ export function Dropzone({
       data-testid="library-rulebook-dropzone-btn"
       type="button"
       className={cn(
-        "flex min-h-[208px] w-full cursor-pointer flex-col items-center justify-center gap-4 rounded-2xl border border-dashed bg-background p-8 text-center transition-colors outline-none hover:bg-muted/40 focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-3",
-        isDragging && "border-primary bg-primary/5",
+        "flex min-h-40 w-full cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border-[1.5px] border-dashed border-[#dcd3fa] bg-white p-8 text-center transition-colors outline-none hover:bg-[#f8f6ff] focus-visible:ring-2 focus-visible:ring-[#6d5ef0]",
+        isDragging && "border-[#6d5ef0] bg-[#f8f6ff]",
       )}
       onClick={onBrowse}
       onDragOver={handleDragOver}
@@ -47,16 +47,16 @@ export function Dropzone({
     >
       <span
         className={cn(
-          "flex size-14 items-center justify-center rounded-2xl bg-muted text-muted-foreground transition-colors",
-          isDragging && "bg-primary text-primary-foreground",
+          "flex size-12 items-center justify-center rounded-[14px] bg-[#efebfc] text-[#6d5ef0] transition-colors",
+          isDragging && "bg-[#6d5ef0] text-white",
         )}
       >
         <UploadIcon stroke="currentColor" />
       </span>
-      <span className="text-base font-medium">
+      <span className="text-sm font-semibold">
         {isDragging ? "Drop to upload" : "Drag a PDF here, or click to browse"}
       </span>
-      <span className="text-base text-muted-foreground">PDF up to 40 MB</span>
+      <span className="text-[13.5px] text-[#b8b2a6]">PDF up to 40 MB</span>
     </button>
   );
 }

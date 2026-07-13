@@ -31,12 +31,12 @@ export function DocumentCard({
   const roundedProgress = Math.round(document.progress);
 
   return (
-    <Card className="rounded-2xl border-border shadow-[0_1px_2px_rgb(0_0_0_/0.04)]">
-      <CardContent className="flex flex-col gap-4 p-4 sm:p-5">
+    <Card className="rounded-2xl border-[#edeae3] shadow-[0_6px_18px_-14px_rgba(20,23,31,0.12)]">
+      <CardContent className="flex flex-col gap-4 p-4">
         <div className="flex items-center gap-3">
           <div
             className={cn(
-              "flex size-12 shrink-0 items-center justify-center rounded-xl bg-muted text-foreground",
+              "flex size-10 shrink-0 items-center justify-center rounded-[10px] bg-[#efebfc] text-[#6d5ef0]",
               document.status === "error" &&
                 "bg-destructive/10 text-destructive",
             )}
@@ -46,11 +46,11 @@ export function DocumentCard({
 
           <div className="min-w-0 flex-1">
             <div className="flex min-w-0 items-center gap-2">
-              <span className="truncate text-base font-bold">
+              <span className="truncate text-sm font-semibold">
                 {document.gameName}
               </span>
             </div>
-            <div className="truncate text-base text-muted-foreground">
+            <div className="truncate text-[13.5px] text-[#b8b2a6]">
               {metaParts.join(" · ")}
             </div>
           </div>
@@ -75,7 +75,7 @@ export function DocumentCard({
         {document.status === "processing" ? (
           <div className="flex flex-col gap-2">
             <Progress value={roundedProgress} />
-            <p className="text-sm text-muted-foreground">
+            <p className="text-[13.5px] text-[#b8b2a6]">
               Extracting text · chunking · embedding — {roundedProgress}%
             </p>
           </div>

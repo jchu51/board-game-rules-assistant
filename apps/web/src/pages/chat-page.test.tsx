@@ -14,7 +14,7 @@ import { ChatPage } from "./chat-page";
 
 const renderChatPage = () =>
   render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={["/chat"]}>
       <ChatPage />
     </MemoryRouter>,
   );
@@ -72,8 +72,18 @@ describe("ChatPage", () => {
       screen.queryByText("Catan - road through settlement"),
     ).not.toBeInTheDocument();
     expect(screen.queryByText(/No chats match/)).not.toBeInTheDocument();
-    expect(screen.getByTestId("mobile-new-chat-btn")).toBeInTheDocument();
     expect(screen.getByTestId("mobile-chat-menu-btn")).toBeInTheDocument();
+    expect(screen.getByText("Chat")).toBeInTheDocument();
+  });
+
+  it("uses the reference navigation labels", () => {
+    renderChatPage();
+
+    expect(screen.getByRole("link", { name: "Ask" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    expect(screen.getByRole("link", { name: "Library" })).toBeInTheDocument();
   });
 
   it("opens and closes the mobile chat navigation", () => {
@@ -104,9 +114,10 @@ describe("ChatPage", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
-  it("creates and activates a chat from the mobile action", async () => {
+  it("creates and activates a chat from the drawer action", async () => {
     renderChatPage();
 
+    fireEvent.click(screen.getByTestId("mobile-chat-menu-btn"));
     fireEvent.click(screen.getByTestId("mobile-new-chat-btn"));
     await act(async () => {});
 
@@ -144,7 +155,6 @@ describe("ChatPage", () => {
     fireEvent.click(button);
 
     expect(button).toBeDisabled();
-    expect(screen.getByTestId("mobile-new-chat-btn")).toBeDisabled();
     expect(createChat).toHaveBeenCalledOnce();
   });
 
@@ -155,7 +165,7 @@ describe("ChatPage", () => {
     await act(async () => {});
 
     expect(screen.getByRole("alert")).toHaveTextContent("creation unavailable");
-    expect(screen.getByTestId("mobile-new-chat-btn")).toBeInTheDocument();
+    expect(screen.getByTestId("mobile-chat-menu-btn")).toBeInTheDocument();
     expect(
       screen.queryByRole("textbox", { name: "Ask a rules question" }),
     ).not.toBeInTheDocument();

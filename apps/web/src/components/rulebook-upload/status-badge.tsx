@@ -8,7 +8,10 @@ type StatusBadgeProps = {
 export function StatusBadge({ status }: StatusBadgeProps) {
   if (status === "error") {
     return (
-      <Badge className="rounded-full px-3 py-0.5 text-sm" variant="destructive">
+      <Badge
+        className="rounded-full bg-[#fee2e2] px-[11px] py-[3px] text-[11.5px] text-[#c0362c]"
+        variant="destructive"
+      >
         Failed
       </Badge>
     );
@@ -17,7 +20,7 @@ export function StatusBadge({ status }: StatusBadgeProps) {
   if (status === "processing") {
     return (
       <Badge
-        className="rounded-full bg-muted px-3 py-0.5 text-sm"
+        className="rounded-full bg-[#efebfc] px-[11px] py-[3px] text-[11.5px] text-[#6d5ef0]"
         variant="secondary"
       >
         Indexing
@@ -27,7 +30,7 @@ export function StatusBadge({ status }: StatusBadgeProps) {
 
   return (
     <Badge
-      className="rounded-full bg-muted px-3 py-0.5 text-sm font-medium"
+      className="rounded-full bg-[#e3fbf0] px-[11px] py-[3px] text-[11.5px] font-semibold text-[#12875a]"
       variant="secondary"
     >
       Ready
