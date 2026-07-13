@@ -1,3 +1,7 @@
+import { randomUUID } from "node:crypto";
+import { writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type { NextFunction, Request, Response } from "express";
 import { MulterError } from "multer";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -14,6 +18,7 @@ import type { RetrievalService } from "../src/application/retrieval/retrieval-se
 import { InvalidSplitterParamsError } from "../src/domain/ingestion/ingestion-errors";
 import { testConfig } from "./test-config";
 import type { ConversationRepository } from "../src/domain/conversation/conversation-repository";
+import type { RulebookFileStore } from "@board-game-rules-assistant/database";
 
 const createResponse = () => {
   const response = {
@@ -47,6 +52,9 @@ const conversationRepository = {
   appendMessages: vi.fn(),
   getMessages: vi.fn(),
 } satisfies ConversationRepository;
+const rulebookFileStore = {
+  save: vi.fn(),
+} satisfies RulebookFileStore;
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -391,11 +399,16 @@ describe("HTTP routers", () => {
 
   it("uploads, lists, and deletes rulebooks", async () => {
     const repository = new InMemoryRulebookRepository();
-    const router = new IngestionRouter(ingestionService, repository, {
-      uploadDirectory: "/tmp",
-      maxUploadSizeBytes: 1024,
-      isProduction: false,
-    }) as unknown as {
+    const router = new IngestionRouter(
+      ingestionService,
+      repository,
+      rulebookFileStore,
+      {
+        uploadDirectory: "/tmp",
+        maxUploadSizeBytes: 1024,
+        isProduction: false,
+      },
+    ) as unknown as {
       uploadPdfs: (
         request: Request,
         response: Response,
@@ -408,20 +421,35 @@ describe("HTTP routers", () => {
       documentCount: 2,
       chunkCount: 4,
     });
+    const pdfData = Uint8Array.from([0x25, 0x50, 0x44, 0x46]);
+    const filePath = join(tmpdir(), `${randomUUID()}.pdf`);
+    await writeFile(filePath, pdfData);
     const response = createResponse();
     await router.uploadPdfs(
       {
         body: { gameName: "Catan" },
         file: {
           originalname: "catan.pdf",
-          size: 3,
-          path: "/tmp/nonexistent-upload.pdf",
+          mimetype: "application/pdf",
+          size: pdfData.byteLength,
+          path: filePath,
         },
       } as Request,
       response,
       vi.fn(),
     );
     expect(response.status).toHaveBeenCalledWith(200);
+    expect(rulebookFileStore.save).toHaveBeenCalledWith({
+      id: expect.any(String),
+      gameName: "Catan",
+      pdfName: "catan.pdf",
+      mimeType: "application/pdf",
+      fileSize: pdfData.byteLength,
+      pdfData: Buffer.from(pdfData),
+    });
+    expect(
+      vi.mocked(ingestionService.ingestPdf).mock.invocationCallOrder[0],
+    ).toBeLessThan(rulebookFileStore.save.mock.invocationCallOrder[0]!);
     const created = repository.list()[0];
     expect(created).toMatchObject({ gameName: "Catan", pdfName: "catan.pdf" });
 
@@ -445,9 +473,11 @@ describe("HTTP routers", () => {
   });
 
   it("rejects missing files, invalid bodies, and invalid splitter settings", async () => {
+    const repository = new InMemoryRulebookRepository();
     const router = new IngestionRouter(
       ingestionService,
-      new InMemoryRulebookRepository(),
+      repository,
+      rulebookFileStore,
       {
         uploadDirectory: "/tmp",
         maxUploadSizeBytes: 1024,
@@ -494,15 +524,22 @@ describe("HTTP routers", () => {
       vi.fn(),
     );
     expect(splitterResponse.status).toHaveBeenCalledWith(400);
+    expect(rulebookFileStore.save).not.toHaveBeenCalled();
+    expect(repository.list()).toEqual([]);
   });
 
   it("handles upload middleware failures and success", () => {
     const createRouter = (isProduction: boolean) =>
-      new IngestionRouter(ingestionService, new InMemoryRulebookRepository(), {
-        uploadDirectory: "/tmp",
-        maxUploadSizeBytes: 1024,
-        isProduction,
-      }) as unknown as {
+      new IngestionRouter(
+        ingestionService,
+        new InMemoryRulebookRepository(),
+        rulebookFileStore,
+        {
+          uploadDirectory: "/tmp",
+          maxUploadSizeBytes: 1024,
+          isProduction,
+        },
+      ) as unknown as {
         handleUpload: (
           middleware: (
             request: Request,

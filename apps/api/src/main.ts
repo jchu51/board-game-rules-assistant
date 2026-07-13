@@ -59,6 +59,7 @@ const healthRouter = new HealthRouter();
 const ingestionRouter = new IngestionRouter(
   ingestionService,
   rulebookRepository,
+  persistence.rulebookFileStore,
   {
     uploadDirectory: config.ingestion.uploadDirectory,
     maxUploadSizeBytes: config.ingestion.maxUploadSizeBytes,

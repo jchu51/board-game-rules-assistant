@@ -51,6 +51,14 @@ describe("createPersistence", () => {
     expect(
       await persistence.conversationRepository.getMessages("conversation"),
     ).toHaveLength(3);
+    await persistence.rulebookFileStore.save({
+      id: "rulebook-1",
+      gameName: "Catan",
+      pdfName: "catan.pdf",
+      mimeType: "application/pdf",
+      fileSize: 3,
+      pdfData: Uint8Array.from([1, 2, 3]),
+    });
     await expect(persistence.healthCheck()).resolves.toBeUndefined();
     await expect(persistence.close()).resolves.toBeUndefined();
   });

@@ -4,14 +4,17 @@ import {
   type VectorStore,
 } from "@board-game-rules-assistant/rag-core";
 import type { EmbeddingsInterface } from "@langchain/core/embeddings";
+import type { RulebookFileStore } from "@board-game-rules-assistant/database";
 
 import type { Config } from "../../config/config-types";
 import type { ConversationRepository } from "../../domain/conversation/conversation-repository";
 import { InMemoryConversationRepository } from "./conversation/in-memory-conversation-repository";
 import { PostgresConversationRepository } from "./conversation/postgres-conversation-repository";
+import { InMemoryRulebookFileStore } from "./rulebook/in-memory-rulebook-file-store";
 
 export type Persistence = {
   conversationRepository: ConversationRepository;
+  rulebookFileStore: RulebookFileStore;
   vectorStore: VectorStore;
   healthCheck(): Promise<void>;
   close(): Promise<void>;
@@ -32,6 +35,7 @@ export const createPersistence = async ({
         maxMessagesPerConversation:
           config.persistence.maxMessagesPerConversation,
       }),
+      rulebookFileStore: new InMemoryRulebookFileStore(),
       vectorStore: new LangchainMemoryVectorStore(embeddings),
       async healthCheck() {},
       async close() {},
@@ -56,6 +60,7 @@ export const createPersistence = async ({
           config.persistence.maxMessagesPerConversation,
       },
     ),
+    rulebookFileStore: postgresPersistence.rulebookFileStore,
     vectorStore: postgresPersistence.vectorStore,
     healthCheck: postgresPersistence.healthCheck,
     close: postgresPersistence.close,
