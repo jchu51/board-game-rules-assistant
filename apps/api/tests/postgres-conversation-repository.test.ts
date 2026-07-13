@@ -27,12 +27,10 @@ describe("PostgresConversationRepository", () => {
         {
           id: "22222222-2222-4222-8222-222222222222",
           title: "Trading rules",
-          game: "Catan",
         },
         {
           id: "11111111-1111-4111-8111-111111111111",
           title: "New chat",
-          game: null,
         },
       ],
     });
@@ -42,16 +40,14 @@ describe("PostgresConversationRepository", () => {
       {
         conversationId: "22222222-2222-4222-8222-222222222222",
         title: "Trading rules",
-        game: "Catan",
       },
       {
         conversationId: "11111111-1111-4111-8111-111111111111",
         title: "New chat",
-        game: null,
       },
     ]);
     expect(query).toHaveBeenCalledWith(
-      `SELECT id, title, game
+      `SELECT id, title
        FROM conversations
        ORDER BY created_at DESC, id DESC`,
     );
@@ -63,14 +59,12 @@ describe("PostgresConversationRepository", () => {
         {
           conversation_id: "conversation-a",
           title: "Rules",
-          game: "Catan",
           role: "user",
           content: "Question",
         },
         {
           conversation_id: "conversation-a",
           title: "Rules",
-          game: "Catan",
           role: "assistant",
           content: "Answer",
         },
@@ -81,7 +75,6 @@ describe("PostgresConversationRepository", () => {
     await expect(repository.getChat("conversation-a")).resolves.toEqual({
       conversationId: "conversation-a",
       title: "Rules",
-      game: "Catan",
       messages: [
         { role: "user", content: "Question" },
         { role: "assistant", content: "Answer" },
@@ -99,7 +92,6 @@ describe("PostgresConversationRepository", () => {
         {
           conversation_id: "conversation-a",
           title: "New chat",
-          game: null,
           role: null,
           content: null,
         },
@@ -110,7 +102,6 @@ describe("PostgresConversationRepository", () => {
     await expect(repository.getChat("conversation-a")).resolves.toEqual({
       conversationId: "conversation-a",
       title: "New chat",
-      game: null,
       messages: [],
     });
   });
@@ -122,21 +113,16 @@ describe("PostgresConversationRepository", () => {
     await expect(repository.getChat("missing")).resolves.toBeNull();
   });
 
-  it("updates conversation title and game metadata", async () => {
+  it("updates a conversation title", async () => {
     const query = vi.fn().mockResolvedValue({ rows: [] });
     const repository = new PostgresConversationRepository(createPool(query));
     const conversationId = "11111111-1111-4111-8111-111111111111";
 
-    await repository.updateMetadata(conversationId, {
-      title: "Catan city production",
-      game: "Catan",
-    });
+    await repository.updateTitle(conversationId, "Catan city production");
 
     expect(query).toHaveBeenCalledWith(
-      expect.stringMatching(
-        /UPDATE conversations[\s\S]*title = \$2[\s\S]*game = \$3/,
-      ),
-      [conversationId, "Catan city production", "Catan"],
+      expect.stringMatching(/UPDATE conversations[\s\S]*title = \$2/),
+      [conversationId, "Catan city production"],
     );
   });
 

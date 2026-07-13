@@ -1,7 +1,6 @@
 import type {
   Conversation,
   ConversationDetail,
-  ConversationMetadata,
   ConversationMessage,
   ConversationSummary,
 } from "./conversation";
@@ -13,9 +12,9 @@ export interface ConversationRepository {
     conversationId: Conversation["id"],
   ): Promise<ConversationDetail | null>;
   getChats(): Promise<ConversationSummary[]>;
-  updateMetadata(
+  updateTitle(
     conversationId: Conversation["id"],
-    metadata: ConversationMetadata,
+    title: Conversation["title"],
   ): Promise<void>;
   appendMessages(
     conversationId: string,

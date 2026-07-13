@@ -34,6 +34,7 @@ export type Conversation = {
 export type Role = "guest" | "standard" | "pro" | "admin";
 
 export type RetrievalAnswer = {
+  game: string | null;
   text: string;
   cites: Citation[];
 };

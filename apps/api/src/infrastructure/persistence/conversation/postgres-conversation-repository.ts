@@ -3,7 +3,6 @@ import type { Pool } from "pg";
 
 import type {
   ConversationDetail,
-  ConversationMetadata,
   ConversationMessage,
   ConversationMessageRole,
   ConversationSummary,
@@ -24,13 +23,11 @@ type ConversationMessageRow = {
 type ConversationSummaryRow = {
   id: string;
   title: string;
-  game: string | null;
 };
 
 type ConversationDetailRow = {
   conversation_id: string;
   title: string;
-  game: string | null;
   role: ConversationMessageRole | null;
   content: string | null;
 };
@@ -90,7 +87,7 @@ export class PostgresConversationRepository implements ConversationRepository {
 
   async getChats(): Promise<ConversationSummary[]> {
     const result = await this.pool.query<ConversationSummaryRow>(
-      `SELECT id, title, game
+      `SELECT id, title
        FROM conversations
        ORDER BY created_at DESC, id DESC`,
     );
@@ -98,7 +95,6 @@ export class PostgresConversationRepository implements ConversationRepository {
     return result.rows.map((chat) => ({
       conversationId: chat.id,
       title: chat.title,
-      game: chat.game,
     }));
   }
 
@@ -107,7 +103,6 @@ export class PostgresConversationRepository implements ConversationRepository {
       `SELECT
          c.id AS conversation_id,
          c.title,
-         c.game,
          m.role,
          m.content
        FROM conversations c
@@ -123,7 +118,6 @@ export class PostgresConversationRepository implements ConversationRepository {
     return {
       conversationId: firstRow.conversation_id,
       title: firstRow.title,
-      game: firstRow.game,
       messages: result.rows.flatMap((row) =>
         row.role !== null && row.content !== null
           ? [{ role: row.role, content: row.content }]
@@ -132,15 +126,12 @@ export class PostgresConversationRepository implements ConversationRepository {
     };
   }
 
-  async updateMetadata(
-    conversationId: string,
-    metadata: ConversationMetadata,
-  ): Promise<void> {
+  async updateTitle(conversationId: string, title: string): Promise<void> {
     await this.pool.query(
       `UPDATE conversations
-       SET title = $2, game = $3, updated_at = now()
+       SET title = $2, updated_at = now()
        WHERE id = $1`,
-      [conversationId, metadata.title, metadata.game],
+      [conversationId, title],
     );
   }
 

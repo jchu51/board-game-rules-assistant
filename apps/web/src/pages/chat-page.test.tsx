@@ -51,7 +51,6 @@ beforeEach(() => {
   getChat.mockImplementation(async (conversationId: string) => ({
     conversationId,
     title: "New chat",
-    game: null,
     messages: [],
   }));
   listChats.mockResolvedValue({ chats: [] });
@@ -123,12 +122,10 @@ describe("ChatPage", () => {
         {
           conversationId: "conversation-2",
           title: "Pandemic outbreaks",
-          game: null,
         },
         {
           conversationId: "conversation-1",
           title: "Catan roads",
-          game: "Catan",
         },
       ],
     });
@@ -377,7 +374,6 @@ describe("ChatPage", () => {
       screen.getByRole("textbox", { name: "Ask a rules question" }),
     ).toBeInTheDocument();
     expect(screen.getAllByText("New chat").length).toBeGreaterThan(0);
-    expect(screen.getByText("Unknown")).toBeInTheDocument();
   });
 
   it("prevents duplicate creates while pending", async () => {
@@ -486,12 +482,6 @@ describe("ChatPage", () => {
         },
       ],
     });
-    getChat.mockResolvedValue({
-      conversationId: "conversation-1",
-      title: "Catan city production",
-      game: "Catan",
-      messages: [],
-    });
     await renderCreatedChatPage();
 
     await submitQuestion("In Catan, how many resources does a city produce?");
@@ -504,7 +494,7 @@ describe("ChatPage", () => {
       0,
     );
     expect(screen.getAllByText("Catan")[0]).toBeInTheDocument();
-    expect(getChat).toHaveBeenCalledWith("conversation-1");
+    expect(getChat).not.toHaveBeenCalled();
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(10_000);
@@ -526,12 +516,6 @@ describe("ChatPage", () => {
       title: "Gloomhaven elemental infusion",
       answer: "No matching rule was found.",
       matches: [],
-    });
-    getChat.mockResolvedValue({
-      conversationId: "conversation-1",
-      title: "Gloomhaven elemental infusion",
-      game: "Gloomhaven",
-      messages: [],
     });
     await renderCreatedChatPage();
 

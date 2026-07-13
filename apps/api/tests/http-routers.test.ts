@@ -43,7 +43,7 @@ const conversationRepository = {
   deleteConversation: vi.fn(),
   getChat: vi.fn(),
   getChats: vi.fn(),
-  updateMetadata: vi.fn(),
+  updateTitle: vi.fn(),
   appendMessages: vi.fn(),
   getMessages: vi.fn(),
 } satisfies ConversationRepository;
@@ -89,12 +89,10 @@ describe("HTTP routers", () => {
       {
         conversationId: "22222222-2222-4222-8222-222222222222",
         title: "Trading rules",
-        game: "Catan",
       },
       {
         conversationId: "11111111-1111-4111-8111-111111111111",
         title: "New chat",
-        game: null,
       },
     ]);
     const router = new ChatRouter(conversationRepository);
@@ -112,12 +110,10 @@ describe("HTTP routers", () => {
         {
           conversationId: "22222222-2222-4222-8222-222222222222",
           title: "Trading rules",
-          game: "Catan",
         },
         {
           conversationId: "11111111-1111-4111-8111-111111111111",
           title: "New chat",
-          game: null,
         },
       ],
     });
@@ -141,7 +137,6 @@ describe("HTTP routers", () => {
     vi.mocked(conversationRepository.getChat).mockResolvedValue({
       conversationId: "11111111-1111-4111-8111-111111111111",
       title: "Catan rules",
-      game: "Catan",
       messages: [
         { role: "user", content: "Question" },
         { role: "assistant", content: "Answer" },
@@ -168,7 +163,6 @@ describe("HTTP routers", () => {
     expect(response.json).toHaveBeenCalledWith({
       conversationId: "11111111-1111-4111-8111-111111111111",
       title: "Catan rules",
-      game: "Catan",
       messages: [
         { role: "user", content: "Question" },
         { role: "assistant", content: "Answer" },
@@ -299,7 +293,7 @@ describe("HTTP routers", () => {
             ChatMessage: expect.any(Object),
             GetChatResponse: expect.objectContaining({
               type: "object",
-              required: ["conversationId", "title", "game", "messages"],
+              required: ["conversationId", "title", "messages"],
               additionalProperties: false,
             }),
             RetrievalSearchResponse: expect.objectContaining({

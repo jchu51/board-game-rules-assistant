@@ -10,7 +10,6 @@ export const ChatSummarySchema = z
   .object({
     conversationId: z.string().uuid(),
     title: z.string().min(1),
-    game: z.string().nullable(),
   })
   .strict();
 

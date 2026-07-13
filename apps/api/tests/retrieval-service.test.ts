@@ -2,8 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { Document } from "@langchain/core/documents";
 import type { EmbeddingsInterface } from "@langchain/core/embeddings";
 import type {
-  ConversationMetadata,
-  ConversationMetadataAgent,
+  ConversationTitleAgent,
   RuleAnswerAgent,
   RuleContextAgent,
 } from "@board-game-rules-assistant/agent-core";
@@ -437,16 +436,12 @@ describe("RetrievalService", () => {
     ]);
   });
 
-  it("generates title and game for the first question", async () => {
+  it("generates a title for the first question", async () => {
     const conversationRepository = new InMemoryConversationRepository();
     const conversationId = await conversationRepository.createConversation();
-    const metadata: ConversationMetadata = {
-      title: "Catan city production",
-      game: "Catan",
-    };
-    const metadataAgent = {
-      run: vi.fn().mockResolvedValue(metadata),
-    } as unknown as ConversationMetadataAgent;
+    const titleAgent = {
+      run: vi.fn().mockResolvedValue("Catan city production"),
+    } as unknown as ConversationTitleAgent;
     const service = new RetrievalService(
       new RecordingVectorStore(),
       new RequestClassifierService(),
@@ -458,7 +453,7 @@ describe("RetrievalService", () => {
       () => {
         throw new Error("should not create answer agent");
       },
-      () => metadataAgent,
+      () => titleAgent,
     );
 
     const result = await service.search({
@@ -467,27 +462,20 @@ describe("RetrievalService", () => {
     });
 
     expect(result.title).toBe("Catan city production");
-    expect(metadataAgent.run).toHaveBeenCalledWith(
+    expect(titleAgent.run).toHaveBeenCalledWith(
       "What is the weather tomorrow?",
     );
     await expect(
       conversationRepository.getChat(conversationId),
     ).resolves.toMatchObject({
       title: "Catan city production",
-      game: "Catan",
     });
   });
 
-  it("preserves the first title while retrying a null game", async () => {
+  it("preserves the first title without invoking the agent again", async () => {
     const conversationRepository = new InMemoryConversationRepository();
     const conversationId = await conversationRepository.createConversation();
-    const generated: ConversationMetadata[] = [
-      { title: "Trading question", game: null },
-      { title: "Replacement title", game: "Catan" },
-    ];
-    const run = vi
-      .fn<(question: string) => Promise<ConversationMetadata>>()
-      .mockImplementation(async () => generated.shift()!);
+    const run = vi.fn().mockResolvedValue("Trading question");
     const service = new RetrievalService(
       new RecordingVectorStore(),
       new RequestClassifierService(),
@@ -499,7 +487,7 @@ describe("RetrievalService", () => {
       () => {
         throw new Error("should not create answer agent");
       },
-      () => ({ run }) as unknown as ConversationMetadataAgent,
+      () => ({ run }) as unknown as ConversationTitleAgent,
     );
 
     await service.search({ conversationId, query: "Can I trade this?" });
@@ -509,30 +497,23 @@ describe("RetrievalService", () => {
     });
 
     expect(result.title).toBe("Trading question");
-    expect(run).toHaveBeenCalledTimes(2);
+    expect(run).toHaveBeenCalledOnce();
     await expect(
       conversationRepository.getChat(conversationId),
     ).resolves.toMatchObject({
       title: "Trading question",
-      game: "Catan",
     });
   });
 
-  it("treats a legacy Unknown game as unresolved", async () => {
+  it("does not invoke the title agent for an existing conversation", async () => {
     const conversationRepository = new InMemoryConversationRepository();
     const conversationId = await conversationRepository.createConversation();
-    await conversationRepository.updateMetadata(conversationId, {
-      title: "Existing title",
-      game: " uNkNoWn ",
-    });
+    await conversationRepository.updateTitle(conversationId, "Catan trading");
     await conversationRepository.appendMessages(conversationId, [
       { role: "user", content: "Earlier question" },
       { role: "assistant", content: "Earlier answer" },
     ]);
-    const run = vi.fn().mockResolvedValue({
-      title: "Ignored title",
-      game: "Pandemic",
-    });
+    const createTitleAgent = vi.fn();
     const service = new RetrievalService(
       new RecordingVectorStore(),
       new RequestClassifierService(),
@@ -544,48 +525,7 @@ describe("RetrievalService", () => {
       () => {
         throw new Error("should not create answer agent");
       },
-      () => ({ run }) as unknown as ConversationMetadataAgent,
-    );
-
-    const result = await service.search({
-      conversationId,
-      query: "How do Pandemic outbreaks work?",
-    });
-
-    expect(run).toHaveBeenCalledOnce();
-    expect(result.title).toBe("Existing title");
-    await expect(
-      conversationRepository.getChat(conversationId),
-    ).resolves.toMatchObject({
-      title: "Existing title",
-      game: "Pandemic",
-    });
-  });
-
-  it("does not invoke metadata after a concrete game is stored", async () => {
-    const conversationRepository = new InMemoryConversationRepository();
-    const conversationId = await conversationRepository.createConversation();
-    await conversationRepository.updateMetadata(conversationId, {
-      title: "Catan trading",
-      game: "Catan",
-    });
-    await conversationRepository.appendMessages(conversationId, [
-      { role: "user", content: "Earlier question" },
-      { role: "assistant", content: "Earlier answer" },
-    ]);
-    const createMetadataAgent = vi.fn();
-    const service = new RetrievalService(
-      new RecordingVectorStore(),
-      new RequestClassifierService(),
-      new StubPublicSearchService(),
-      conversationRepository,
-      () => {
-        throw new Error("should not create context agent");
-      },
-      () => {
-        throw new Error("should not create answer agent");
-      },
-      createMetadataAgent,
+      createTitleAgent,
     );
 
     const result = await service.search({
@@ -594,10 +534,10 @@ describe("RetrievalService", () => {
     });
 
     expect(result.title).toBe("Catan trading");
-    expect(createMetadataAgent).not.toHaveBeenCalled();
+    expect(createTitleAgent).not.toHaveBeenCalled();
   });
 
-  it("keeps retrieval successful when metadata generation fails", async () => {
+  it("keeps retrieval successful when title generation fails", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     const conversationRepository = new InMemoryConversationRepository();
     const conversationId = await conversationRepository.createConversation();
@@ -615,7 +555,7 @@ describe("RetrievalService", () => {
       () =>
         ({
           run: vi.fn().mockRejectedValue(new Error("metadata unavailable")),
-        }) as unknown as ConversationMetadataAgent,
+        }) as unknown as ConversationTitleAgent,
     );
 
     const result = await service.search({
@@ -629,7 +569,6 @@ describe("RetrievalService", () => {
       conversationRepository.getChat(conversationId),
     ).resolves.toMatchObject({
       title: "New chat",
-      game: null,
       messages: [
         { role: "user", content: "What is the weather tomorrow?" },
         { role: "assistant", content: result.answer },

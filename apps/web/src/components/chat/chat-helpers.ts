@@ -1,6 +1,7 @@
 import type { PersistedChatMessage } from "@/api/chat-service";
 import type { RetrievalSearchResponse } from "@/api/retrieval-api";
 
+import { gamesByToken } from "./chat-config";
 import type { AssistantMessage, Message, RetrievalAnswer } from "./chat-types";
 
 export function buildRestoredMessages(
@@ -25,6 +26,14 @@ export function buildRestoredMessages(
   });
 }
 
+export const detectGame = (text: string): string | null => {
+  const normalizedText = ` ${text.toLowerCase()} `;
+  for (const [token, game] of Object.entries(gamesByToken)) {
+    if (normalizedText.includes(token)) return game;
+  }
+  return null;
+};
+
 const compactWhitespace = (text: string) => text.replace(/\s+/g, " ").trim();
 
 const excerptText = (text: string, maxLength = 420) => {
@@ -35,11 +44,14 @@ const excerptText = (text: string, maxLength = 420) => {
 };
 
 export const buildRetrievalAnswer = (
+  question: string,
   response: RetrievalSearchResponse,
 ): RetrievalAnswer => {
+  const game = detectGame(question);
   const { answer, matches } = response;
   if (matches.length === 0) {
     return {
+      game,
       text:
         answer ||
         "I could not find a matching passage in the indexed rulebooks. Try uploading the rulebook in Library first, or ask with the game name and a more specific rule term.",
@@ -53,6 +65,7 @@ export const buildRetrievalAnswer = (
     quote: excerptText(match.content),
   }));
   return {
+    game,
     text: `${answer}\n\nSources: ${cites.map(({ n }) => `[[${n}]]`).join(" ")}`,
     cites,
   };

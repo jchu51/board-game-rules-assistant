@@ -1,7 +1,7 @@
 import type { VectorStore } from "@board-game-rules-assistant/rag-core";
 import { CONTEXT_ORIGIN } from "@board-game-rules-assistant/agent-core";
 import type {
-  ConversationMetadataAgent,
+  ConversationTitleAgent,
   RuleAnswerAgent,
   RuleContextAgent,
 } from "@board-game-rules-assistant/agent-core";
@@ -12,7 +12,6 @@ import type {
 import type {
   ConversationDetail,
   ConversationMessage,
-  ConversationMetadata,
 } from "../../domain/conversation/conversation";
 import type { ConversationRepository } from "../../domain/conversation/conversation-repository";
 import type { RequestClassifierService } from "./request-classifier-service";
@@ -39,7 +38,7 @@ export class RetrievalService {
     private readonly createRuleAnswerAgent: (
       context: string,
     ) => RuleAnswerAgent,
-    private readonly createConversationMetadataAgent?: () => ConversationMetadataAgent,
+    private readonly createConversationTitleAgent?: () => ConversationTitleAgent,
   ) {}
 
   async search({
@@ -51,7 +50,6 @@ export class RetrievalService {
     const conversation: ConversationDetail = storedConversation ?? {
       conversationId,
       title: "New chat",
-      game: null,
       messages: await this.conversationRepository.getMessages(conversationId),
     };
     const conversationMessages =
@@ -118,15 +116,12 @@ export class RetrievalService {
     query: string,
     result: RetrievalAnswerResult,
   ): Promise<RetrievalSearchResult> {
-    const metadata = await this.resolveMetadata(conversation, query);
+    const title = await this.resolveTitle(conversation, query);
 
-    if (
-      metadata.title !== conversation.title ||
-      metadata.game !== conversation.game
-    ) {
-      await this.conversationRepository.updateMetadata(
+    if (title !== conversation.title) {
+      await this.conversationRepository.updateTitle(
         conversation.conversationId,
-        metadata,
+        title,
       );
     }
 
@@ -138,39 +133,24 @@ export class RetrievalService {
       ],
     );
 
-    return { title: metadata.title, ...result };
+    return { title, ...result };
   }
 
-  private async resolveMetadata(
+  private async resolveTitle(
     conversation: ConversationDetail,
     query: string,
-  ): Promise<ConversationMetadata> {
-    const currentMetadata: ConversationMetadata = {
-      title: conversation.title,
-      game: conversation.game,
-    };
+  ): Promise<string> {
     const isFirstQuestion = conversation.messages.length === 0;
-    const gameIsUnresolved =
-      conversation.game === null ||
-      conversation.game.trim().toLowerCase() === "unknown";
 
-    if (
-      !this.createConversationMetadataAgent ||
-      (!isFirstQuestion && !gameIsUnresolved)
-    ) {
-      return currentMetadata;
+    if (!this.createConversationTitleAgent || !isFirstQuestion) {
+      return conversation.title;
     }
 
     try {
-      const generated = await this.createConversationMetadataAgent().run(query);
-
-      return {
-        title: isFirstQuestion ? generated.title : conversation.title,
-        game: gameIsUnresolved ? generated.game : conversation.game,
-      };
+      return await this.createConversationTitleAgent().run(query);
     } catch (error) {
-      console.error("conversation metadata generation failed:\n", error);
-      return currentMetadata;
+      console.error("conversation title generation failed:\n", error);
+      return conversation.title;
     }
   }
 

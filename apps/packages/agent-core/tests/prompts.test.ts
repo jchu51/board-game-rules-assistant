@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { boardGameRuleMasterPrompt } from "../src/prompts/board-game-rule-master-prompt.js";
-import { conversationMetadataPrompt } from "../src/prompts/conversation-metadata-prompt.js";
+import { conversationTitlePrompt } from "../src/prompts/conversation-title-prompt.js";
 import { ruleContextPrompt } from "../src/prompts/rule-context-prompt.js";
 
 const contentAsText = (content: unknown): string => {
@@ -53,9 +53,9 @@ describe("boardGameRuleMasterPrompt", () => {
   });
 });
 
-describe("conversationMetadataPrompt", () => {
-  it("requires concise JSON metadata and includes the question", async () => {
-    const messages = await conversationMetadataPrompt.formatMessages({
+describe("conversationTitlePrompt", () => {
+  it("requires a concise JSON title and includes the question", async () => {
+    const messages = await conversationTitlePrompt.formatMessages({
       question: "How many resources does a Catan city produce?",
     });
 
@@ -64,10 +64,9 @@ describe("conversationMetadataPrompt", () => {
     const humanContent = contentAsText(messages[1]?.content);
 
     expect(systemContent).toMatch(/concise non-empty summary/i);
-    expect(systemContent).toMatch(/concrete board-game name/i);
-    expect(systemContent).toMatch(/otherwise null/i);
     expect(systemContent).toMatch(/JSON only/i);
-    expect(systemContent).toMatch(/exactly two properties: title and game/i);
+    expect(systemContent).toMatch(/exactly one property: title/i);
+    expect(systemContent).not.toMatch(/property: game/i);
     expect(humanContent).toBe("How many resources does a Catan city produce?");
   });
 });
