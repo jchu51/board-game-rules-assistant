@@ -16,8 +16,6 @@ export class InMemoryRulebookFileStore implements RulebookFileStore {
   get(id: string): RulebookFileRecord | undefined {
     const record = this.records.get(id);
 
-    return record
-      ? { ...record, pdfData: record.pdfData.slice() }
-      : undefined;
+    return record ? { ...record, pdfData: record.pdfData.slice() } : undefined;
   }
 }

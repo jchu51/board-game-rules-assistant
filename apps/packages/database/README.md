@@ -1,8 +1,14 @@
 # Database Package
 
-PostgreSQL persistence for conversation history and rulebook vectors. The
-package owns one shared `pg.Pool`, runs ordered SQL migrations, and adapts
-LangChain `PGVectorStore` to the `rag-core` vector-store contract.
+PostgreSQL persistence for conversation history, rulebook vectors, and original
+rulebook PDFs. The package owns one shared `pg.Pool`, runs ordered SQL
+migrations, and adapts LangChain `PGVectorStore` to the `rag-core` vector-store
+contract.
+
+The `rulebooks` table stores upload metadata and complete PDF bytes in a `BYTEA`
+column. Uploads are limited by the API to 40 MB, so direct `BYTEA` storage keeps
+the file lifecycle simple. Future list queries should select metadata columns
+without loading `pdf_data`.
 
 ## Local PostgreSQL
 
@@ -26,3 +32,5 @@ TEST_DATABASE_URL=postgresql://board_game_rules:board_game_rules@127.0.0.1:55432
 The API can avoid PostgreSQL for lightweight local work by setting
 `PERSISTENCE_DRIVER=memory`. PostgreSQL mode does not support callback filters,
 and vector insertion is append-oriented without deduplication or replacement.
+Persisted PDF retrieval and deletion endpoints are not part of the upload-only
+phase.

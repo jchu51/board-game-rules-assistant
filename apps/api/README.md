@@ -3,8 +3,9 @@
 Express API for the Board Game Rules Assistant.
 
 The API accepts rulebook PDF uploads, extracts and chunks PDF text through
-`rag-core`, creates embeddings, stores vectors in memory or PostgreSQL/pgvector, returns rulebook
-summaries for the frontend, and exposes similarity search over indexed chunks.
+`rag-core`, creates embeddings, stores vectors in memory or PostgreSQL/pgvector,
+persists original PDFs in PostgreSQL, returns rulebook summaries for the
+frontend, and exposes similarity search over indexed chunks.
 
 ## Stack
 
@@ -51,9 +52,10 @@ PERSISTENCE_MAX_MESSAGES=20
 comma-separated list and applied to Tavily fallback searches. Use trusted
 board-game domains; leaving it unset permits results from any domain.
 
-`PERSISTENCE_DRIVER=memory` is the lightweight local default and keeps vectors
-and conversations process-local. Set it to `postgres` with `DATABASE_URL` to
-persist both. Production configuration rejects the memory driver.
+`PERSISTENCE_DRIVER=memory` is the lightweight local default and keeps vectors,
+conversations, and uploaded PDFs process-local. Set it to `postgres` with
+`DATABASE_URL` to persist all three. Production configuration rejects the
+memory driver.
 
 ## Start
 
@@ -92,6 +94,11 @@ curl -X POST http://127.0.0.1:8000/rulebooks \
   -F "gameName=Catan" \
   -F "file=@/path/to/catan-rulebook.pdf"
 ```
+
+The upload is synchronous. It returns success only after embedding finishes and
+the selected file store saves the original PDF. The PostgreSQL adapter stores
+the complete file bytes in `rulebooks.pdf_data`; the temporary upload file is
+then removed.
 
 Retrieval example:
 
@@ -146,7 +153,7 @@ src/
     rulebook/                    # rulebook repository contract
   infrastructure/                # adapters for external/storage concerns
     openapi/                     # OpenAPI document loading
-    persistence/rulebook/        # in-memory rulebook repository
+    persistence/rulebook/        # in-memory rulebook metadata and PDF stores
   presentation/http/             # Express routers and HTTP schemas
     app.ts                       # Express app factory
     docs/                        # local-only Swagger/OpenAPI routes
@@ -158,9 +165,12 @@ src/
 
 ## Current Limitations
 
-- Rulebook metadata is stored in memory only.
+- `GET /rulebooks` and `DELETE /rulebooks/:id` still use process-local metadata;
+  persisted listing and deletion are follow-up work.
 - Vector-store deletion is not implemented yet.
-- Uploaded PDF files are deleted after ingestion.
+- Temporary uploaded files are deleted after ingestion and file-store
+  persistence.
+- No endpoint returns the persisted PDF bytes yet.
 - Retrieval returns matching chunks, metadata, and an agent-generated answer.
 - Request classification relies on a maintained keyword and known-game list;
   it is not yet derived from indexed rulebooks or an LLM classifier.
