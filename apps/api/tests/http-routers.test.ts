@@ -18,7 +18,6 @@ import type { RetrievalService } from "../src/application/retrieval/retrieval-se
 import { InvalidSplitterParamsError } from "../src/domain/ingestion/ingestion-errors";
 import { testConfig } from "./test-config";
 import type { ConversationRepository } from "../src/domain/conversation/conversation-repository";
-import type { RulebookFileStore } from "@board-game-rules-assistant/database";
 
 const createResponse = () => {
   const response = {
@@ -52,9 +51,6 @@ const conversationRepository = {
   appendMessages: vi.fn(),
   getMessages: vi.fn(),
 } satisfies ConversationRepository;
-const rulebookFileStore = {
-  save: vi.fn(),
-} satisfies RulebookFileStore;
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -399,16 +395,12 @@ describe("HTTP routers", () => {
 
   it("uploads, lists, and deletes rulebooks", async () => {
     const repository = new InMemoryRulebookRepository();
-    const router = new IngestionRouter(
-      ingestionService,
-      repository,
-      rulebookFileStore,
-      {
-        uploadDirectory: "/tmp",
-        maxUploadSizeBytes: 1024,
-        isProduction: false,
-      },
-    ) as unknown as {
+    const save = vi.spyOn(repository, "save");
+    const router = new IngestionRouter(ingestionService, repository, {
+      uploadDirectory: "/tmp",
+      maxUploadSizeBytes: 1024,
+      isProduction: false,
+    }) as unknown as {
       uploadPdfs: (
         request: Request,
         response: Response,
@@ -439,7 +431,7 @@ describe("HTTP routers", () => {
       vi.fn(),
     );
     expect(response.status).toHaveBeenCalledWith(200);
-    expect(rulebookFileStore.save).toHaveBeenCalledWith({
+    expect(save).toHaveBeenCalledWith({
       id: expect.any(String),
       gameName: "Catan",
       pdfName: "catan.pdf",
@@ -449,7 +441,7 @@ describe("HTTP routers", () => {
     });
     expect(
       vi.mocked(ingestionService.ingestPdf).mock.invocationCallOrder[0],
-    ).toBeLessThan(rulebookFileStore.save.mock.invocationCallOrder[0]!);
+    ).toBeLessThan(save.mock.invocationCallOrder[0]!);
     const created = repository.list()[0];
     expect(created).toMatchObject({ gameName: "Catan", pdfName: "catan.pdf" });
 
@@ -474,16 +466,12 @@ describe("HTTP routers", () => {
 
   it("rejects missing files, invalid bodies, and invalid splitter settings", async () => {
     const repository = new InMemoryRulebookRepository();
-    const router = new IngestionRouter(
-      ingestionService,
-      repository,
-      rulebookFileStore,
-      {
-        uploadDirectory: "/tmp",
-        maxUploadSizeBytes: 1024,
-        isProduction: false,
-      },
-    ) as unknown as {
+    const save = vi.spyOn(repository, "save");
+    const router = new IngestionRouter(ingestionService, repository, {
+      uploadDirectory: "/tmp",
+      maxUploadSizeBytes: 1024,
+      isProduction: false,
+    }) as unknown as {
       uploadPdfs: (
         request: Request,
         response: Response,
@@ -524,22 +512,17 @@ describe("HTTP routers", () => {
       vi.fn(),
     );
     expect(splitterResponse.status).toHaveBeenCalledWith(400);
-    expect(rulebookFileStore.save).not.toHaveBeenCalled();
+    expect(save).not.toHaveBeenCalled();
     expect(repository.list()).toEqual([]);
   });
 
   it("handles upload middleware failures and success", () => {
     const createRouter = (isProduction: boolean) =>
-      new IngestionRouter(
-        ingestionService,
-        new InMemoryRulebookRepository(),
-        rulebookFileStore,
-        {
-          uploadDirectory: "/tmp",
-          maxUploadSizeBytes: 1024,
-          isProduction,
-        },
-      ) as unknown as {
+      new IngestionRouter(ingestionService, new InMemoryRulebookRepository(), {
+        uploadDirectory: "/tmp",
+        maxUploadSizeBytes: 1024,
+        isProduction,
+      }) as unknown as {
         handleUpload: (
           middleware: (
             request: Request,

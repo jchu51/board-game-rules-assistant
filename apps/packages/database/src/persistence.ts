@@ -4,10 +4,6 @@ import type { EmbeddingsInterface } from "@langchain/core/embeddings";
 import { Pool } from "pg";
 
 import { runMigrations } from "./migrations.js";
-import {
-  PostgresRulebookFileStore,
-  type RulebookFileStore,
-} from "./rulebook/rulebook-file-store.js";
 import { LangchainPgVectorStoreAdapter } from "./vector/langchain-pg-vector-store.js";
 
 export type CreatePostgresPersistenceOptions = {
@@ -18,7 +14,6 @@ export type CreatePostgresPersistenceOptions = {
 
 export type PostgresPersistence = {
   pool: Pool;
-  rulebookFileStore: RulebookFileStore;
   vectorStore: VectorStore;
   healthCheck(): Promise<void>;
   close(): Promise<void>;
@@ -46,7 +41,6 @@ export const createPostgresPersistence = async (
 
     return {
       pool,
-      rulebookFileStore: new PostgresRulebookFileStore(pool),
       vectorStore: new LangchainPgVectorStoreAdapter(pgVectorStore),
       async healthCheck() {
         await pool.query("SELECT 1");

@@ -10,7 +10,6 @@ import { IngestionService } from "./application/ingestion/ingestion-service";
 import { RequestClassifierService } from "./application/retrieval/request-classifier-service";
 import { RetrievalService } from "./application/retrieval/retrieval-service";
 import { config } from "./config/config";
-import { InMemoryRulebookRepository } from "./infrastructure/persistence/rulebook/in-memory-rulebook-repository";
 import { createPersistence } from "./infrastructure/persistence/create-persistence";
 import { TavilyPublicSearchService } from "./infrastructure/public-search/tavily-public-search-service";
 import { createApp } from "./presentation/http/app";
@@ -31,7 +30,7 @@ const chatModel = await llmService.init(config.agent.chatModel, {
   temperature: 0,
 });
 const vectorStore = persistence.vectorStore;
-const rulebookRepository = new InMemoryRulebookRepository();
+const rulebookRepository = persistence.rulebookRepository;
 const conversationRepository = persistence.conversationRepository;
 const ingestionService = new IngestionService(vectorStore, {
   defaultSplitterParams: {
@@ -59,7 +58,6 @@ const healthRouter = new HealthRouter();
 const ingestionRouter = new IngestionRouter(
   ingestionService,
   rulebookRepository,
-  persistence.rulebookFileStore,
   {
     uploadDirectory: config.ingestion.uploadDirectory,
     maxUploadSizeBytes: config.ingestion.maxUploadSizeBytes,

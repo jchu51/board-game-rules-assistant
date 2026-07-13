@@ -5,8 +5,13 @@ export type RulebookRecord = {
   fileSize: number;
 };
 
+export type SaveRulebookRecord = RulebookRecord & {
+  mimeType: string;
+  pdfData: Uint8Array;
+};
+
 export interface RulebookRepository {
-  create(record: RulebookRecord): RulebookRecord;
+  save(record: SaveRulebookRecord): Promise<RulebookRecord>;
   deleteById(id: string): boolean;
   list(): RulebookRecord[];
 }

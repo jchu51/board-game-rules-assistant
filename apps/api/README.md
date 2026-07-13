@@ -96,9 +96,9 @@ curl -X POST http://127.0.0.1:8000/rulebooks \
 ```
 
 The upload is synchronous. It returns success only after embedding finishes and
-the selected file store saves the original PDF. The PostgreSQL adapter stores
-the complete file bytes in `rulebooks.pdf_data`; the temporary upload file is
-then removed.
+the selected rulebook repository saves the original PDF. The PostgreSQL
+repository stores the complete file bytes in `rulebooks.pdf_data`; the temporary
+upload file is then removed.
 
 Retrieval example:
 
@@ -168,7 +168,7 @@ src/
 - `GET /rulebooks` and `DELETE /rulebooks/:id` still use process-local metadata;
   persisted listing and deletion are follow-up work.
 - Vector-store deletion is not implemented yet.
-- Temporary uploaded files are deleted after ingestion and file-store
+- Temporary uploaded files are deleted after ingestion and repository
   persistence.
 - No endpoint returns the persisted PDF bytes yet.
 - Retrieval returns matching chunks, metadata, and an agent-generated answer.

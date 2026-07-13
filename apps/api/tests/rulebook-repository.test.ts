@@ -3,17 +3,31 @@ import { describe, expect, it } from "vitest";
 import { InMemoryRulebookRepository } from "../src/infrastructure/persistence/rulebook/in-memory-rulebook-repository";
 
 describe("InMemoryRulebookRepository", () => {
-  it("creates, lists, and deletes rulebook records", () => {
+  it("saves, lists, and deletes rulebook records", async () => {
     const repository = new InMemoryRulebookRepository();
     const record = {
       fileSize: 1024,
       gameName: "Catan",
       id: "rulebook-1",
+      mimeType: "application/pdf",
+      pdfData: Uint8Array.from([1, 2, 3]),
       pdfName: "catan.pdf",
     };
 
-    expect(repository.create(record)).toBe(record);
-    expect(repository.list()).toEqual([record]);
+    await expect(repository.save(record)).resolves.toEqual({
+      fileSize: 1024,
+      gameName: "Catan",
+      id: "rulebook-1",
+      pdfName: "catan.pdf",
+    });
+    expect(repository.list()).toEqual([
+      {
+        fileSize: 1024,
+        gameName: "Catan",
+        id: "rulebook-1",
+        pdfName: "catan.pdf",
+      },
+    ]);
     expect(repository.deleteById("missing")).toBe(false);
     expect(repository.deleteById("rulebook-1")).toBe(true);
     expect(repository.list()).toEqual([]);

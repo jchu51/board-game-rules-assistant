@@ -4,9 +4,14 @@
 
 **Goal:** Persist every successfully embedded uploaded PDF and its metadata so PostgreSQL contains a byte-for-byte copy before the upload response succeeds.
 
-**Architecture:** Add a `rulebooks` migration and rulebook file store to the database package. The API persistence bundle supplies either the PostgreSQL store or an in-memory equivalent, and the upload router saves the temporary file after ingestion but before creating its existing process-local list record.
+**Architecture:** Add a `rulebooks` migration to the database package and extend the API-domain `RulebookRepository` with PDF persistence. PostgreSQL and in-memory repository implementations live in the API, while the database package exposes only migrations, its shared pool, and vector infrastructure.
 
 **Tech Stack:** TypeScript, Express, Multer, PostgreSQL `BYTEA`, `pg`, Vitest.
+
+> **Architecture revision:** The original task details below record the initial
+> file-store implementation sequence. Review consolidated file and metadata
+> persistence into the existing API-domain `RulebookRepository`; this revision
+> supersedes every `RulebookFileStore` path and interface named below.
 
 ## Global Constraints
 
@@ -21,11 +26,13 @@
 ### Task 1: Add the Rulebook Table
 
 **Files:**
+
 - Create: `apps/packages/database/migrations/0003_rulebooks.sql`
 - Modify: `apps/packages/database/src/migrations.ts`
 - Modify: `apps/packages/database/tests/migrations.test.ts`
 
 **Interfaces:**
+
 - Produces: `rulebooks(id, game_name, pdf_name, mime_type, file_size, pdf_data, created_at)`.
 
 - [ ] **Step 1: Write the failing migration test**
@@ -61,6 +68,7 @@ Rerun Step 2, then commit with `feat(database): add persisted rulebooks table`.
 ### Task 2: Add PostgreSQL and Memory File Stores
 
 **Files:**
+
 - Create: `apps/packages/database/src/rulebook/rulebook-file-store.ts`
 - Modify: `apps/packages/database/src/persistence.ts`
 - Modify: `apps/packages/database/src/index.ts`
@@ -69,6 +77,7 @@ Rerun Step 2, then commit with `feat(database): add persisted rulebooks table`.
 - Create: `apps/api/tests/rulebook-file-store.test.ts`
 
 **Interfaces:**
+
 - Produces: `RulebookFileRecord` containing `id`, `gameName`, `pdfName`, `mimeType`, `fileSize`, and `pdfData: Uint8Array`.
 - Produces: `RulebookFileStore.save(record: RulebookFileRecord): Promise<void>`.
 - Produces: `PostgresRulebookFileStore` and `InMemoryRulebookFileStore`.
@@ -141,6 +150,7 @@ Rerun both focused store tests and commit with `feat: add rulebook pdf file stor
 ### Task 3: Persist Through POST /rulebooks
 
 **Files:**
+
 - Modify: `apps/api/src/infrastructure/persistence/create-persistence.ts`
 - Modify: `apps/api/tests/create-persistence.test.ts`
 - Modify: `apps/api/src/presentation/http/ingestion/ingestion-router.ts`
@@ -148,6 +158,7 @@ Rerun both focused store tests and commit with `feat: add rulebook pdf file stor
 - Modify: `apps/api/src/main.ts`
 
 **Interfaces:**
+
 - Consumes: `RulebookFileStore.save(record)` from Task 2.
 - Produces: uploads that save PDF bytes before returning success.
 
@@ -207,11 +218,13 @@ Run `npm test -w api -- tests/create-persistence.test.ts tests/http-routers.test
 ### Task 4: Document and Verify Phase One
 
 **Files:**
+
 - Modify: `apps/api/openapi.yml`
 - Modify: `apps/api/README.md`
 - Modify: `apps/packages/database/README.md`
 
 **Interfaces:**
+
 - Produces: documentation that distinguishes persisted upload storage from process-local list/delete behavior.
 
 - [ ] **Step 1: Update documentation**

@@ -51,7 +51,7 @@ describe("createPersistence", () => {
     expect(
       await persistence.conversationRepository.getMessages("conversation"),
     ).toHaveLength(3);
-    await persistence.rulebookFileStore.save({
+    await persistence.rulebookRepository.save({
       id: "rulebook-1",
       gameName: "Catan",
       pdfName: "catan.pdf",

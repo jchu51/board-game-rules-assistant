@@ -13,6 +13,7 @@ const validEnvironment = {
   INGESTION_UPLOAD_DIRECTORY: "/tmp",
   INGESTION_MAX_UPLOAD_SIZE_BYTES: "1024",
   TAVILY_API_KEY: "tavily",
+  PERSISTENCE_DRIVER: "memory",
 };
 
 afterEach(() => {

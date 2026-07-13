@@ -47,19 +47,20 @@ phases will select metadata columns only and will not load `pdf_data`.
 
 ## Components
 
-Introduce a focused rulebook file-storage interface owned by the API domain.
-Its phase-one operation accepts an immutable record containing the generated
-rulebook id, game name, original filename, MIME type, file size, and PDF bytes.
+Extend the API-domain `RulebookRepository` with a `save` operation accepting the
+generated rulebook id, game name, original filename, MIME type, file size, and
+PDF bytes. PDF persistence and rulebook metadata are one aggregate and do not
+need separate repository and file-store abstractions.
 
-The PostgreSQL implementation inserts the record into `rulebooks` using the
-shared database pool. The in-memory implementation retains the same record in
-a map so `PERSISTENCE_DRIVER=memory` keeps equivalent upload behavior for local
-development and unit tests.
+The PostgreSQL and in-memory repository implementations live in the API
+infrastructure layer, matching the existing conversation repository pattern.
+The database package owns migrations, the shared pool, and pgvector setup, but
+does not own rulebook domain contracts or repository implementations.
 
-The existing in-memory rulebook metadata repository remains in place during
-this phase because changing the list and delete endpoints is explicitly deferred.
-After persistence succeeds, the upload handler continues adding the metadata
-record there so current-process `GET /rulebooks` behavior does not regress.
+During this upload-only phase, the PostgreSQL repository delegates `list` and
+`deleteById` to a process-local repository after `save` succeeds. Persisted list
+and delete behavior remains explicitly deferred without introducing a second
+storage abstraction.
 
 ## Upload Data Flow
 
@@ -68,10 +69,10 @@ record there so current-process `GET /rulebooks` behavior does not regress.
 2. The ingestion service extracts, chunks, embeds, and indexes the PDF exactly
    as it does today.
 3. The upload handler reads the unchanged temporary file into a `Buffer`.
-4. The selected rulebook file storage saves metadata and bytes.
-5. The existing process-local metadata record is created.
-6. The API returns the existing `UploadPdfsResponse` without adding binary data.
-7. The `finally` block removes the temporary file.
+4. The selected `RulebookRepository` saves metadata and bytes, then records the
+   process-local summary used by the current list and delete endpoints.
+5. The API returns the existing `UploadPdfsResponse` without adding binary data.
+6. The `finally` block removes the temporary file.
 
 The generated rulebook id is shared by vector metadata, the persisted row, and
 the upload response, allowing later endpoints to locate the exact PDF.

@@ -4,17 +4,18 @@ import {
   type VectorStore,
 } from "@board-game-rules-assistant/rag-core";
 import type { EmbeddingsInterface } from "@langchain/core/embeddings";
-import type { RulebookFileStore } from "@board-game-rules-assistant/database";
 
 import type { Config } from "../../config/config-types";
 import type { ConversationRepository } from "../../domain/conversation/conversation-repository";
+import type { RulebookRepository } from "../../domain/rulebook/rulebook-repository";
 import { InMemoryConversationRepository } from "./conversation/in-memory-conversation-repository";
 import { PostgresConversationRepository } from "./conversation/postgres-conversation-repository";
-import { InMemoryRulebookFileStore } from "./rulebook/in-memory-rulebook-file-store";
+import { InMemoryRulebookRepository } from "./rulebook/in-memory-rulebook-repository";
+import { PostgresRulebookRepository } from "./rulebook/postgres-rulebook-repository";
 
 export type Persistence = {
   conversationRepository: ConversationRepository;
-  rulebookFileStore: RulebookFileStore;
+  rulebookRepository: RulebookRepository;
   vectorStore: VectorStore;
   healthCheck(): Promise<void>;
   close(): Promise<void>;
@@ -35,7 +36,7 @@ export const createPersistence = async ({
         maxMessagesPerConversation:
           config.persistence.maxMessagesPerConversation,
       }),
-      rulebookFileStore: new InMemoryRulebookFileStore(),
+      rulebookRepository: new InMemoryRulebookRepository(),
       vectorStore: new LangchainMemoryVectorStore(embeddings),
       async healthCheck() {},
       async close() {},
@@ -60,7 +61,9 @@ export const createPersistence = async ({
           config.persistence.maxMessagesPerConversation,
       },
     ),
-    rulebookFileStore: postgresPersistence.rulebookFileStore,
+    rulebookRepository: new PostgresRulebookRepository(
+      postgresPersistence.pool,
+    ),
     vectorStore: postgresPersistence.vectorStore,
     healthCheck: postgresPersistence.healthCheck,
     close: postgresPersistence.close,

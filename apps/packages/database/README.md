@@ -1,9 +1,10 @@
 # Database Package
 
-PostgreSQL persistence for conversation history, rulebook vectors, and original
-rulebook PDFs. The package owns one shared `pg.Pool`, runs ordered SQL
+PostgreSQL infrastructure for conversation history, rulebook vectors, and
+original rulebook PDFs. The package owns one shared `pg.Pool`, runs ordered SQL
 migrations, and adapts LangChain `PGVectorStore` to the `rag-core` vector-store
-contract.
+contract. Domain repository contracts and PostgreSQL repository adapters live
+in the API package.
 
 The `rulebooks` table stores upload metadata and complete PDF bytes in a `BYTEA`
 column. Uploads are limited by the API to 40 MB, so direct `BYTEA` storage keeps

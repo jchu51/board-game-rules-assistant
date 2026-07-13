@@ -1,7 +1,6 @@
 import { readFile, rm } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import { extname } from "node:path";
-import type { RulebookFileStore } from "@board-game-rules-assistant/database";
 import type { NextFunction, Request, RequestHandler, Response } from "express";
 import { Router } from "express";
 import multer, { MulterError } from "multer";
@@ -35,7 +34,6 @@ export class IngestionRouter {
   constructor(
     private readonly ingestionService: IngestionService,
     private readonly rulebookRepository: RulebookRepository,
-    private readonly rulebookFileStore: RulebookFileStore,
     {
       uploadDirectory,
       maxUploadSizeBytes,
@@ -149,7 +147,7 @@ export class IngestionRouter {
       });
 
       const pdfData = await readFile(request.file.path);
-      await this.rulebookFileStore.save({
+      await this.rulebookRepository.save({
         id,
         gameName,
         pdfName,
@@ -157,8 +155,6 @@ export class IngestionRouter {
         fileSize,
         pdfData,
       });
-
-      this.rulebookRepository.create({ id, gameName, pdfName, fileSize });
 
       const responseBody = UploadPdfsResponseSchema.parse({
         ...result,

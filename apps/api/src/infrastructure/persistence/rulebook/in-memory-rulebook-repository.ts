@@ -1,14 +1,19 @@
 import type {
   RulebookRecord,
   RulebookRepository,
+  SaveRulebookRecord,
 } from "../../../domain/rulebook/rulebook-repository";
 
 export class InMemoryRulebookRepository implements RulebookRepository {
-  private readonly rulebooks = new Map<string, RulebookRecord>();
+  private readonly rulebooks = new Map<string, SaveRulebookRecord>();
 
-  create(record: RulebookRecord): RulebookRecord {
-    this.rulebooks.set(record.id, record);
-    return record;
+  async save(record: SaveRulebookRecord): Promise<RulebookRecord> {
+    this.rulebooks.set(record.id, {
+      ...record,
+      pdfData: record.pdfData.slice(),
+    });
+
+    return this.toRulebookRecord(record);
   }
 
   deleteById(id: string): boolean {
@@ -16,6 +21,17 @@ export class InMemoryRulebookRepository implements RulebookRepository {
   }
 
   list(): RulebookRecord[] {
-    return Array.from(this.rulebooks.values());
+    return Array.from(this.rulebooks.values(), (record) =>
+      this.toRulebookRecord(record),
+    );
+  }
+
+  private toRulebookRecord(record: SaveRulebookRecord): RulebookRecord {
+    return {
+      id: record.id,
+      gameName: record.gameName,
+      pdfName: record.pdfName,
+      fileSize: record.fileSize,
+    };
   }
 }
