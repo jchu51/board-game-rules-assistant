@@ -11,6 +11,7 @@ export type CreateChatResponse = {
 export type ChatSummary = {
   conversationId: string;
   title: string;
+  game: string | null;
 };
 
 export type ListChatsResponse = {

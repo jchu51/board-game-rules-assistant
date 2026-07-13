@@ -44,19 +44,6 @@ export const planRows = [
   },
 ];
 
-export const gamesByToken: Record<string, string> = {
-  azul: "Azul",
-  catan: "Catan",
-  gloomhaven: "Gloomhaven",
-  monopoly: "Monopoly",
-  pandemic: "Pandemic",
-  root: "Root",
-  scythe: "Scythe",
-  "terraforming mars": "Terraforming Mars",
-  "ticket to ride": "Ticket to Ride",
-  wingspan: "Wingspan",
-};
-
 export const exampleQuestions = [
   {
     id: "ask-example-catan-road-btn",

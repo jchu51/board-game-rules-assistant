@@ -51,6 +51,7 @@ beforeEach(() => {
   getChat.mockImplementation(async (conversationId: string) => ({
     conversationId,
     title: "New chat",
+    game: null,
     messages: [],
   }));
   listChats.mockResolvedValue({ chats: [] });
@@ -342,6 +343,7 @@ describe("ChatPage", () => {
       screen.getByRole("textbox", { name: "Ask a rules question" }),
     ).toBeInTheDocument();
     expect(screen.getAllByText("New chat").length).toBeGreaterThan(0);
+    expect(screen.getByText("Unknown")).toBeInTheDocument();
   });
 
   it("prevents duplicate creates while pending", async () => {
@@ -432,6 +434,7 @@ describe("ChatPage", () => {
 
   it("searches, streams an answer, and renders citations", async () => {
     searchRulebooks.mockResolvedValue({
+      title: "Catan city production",
       answer: "A city produces two resources.",
       matches: [
         {
@@ -449,6 +452,12 @@ describe("ChatPage", () => {
         },
       ],
     });
+    getChat.mockResolvedValue({
+      conversationId: "conversation-1",
+      title: "Catan city production",
+      game: "Catan",
+      messages: [],
+    });
     await renderCreatedChatPage();
 
     await submitQuestion("In Catan, how many resources does a city produce?");
@@ -457,7 +466,9 @@ describe("ChatPage", () => {
       conversationId: "conversation-1",
       query: "In Catan, how many resources does a city produce?",
     });
+    expect(screen.getAllByText("Catan city production").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Catan")[0]).toBeInTheDocument();
+    expect(getChat).toHaveBeenCalledWith("conversation-1");
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(10_000);
@@ -476,8 +487,15 @@ describe("ChatPage", () => {
 
   it("shows the provided not-found answer without sources", async () => {
     searchRulebooks.mockResolvedValue({
+      title: "Gloomhaven elemental infusion",
       answer: "No matching rule was found.",
       matches: [],
+    });
+    getChat.mockResolvedValue({
+      conversationId: "conversation-1",
+      title: "Gloomhaven elemental infusion",
+      game: "Gloomhaven",
+      messages: [],
     });
     await renderCreatedChatPage();
 
@@ -499,7 +517,11 @@ describe("ChatPage", () => {
   });
 
   it("uses the fallback answer when an empty response has no matches", async () => {
-    searchRulebooks.mockResolvedValue({ answer: "", matches: [] });
+    searchRulebooks.mockResolvedValue({
+      title: "What happens next",
+      answer: "",
+      matches: [],
+    });
     await renderCreatedChatPage();
 
     await submitQuestion("What happens next?");
@@ -526,7 +548,11 @@ describe("ChatPage", () => {
   });
 
   it("submits on Enter but allows Shift+Enter", async () => {
-    searchRulebooks.mockResolvedValue({ answer: "Answer", matches: [] });
+    searchRulebooks.mockResolvedValue({
+      title: "Azul scoring",
+      answer: "Answer",
+      matches: [],
+    });
     await renderCreatedChatPage();
     const input = screen.getByRole("textbox", { name: "Ask a rules question" });
     fireEvent.change(input, { target: { value: "Azul scoring" } });
@@ -541,7 +567,8 @@ describe("ChatPage", () => {
 
   it("ignores concurrent and stale search results after a new chat", async () => {
     let resolveSearch:
-      ((value: { answer: string; matches: never[] }) => void) | undefined;
+      | ((value: { title: string; answer: string; matches: never[] }) => void)
+      | undefined;
     searchRulebooks.mockReturnValue(
       new Promise((resolve) => {
         resolveSearch = resolve;
@@ -559,7 +586,11 @@ describe("ChatPage", () => {
 
     fireEvent.click(screen.getByTestId("ask-new-chat-btn"));
     await act(async () => {
-      resolveSearch?.({ answer: "Stale answer", matches: [] });
+      resolveSearch?.({
+        title: "Stale title",
+        answer: "Stale answer",
+        matches: [],
+      });
     });
     expect(screen.queryByText("Stale answer")).not.toBeInTheDocument();
     expect(screen.getByText("Ask the Referee")).toBeInTheDocument();

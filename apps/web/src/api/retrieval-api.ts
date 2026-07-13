@@ -22,6 +22,7 @@ export type RetrievalMatch = {
 };
 
 export type RetrievalSearchResponse = {
+  title: string;
   answer: string;
   matches: RetrievalMatch[];
 };

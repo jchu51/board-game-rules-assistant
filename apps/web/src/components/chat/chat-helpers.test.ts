@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import {
   buildRestoredMessages,
   buildRetrievalAnswer,
-  detectGame,
   getLastCitedMessage,
 } from "./chat-helpers";
 
@@ -27,12 +26,9 @@ describe("chat helpers", () => {
     ]);
   });
 
-  it("detects a named game case-insensitively", () => {
-    expect(detectGame("How does CATAN trading work?")).toBe("Catan");
-  });
-
   it("maps retrieval matches to citations", () => {
-    const result = buildRetrievalAnswer("Catan city", {
+    const result = buildRetrievalAnswer({
+      title: "Catan city production",
       answer: "A city produces two resources.",
       matches: [
         {
@@ -56,7 +52,11 @@ describe("chat helpers", () => {
 
   it("uses the fallback for an empty retrieval response", () => {
     expect(
-      buildRetrievalAnswer("Unknown rule", { answer: "", matches: [] }).text,
+      buildRetrievalAnswer({
+        title: "Unknown rule",
+        answer: "",
+        matches: [],
+      }).text,
     ).toContain("Try uploading the rulebook");
   });
 

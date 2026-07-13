@@ -7,7 +7,6 @@ import {
   buildRestoredMessages,
   buildRetrievalAnswer,
   clearTimers,
-  detectGame,
   getLastCitedMessage,
 } from "./chat-helpers";
 import type {
@@ -53,7 +52,7 @@ export function useChatController() {
         const loadedConversations: Conversation[] = chats.map((chat) => ({
           id: chat.conversationId,
           title: chat.title,
-          game: null,
+          game: chat.game,
           messages: [],
         }));
         setConversations((current) => {
@@ -149,7 +148,6 @@ export function useChatController() {
   ) => {
     updateConversation(conversationId, (conversation) => ({
       ...conversation,
-      game: answer.game ?? conversation.game,
       messages: conversation.messages.map((message) =>
         message.id === messageId && message.role === "assistant"
           ? {
@@ -193,7 +191,6 @@ export function useChatController() {
     const question = rawText.trim();
     if (!activeConversation || !question || isSearching) return;
     const conversationId = activeConversation.id;
-    const detectedGame = detectGame(question);
     const userMessage: UserMessage = {
       id: `user-${++messageIdRef.current}`,
       role: "user",
@@ -207,14 +204,8 @@ export function useChatController() {
       phase: "thinking",
       revealed: 0,
     };
-    const isFirstMessage = activeConversation.messages.length === 0;
-    const nextTitle = detectedGame
-      ? `${detectedGame} - ${question.slice(0, 34)}${question.length > 34 ? "..." : ""}`
-      : question.slice(0, 42);
     updateConversation(conversationId, (conversation) => ({
       ...conversation,
-      game: detectedGame ?? conversation.game,
-      title: isFirstMessage ? nextTitle : conversation.title,
       messages: [...conversation.messages, userMessage, assistantMessage],
     }));
     setInput("");
@@ -228,10 +219,17 @@ export function useChatController() {
         query: question,
       });
       if (!isStaleSearch()) {
+        const refreshedChat = await getChat(conversationId).catch(() => null);
+        if (isStaleSearch()) return;
+        updateConversation(conversationId, (conversation) => ({
+          ...conversation,
+          title: response.title,
+          game: refreshedChat?.game ?? conversation.game,
+        }));
         completeAssistantMessage(
           conversationId,
           assistantMessage.id,
-          buildRetrievalAnswer(question, response),
+          buildRetrievalAnswer(response),
         );
       }
     } catch (error) {
@@ -292,7 +290,7 @@ export function useChatController() {
             ? {
                 id: chat.conversationId,
                 title: chat.title,
-                game: null,
+                game: chat.game,
                 messages: buildRestoredMessages(
                   chat.conversationId,
                   chat.messages,

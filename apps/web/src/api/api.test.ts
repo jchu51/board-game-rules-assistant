@@ -104,12 +104,18 @@ describe("web API clients", () => {
   it("searches rulebooks", async () => {
     const fetchMock = vi
       .fn()
-      .mockResolvedValue(response({ answer: "Answer", matches: [] }));
+      .mockResolvedValue(
+        response({ title: "Rules question", answer: "Answer", matches: [] }),
+      );
     vi.stubGlobal("fetch", fetchMock);
 
     await expect(
       searchRulebooks({ conversationId: "conversation", query: "question" }),
-    ).resolves.toEqual({ answer: "Answer", matches: [] });
+    ).resolves.toEqual({
+      title: "Rules question",
+      answer: "Answer",
+      matches: [],
+    });
     expect(fetchMock).toHaveBeenCalledWith(
       expect.stringMatching(/retrieval\/search$/),
       expect.objectContaining({

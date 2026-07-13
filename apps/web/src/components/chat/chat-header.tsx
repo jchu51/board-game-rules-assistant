@@ -23,12 +23,10 @@ export function ChatHeader(props: {
         <span className="font-heading truncate text-base font-bold text-[#14171f]">
           {conversation.title}
         </span>
-        {conversation.game ? (
-          <span className="ml-1 inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[#efebfc] px-3 py-1.5 text-[12.5px] font-semibold text-[#6d5ef0]">
-            <span className="size-1.5 rounded-full bg-[#3fbfa8]" />
-            {conversation.game}
-          </span>
-        ) : null}
+        <span className="ml-1 inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[#efebfc] px-3 py-1.5 text-[12.5px] font-semibold text-[#6d5ef0]">
+          <span className="size-1.5 rounded-full bg-[#3fbfa8]" />
+          {conversation.game ?? "Unknown"}
+        </span>
       </div>
       <div className="relative flex shrink-0 items-center gap-2">
         <button
