@@ -6,10 +6,12 @@ import { HttpStatus } from "../shared/http-status";
 import type { ErrorResponseBody, TypedResponse } from "../shared/http-types";
 import {
   CreateChatResponseSchema,
+  GetChatResponseSchema,
   GetChatsResponseSchema,
 } from "./chat-schema";
 import type {
   CreateChatResponseBody,
+  GetChatResponseBody,
   GetChatsResponseBody,
 } from "./chat-types";
 
@@ -21,6 +23,7 @@ export class ChatRouter {
 
     router.post("/chats", this.createChat);
     router.get("/chats", this.getChats);
+    router.get("/chats/:id", this.getChat);
     router.delete("/chats/:id", this.deleteChat);
 
     this.router = router;
@@ -52,6 +55,28 @@ export class ChatRouter {
       const responseBody = GetChatsResponseSchema.parse({ chats });
 
       return response.status(HttpStatus.OK).json(responseBody);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  private getChat = async (
+    request: Request<{ id: string }>,
+    response: TypedResponse<GetChatResponseBody | ErrorResponseBody>,
+    next: NextFunction,
+  ) => {
+    try {
+      const chat = await this.conversationRepository.getChat(request.params.id);
+
+      if (!chat) {
+        return response
+          .status(HttpStatus.NOT_FOUND)
+          .json({ error: "Chat not found" });
+      }
+
+      return response
+        .status(HttpStatus.OK)
+        .json(GetChatResponseSchema.parse(chat));
     } catch (error) {
       next(error);
     }

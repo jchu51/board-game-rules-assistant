@@ -2,17 +2,22 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { createChat, deleteChat, listChats, searchRulebooks } = vi.hoisted(
-  () => ({
+const { createChat, deleteChat, getChat, listChats, searchRulebooks } =
+  vi.hoisted(() => ({
     createChat: vi.fn(),
     deleteChat: vi.fn(),
+    getChat: vi.fn(),
     listChats: vi.fn(),
     searchRulebooks: vi.fn(),
-  }),
-);
+  }));
 
 vi.mock("@/api/retrieval-api", () => ({ searchRulebooks }));
-vi.mock("@/api/chat-service", () => ({ createChat, deleteChat, listChats }));
+vi.mock("@/api/chat-service", () => ({
+  createChat,
+  deleteChat,
+  getChat,
+  listChats,
+}));
 
 import { ChatPage } from "./chat-page";
 
@@ -43,6 +48,11 @@ beforeEach(() => {
     conversationId: "conversation-1",
   });
   deleteChat.mockResolvedValue(undefined);
+  getChat.mockImplementation(async (conversationId: string) => ({
+    conversationId,
+    title: "New chat",
+    messages: [],
+  }));
   listChats.mockResolvedValue({ chats: [] });
 });
 
@@ -97,11 +107,121 @@ describe("ChatPage", () => {
     expect(screen.queryByText("Ask the Referee")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId("chat-select-conversation-2-btn"));
+    await act(async () => {});
 
+    expect(getChat).toHaveBeenCalledWith("conversation-2");
     expect(screen.getByText("Ask the Referee")).toBeInTheDocument();
     expect(
       screen.getByRole("textbox", { name: "Ask a rules question" }),
     ).toBeInTheDocument();
+  });
+
+  it("loads and renders persisted user and assistant text", async () => {
+    listChats.mockResolvedValue({
+      chats: [
+        {
+          conversationId: "conversation-1",
+          title: "Catan road rules",
+        },
+      ],
+    });
+    getChat.mockResolvedValue({
+      conversationId: "conversation-1",
+      title: "Catan road rules",
+      messages: [
+        { role: "user", content: "Can I build this road?" },
+        { role: "assistant", content: "Yes, if the route is open." },
+      ],
+    });
+    renderChatPage();
+    await act(async () => {});
+
+    fireEvent.click(screen.getByTestId("chat-select-conversation-1-btn"));
+    await act(async () => {});
+
+    expect(screen.getByText("Can I build this road?")).toBeInTheDocument();
+    expect(screen.getByText("Yes, if the route is open.")).toBeInTheDocument();
+    expect(
+      screen.getByText(/Rulebook citations for the latest answer/),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "View sources" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("keeps the current chat selected when history loading fails", async () => {
+    listChats.mockResolvedValue({
+      chats: [
+        {
+          conversationId: "conversation-2",
+          title: "Pandemic outbreaks",
+        },
+      ],
+    });
+    renderChatPage();
+    await act(async () => {});
+    fireEvent.click(screen.getByTestId("ask-new-chat-btn"));
+    await act(async () => {});
+    getChat.mockRejectedValueOnce(new Error("history unavailable"));
+
+    fireEvent.click(screen.getByTestId("chat-select-conversation-2-btn"));
+    await act(async () => {});
+
+    expect(screen.getByRole("alert")).toHaveTextContent("history unavailable");
+    expect(screen.getByText("Ask the Referee")).toBeInTheDocument();
+    expect(screen.getAllByText("New chat").length).toBeGreaterThan(0);
+  });
+
+  it("ignores stale history when a newer selection resolves first", async () => {
+    let resolveFirst:
+      | ((value: {
+          conversationId: string;
+          title: string;
+          messages: Array<{ role: "user"; content: string }>;
+        }) => void)
+      | undefined;
+    let resolveSecond:
+      | ((value: {
+          conversationId: string;
+          title: string;
+          messages: Array<{ role: "user"; content: string }>;
+        }) => void)
+      | undefined;
+    listChats.mockResolvedValue({
+      chats: [
+        { conversationId: "conversation-1", title: "First chat" },
+        { conversationId: "conversation-2", title: "Second chat" },
+      ],
+    });
+    getChat.mockImplementation(
+      (conversationId: string) =>
+        new Promise((resolve) => {
+          if (conversationId === "conversation-1") resolveFirst = resolve;
+          else resolveSecond = resolve;
+        }),
+    );
+    renderChatPage();
+    await act(async () => {});
+
+    fireEvent.click(screen.getByTestId("chat-select-conversation-1-btn"));
+    fireEvent.click(screen.getByTestId("chat-select-conversation-2-btn"));
+    await act(async () => {
+      resolveSecond?.({
+        conversationId: "conversation-2",
+        title: "Second chat",
+        messages: [{ role: "user", content: "Second history" }],
+      });
+    });
+    await act(async () => {
+      resolveFirst?.({
+        conversationId: "conversation-1",
+        title: "First chat",
+        messages: [{ role: "user", content: "Stale first history" }],
+      });
+    });
+
+    expect(screen.getByText("Second history")).toBeInTheDocument();
+    expect(screen.queryByText("Stale first history")).not.toBeInTheDocument();
   });
 
   it("shows chat loading failures", async () => {
@@ -209,6 +329,7 @@ describe("ChatPage", () => {
       screen.getByTestId("mobile-chat-select-conversation-1-btn"),
     );
 
+    expect(getChat).toHaveBeenCalledWith("conversation-1");
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 

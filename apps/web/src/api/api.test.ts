@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { searchRulebooks } from "./retrieval-api";
-import { createChat, deleteChat, listChats } from "./chat-service";
+import { createChat, deleteChat, getChat, listChats } from "./chat-service";
 import {
   deleteRulebook,
   listRulebooks,
@@ -46,6 +46,24 @@ describe("web API clients", () => {
 
     await expect(listChats()).resolves.toEqual(body);
     expect(fetchMock).toHaveBeenCalledWith(expect.stringMatching(/\/chats$/));
+  });
+
+  it("gets a chat history with an encoded conversation id", async () => {
+    const body = {
+      conversationId: "11111111-1111-4111-8111-111111111111",
+      title: "Catan rules",
+      messages: [
+        { role: "user" as const, content: "Question" },
+        { role: "assistant" as const, content: "Answer" },
+      ],
+    };
+    const fetchMock = vi.fn().mockResolvedValue(response(body));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(getChat("conversation/id")).resolves.toEqual(body);
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringMatching(/\/chats\/conversation%2Fid$/),
+    );
   });
 
   it("deletes a chat with an encoded conversation id", async () => {
@@ -115,6 +133,7 @@ describe("web API clients", () => {
     ["search", () => searchRulebooks({ conversationId: "c", query: "q" })],
     ["create chat", () => createChat()],
     ["list chats", () => listChats()],
+    ["get chat", () => getChat("missing")],
     ["delete chat", () => deleteChat("missing")],
   ])("surfaces the API error for %s", async (_name, request) => {
     vi.stubGlobal(
@@ -136,6 +155,7 @@ describe("web API clients", () => {
     ["search", () => searchRulebooks({ conversationId: "c", query: "q" })],
     ["create chat", () => createChat()],
     ["list chats", () => listChats()],
+    ["get chat", () => getChat("missing")],
     ["delete chat", () => deleteChat("missing")],
   ])(
     "uses the fallback when %s has no readable error",

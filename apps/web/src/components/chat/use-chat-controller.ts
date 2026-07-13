@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 
-import { createChat, deleteChat, listChats } from "@/api/chat-service";
+import { createChat, deleteChat, getChat, listChats } from "@/api/chat-service";
 import { searchRulebooks } from "@/api/retrieval-api";
 
 import {
+  buildRestoredMessages,
   buildRetrievalAnswer,
   clearTimers,
   detectGame,
@@ -31,6 +32,7 @@ export function useChatController() {
   const scrollRef = useRef<HTMLElement | null>(null);
   const timersRef = useRef<Record<string, number>>({});
   const activeSearchIdRef = useRef(0);
+  const selectionRequestIdRef = useRef(0);
   const messageIdRef = useRef(0);
 
   const activeConversation = conversations.find(
@@ -243,6 +245,7 @@ export function useChatController() {
 
   const handleNewChat = async () => {
     if (isCreatingChat) return;
+    selectionRequestIdRef.current += 1;
     setIsCreatingChat(true);
     setChatError(null);
     try {
@@ -272,7 +275,46 @@ export function useChatController() {
     }
   };
 
+  const selectConversation = async (conversationId: string) => {
+    const requestId = ++selectionRequestIdRef.current;
+    setChatError(null);
+
+    try {
+      const chat = await getChat(conversationId);
+      if (selectionRequestIdRef.current !== requestId) return;
+
+      activeSearchIdRef.current += 1;
+      clearTimers(timersRef.current);
+      timersRef.current = {};
+      setConversations((current) =>
+        current.map((conversation) =>
+          conversation.id === conversationId
+            ? {
+                id: chat.conversationId,
+                title: chat.title,
+                game: null,
+                messages: buildRestoredMessages(
+                  chat.conversationId,
+                  chat.messages,
+                ),
+              }
+            : conversation,
+        ),
+      );
+      setActiveId(chat.conversationId);
+      setInput("");
+      setIsSearching(false);
+    } catch (error) {
+      if (selectionRequestIdRef.current !== requestId) return;
+
+      setChatError(
+        error instanceof Error ? error.message : "Failed to load chat",
+      );
+    }
+  };
+
   const deleteConversation = async (conversationId: string) => {
+    selectionRequestIdRef.current += 1;
     setChatError(null);
     try {
       await deleteChat(conversationId);
@@ -339,8 +381,8 @@ export function useChatController() {
     role,
     scrollRef,
     search,
+    selectConversation,
     sendText,
-    setActiveId,
     setInfoOpen,
     setInput,
     setRole,

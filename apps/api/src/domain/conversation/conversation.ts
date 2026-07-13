@@ -16,3 +16,7 @@ export type ConversationMessage = {
   role: ConversationMessageRole;
   content: string;
 };
+
+export type ConversationDetail = ConversationSummary & {
+  messages: ConversationMessage[];
+};

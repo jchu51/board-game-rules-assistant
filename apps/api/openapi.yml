@@ -54,6 +54,41 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
   /chats/{id}:
+    get:
+      tags:
+        - Chats
+      summary: Get a chat history
+      description: Returns one conversation and its persisted messages ordered from oldest to newest.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Chat history
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetChatResponse"
+        "404":
+          description: Chat not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                notFound:
+                  value:
+                    error: Chat not found
+        "500":
+          description: Unexpected chat history failure
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
     delete:
       tags:
         - Chats
@@ -270,6 +305,40 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ChatSummary"
+      additionalProperties: false
+    ChatMessage:
+      type: object
+      required:
+        - role
+        - content
+      properties:
+        role:
+          type: string
+          enum:
+            - user
+            - assistant
+        content:
+          type: string
+      additionalProperties: false
+    GetChatResponse:
+      type: object
+      required:
+        - conversationId
+        - title
+        - messages
+      properties:
+        conversationId:
+          type: string
+          format: uuid
+          description: Server-generated conversation identifier.
+        title:
+          type: string
+          minLength: 1
+          description: Conversation title.
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChatMessage"
       additionalProperties: false
     ErrorResponse:
       type: object

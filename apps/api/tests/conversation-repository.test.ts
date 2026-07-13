@@ -37,6 +37,51 @@ describe("InMemoryConversationRepository", () => {
     ]);
   });
 
+  it("gets an isolated chat detail with messages in insertion order", async () => {
+    const repository = new InMemoryConversationRepository();
+    const conversationId = await repository.createConversation();
+    await repository.appendMessages(conversationId, [
+      { role: "user", content: "Question" },
+      { role: "assistant", content: "Answer" },
+    ]);
+
+    const chat = await repository.getChat(conversationId);
+
+    expect(chat).toEqual({
+      conversationId,
+      title: "New chat",
+      messages: [
+        { role: "user", content: "Question" },
+        { role: "assistant", content: "Answer" },
+      ],
+    });
+
+    if (!chat) throw new Error("Expected chat detail");
+    chat.title = "Changed externally";
+    chat.messages[0]!.content = "Changed externally";
+
+    expect(await repository.getChat(conversationId)).toEqual({
+      conversationId,
+      title: "New chat",
+      messages: [
+        { role: "user", content: "Question" },
+        { role: "assistant", content: "Answer" },
+      ],
+    });
+  });
+
+  it("distinguishes empty and missing chats", async () => {
+    const repository = new InMemoryConversationRepository();
+    const conversationId = await repository.createConversation();
+
+    await expect(repository.getChat(conversationId)).resolves.toEqual({
+      conversationId,
+      title: "New chat",
+      messages: [],
+    });
+    await expect(repository.getChat("missing")).resolves.toBeNull();
+  });
+
   it("hard deletes a conversation and its messages", async () => {
     const repository = new InMemoryConversationRepository();
     const conversationId = await repository.createConversation();

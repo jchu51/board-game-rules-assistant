@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
 
 import type {
+  ConversationDetail,
   ConversationMessage,
   ConversationMessageRole,
   ConversationSummary,
@@ -22,6 +23,13 @@ type ConversationMessageRow = {
 type ConversationSummaryRow = {
   id: string;
   title: string;
+};
+
+type ConversationDetailRow = {
+  conversation_id: string;
+  title: string;
+  role: ConversationMessageRole | null;
+  content: string | null;
 };
 
 export class PostgresConversationRepository implements ConversationRepository {
@@ -88,6 +96,34 @@ export class PostgresConversationRepository implements ConversationRepository {
       conversationId: chat.id,
       title: chat.title,
     }));
+  }
+
+  async getChat(conversationId: string): Promise<ConversationDetail | null> {
+    const result = await this.pool.query<ConversationDetailRow>(
+      `SELECT
+         c.id AS conversation_id,
+         c.title,
+         m.role,
+         m.content
+       FROM conversations c
+       LEFT JOIN conversation_messages m ON m.conversation_id = c.id
+       WHERE c.id = $1
+       ORDER BY m.id ASC`,
+      [conversationId],
+    );
+
+    const firstRow = result.rows[0];
+    if (!firstRow) return null;
+
+    return {
+      conversationId: firstRow.conversation_id,
+      title: firstRow.title,
+      messages: result.rows.flatMap((row) =>
+        row.role !== null && row.content !== null
+          ? [{ role: row.role, content: row.content }]
+          : [],
+      ),
+    };
   }
 
   async appendMessages(

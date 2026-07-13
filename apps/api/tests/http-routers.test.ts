@@ -41,6 +41,7 @@ const retrievalService = {
 const conversationRepository = {
   createConversation: vi.fn(),
   deleteConversation: vi.fn(),
+  getChat: vi.fn(),
   getChats: vi.fn(),
   appendMessages: vi.fn(),
   getMessages: vi.fn(),
@@ -95,7 +96,7 @@ describe("HTTP routers", () => {
     ]);
     const router = new ChatRouter(conversationRepository);
     const handler = router.router.stack.find(
-      (layer) => layer.route?.methods.get,
+      (layer) => layer.route?.path === "/chats" && layer.route.methods.get,
     )?.route.stack[0]?.handle;
     const response = createResponse();
 
@@ -122,11 +123,84 @@ describe("HTTP routers", () => {
     vi.mocked(conversationRepository.getChats).mockRejectedValue(error);
     const router = new ChatRouter(conversationRepository);
     const handler = router.router.stack.find(
-      (layer) => layer.route?.methods.get,
+      (layer) => layer.route?.path === "/chats" && layer.route.methods.get,
     )?.route.stack[0]?.handle;
     const next = vi.fn();
 
     await handler?.({} as Request, createResponse(), next);
+
+    expect(next).toHaveBeenCalledWith(error);
+  });
+
+  it("gets a chat with its ordered message history", async () => {
+    vi.mocked(conversationRepository.getChat).mockResolvedValue({
+      conversationId: "11111111-1111-4111-8111-111111111111",
+      title: "Catan rules",
+      messages: [
+        { role: "user", content: "Question" },
+        { role: "assistant", content: "Answer" },
+      ],
+    });
+    const router = new ChatRouter(conversationRepository);
+    const handler = router.router.stack.find(
+      (layer) => layer.route?.path === "/chats/:id" && layer.route.methods.get,
+    )?.route.stack[0]?.handle;
+    const response = createResponse();
+
+    await handler?.(
+      {
+        params: { id: "11111111-1111-4111-8111-111111111111" },
+      } as unknown as Request,
+      response,
+      vi.fn(),
+    );
+
+    expect(conversationRepository.getChat).toHaveBeenCalledWith(
+      "11111111-1111-4111-8111-111111111111",
+    );
+    expect(response.status).toHaveBeenCalledWith(200);
+    expect(response.json).toHaveBeenCalledWith({
+      conversationId: "11111111-1111-4111-8111-111111111111",
+      title: "Catan rules",
+      messages: [
+        { role: "user", content: "Question" },
+        { role: "assistant", content: "Answer" },
+      ],
+    });
+  });
+
+  it("returns not found when getting a missing chat", async () => {
+    vi.mocked(conversationRepository.getChat).mockResolvedValue(null);
+    const router = new ChatRouter(conversationRepository);
+    const handler = router.router.stack.find(
+      (layer) => layer.route?.path === "/chats/:id" && layer.route.methods.get,
+    )?.route.stack[0]?.handle;
+    const response = createResponse();
+
+    await handler?.(
+      { params: { id: "missing" } } as unknown as Request,
+      response,
+      vi.fn(),
+    );
+
+    expect(response.status).toHaveBeenCalledWith(404);
+    expect(response.json).toHaveBeenCalledWith({ error: "Chat not found" });
+  });
+
+  it("forwards chat history failures", async () => {
+    const error = new Error("get failed");
+    vi.mocked(conversationRepository.getChat).mockRejectedValue(error);
+    const router = new ChatRouter(conversationRepository);
+    const handler = router.router.stack.find(
+      (layer) => layer.route?.path === "/chats/:id" && layer.route.methods.get,
+    )?.route.stack[0]?.handle;
+    const next = vi.fn();
+
+    await handler?.(
+      { params: { id: "chat" } } as unknown as Request,
+      createResponse(),
+      next,
+    );
 
     expect(next).toHaveBeenCalledWith(error);
   });
@@ -209,7 +283,18 @@ describe("HTTP routers", () => {
             post: expect.any(Object),
           }),
           "/chats/{id}": expect.objectContaining({
+            get: expect.any(Object),
             delete: expect.any(Object),
+          }),
+        }),
+        components: expect.objectContaining({
+          schemas: expect.objectContaining({
+            ChatMessage: expect.any(Object),
+            GetChatResponse: expect.objectContaining({
+              type: "object",
+              required: ["conversationId", "title", "messages"],
+              additionalProperties: false,
+            }),
           }),
         }),
       }),

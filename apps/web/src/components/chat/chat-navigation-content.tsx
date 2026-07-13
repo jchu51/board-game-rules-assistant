@@ -45,7 +45,7 @@ export function ChatNavigationContent(props: {
             label="New"
             onDelete={chat.deleteConversation}
             onSelect={(conversationId) => {
-              chat.setActiveId(conversationId);
+              void chat.selectConversation(conversationId);
               onNavigate?.();
             }}
           />
@@ -60,7 +60,7 @@ export function ChatNavigationContent(props: {
             label={game}
             onDelete={chat.deleteConversation}
             onSelect={(conversationId) => {
-              chat.setActiveId(conversationId);
+              void chat.selectConversation(conversationId);
               onNavigate?.();
             }}
           />

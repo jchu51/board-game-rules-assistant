@@ -1,7 +1,30 @@
+import type { PersistedChatMessage } from "@/api/chat-service";
 import type { RetrievalSearchResponse } from "@/api/retrieval-api";
 
 import { gamesByToken } from "./chat-config";
 import type { AssistantMessage, Message, RetrievalAnswer } from "./chat-types";
+
+export function buildRestoredMessages(
+  conversationId: string,
+  messages: PersistedChatMessage[],
+): Message[] {
+  return messages.map((message, index) => {
+    const id = `history-${conversationId}-${index}`;
+
+    if (message.role === "user") {
+      return { id, role: "user", text: message.content };
+    }
+
+    return {
+      id,
+      role: "assistant",
+      text: message.content,
+      cites: [],
+      phase: "done",
+      revealed: message.content.length,
+    };
+  });
+}
 
 export const detectGame = (text: string): string | null => {
   const normalizedText = ` ${text.toLowerCase()} `;

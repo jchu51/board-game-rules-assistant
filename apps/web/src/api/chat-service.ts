@@ -17,6 +17,15 @@ export type ListChatsResponse = {
   chats: ChatSummary[];
 };
 
+export type PersistedChatMessage = {
+  role: "user" | "assistant";
+  content: string;
+};
+
+export type GetChatResponse = ChatSummary & {
+  messages: PersistedChatMessage[];
+};
+
 export async function listChats(): Promise<ListChatsResponse> {
   const response = await fetch(`${API_BASE_URL}/chats`);
 
@@ -28,6 +37,23 @@ export async function listChats(): Promise<ListChatsResponse> {
   }
 
   return (await response.json()) as ListChatsResponse;
+}
+
+export async function getChat(
+  conversationId: string,
+): Promise<GetChatResponse> {
+  const response = await fetch(
+    `${API_BASE_URL}/chats/${encodeURIComponent(conversationId)}`,
+  );
+
+  if (!response.ok) {
+    const errorBody = (await response.json().catch(() => ({}))) as
+      ApiErrorResponse | undefined;
+
+    throw new Error(errorBody?.error ?? "Failed to load chat");
+  }
+
+  return (await response.json()) as GetChatResponse;
 }
 
 export async function createChat(): Promise<CreateChatResponse> {

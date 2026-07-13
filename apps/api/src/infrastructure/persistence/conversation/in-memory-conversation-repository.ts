@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import type { ConversationRepository } from "../../../domain/conversation/conversation-repository";
 import type {
+  ConversationDetail,
   ConversationMessage,
   ConversationSummary,
 } from "../../../domain/conversation/conversation";
@@ -46,6 +47,20 @@ export class InMemoryConversationRepository implements ConversationRepository {
 
   async getChats(): Promise<ConversationSummary[]> {
     return this.chats.map((chat) => ({ ...chat }));
+  }
+
+  async getChat(conversationId: string): Promise<ConversationDetail | null> {
+    const chat = this.chats.find(
+      (candidate) => candidate.conversationId === conversationId,
+    );
+    if (!chat) return null;
+
+    return {
+      ...chat,
+      messages: (this.conversations.get(conversationId) ?? []).map(
+        (message) => ({ ...message }),
+      ),
+    };
   }
 
   async appendMessages(

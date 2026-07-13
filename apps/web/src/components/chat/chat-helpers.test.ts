@@ -1,12 +1,32 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buildRestoredMessages,
   buildRetrievalAnswer,
   detectGame,
   getLastCitedMessage,
 } from "./chat-helpers";
 
 describe("chat helpers", () => {
+  it("converts persisted messages into completed display messages", () => {
+    expect(
+      buildRestoredMessages("chat-a", [
+        { role: "user", content: "Question" },
+        { role: "assistant", content: "Answer" },
+      ]),
+    ).toEqual([
+      { id: "history-chat-a-0", role: "user", text: "Question" },
+      {
+        id: "history-chat-a-1",
+        role: "assistant",
+        text: "Answer",
+        cites: [],
+        phase: "done",
+        revealed: 6,
+      },
+    ]);
+  });
+
   it("detects a named game case-insensitively", () => {
     expect(detectGame("How does CATAN trading work?")).toBe("Catan");
   });

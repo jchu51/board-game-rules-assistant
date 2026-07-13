@@ -18,3 +18,14 @@ export const GetChatsResponseSchema = z
     chats: z.array(ChatSummarySchema),
   })
   .strict();
+
+export const ChatMessageSchema = z
+  .object({
+    role: z.enum(["user", "assistant"]),
+    content: z.string(),
+  })
+  .strict();
+
+export const GetChatResponseSchema = ChatSummarySchema.extend({
+  messages: z.array(ChatMessageSchema),
+}).strict();

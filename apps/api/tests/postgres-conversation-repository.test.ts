@@ -53,6 +53,66 @@ describe("PostgresConversationRepository", () => {
     );
   });
 
+  it("gets a populated chat with messages in database order", async () => {
+    const query = vi.fn().mockResolvedValue({
+      rows: [
+        {
+          conversation_id: "conversation-a",
+          title: "Rules",
+          role: "user",
+          content: "Question",
+        },
+        {
+          conversation_id: "conversation-a",
+          title: "Rules",
+          role: "assistant",
+          content: "Answer",
+        },
+      ],
+    });
+    const repository = new PostgresConversationRepository(createPool(query));
+
+    await expect(repository.getChat("conversation-a")).resolves.toEqual({
+      conversationId: "conversation-a",
+      title: "Rules",
+      messages: [
+        { role: "user", content: "Question" },
+        { role: "assistant", content: "Answer" },
+      ],
+    });
+    expect(query).toHaveBeenCalledWith(
+      expect.stringMatching(/ORDER BY m\.id ASC/),
+      ["conversation-a"],
+    );
+  });
+
+  it("gets an existing empty chat", async () => {
+    const query = vi.fn().mockResolvedValue({
+      rows: [
+        {
+          conversation_id: "conversation-a",
+          title: "New chat",
+          role: null,
+          content: null,
+        },
+      ],
+    });
+    const repository = new PostgresConversationRepository(createPool(query));
+
+    await expect(repository.getChat("conversation-a")).resolves.toEqual({
+      conversationId: "conversation-a",
+      title: "New chat",
+      messages: [],
+    });
+  });
+
+  it("returns null when getting a missing chat", async () => {
+    const query = vi.fn().mockResolvedValue({ rows: [] });
+    const repository = new PostgresConversationRepository(createPool(query));
+
+    await expect(repository.getChat("missing")).resolves.toBeNull();
+  });
+
   it("hard deletes messages and their conversation in one transaction", async () => {
     const query = vi
       .fn()
