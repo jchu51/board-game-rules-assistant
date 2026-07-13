@@ -21,7 +21,7 @@ const renderChatPage = () =>
 
 const renderCreatedChatPage = async () => {
   const result = renderChatPage();
-  fireEvent.click(screen.getByRole("button", { name: "New chat" }));
+  fireEvent.click(screen.getByTestId("ask-new-chat-btn"));
   await act(async () => {});
   return result;
 };
@@ -72,6 +72,57 @@ describe("ChatPage", () => {
       screen.queryByText("Catan - road through settlement"),
     ).not.toBeInTheDocument();
     expect(screen.queryByText(/No chats match/)).not.toBeInTheDocument();
+    expect(screen.getByTestId("mobile-new-chat-btn")).toBeInTheDocument();
+    expect(screen.getByTestId("mobile-chat-menu-btn")).toBeInTheDocument();
+  });
+
+  it("opens and closes the mobile chat navigation", () => {
+    renderChatPage();
+
+    fireEvent.click(screen.getByTestId("mobile-chat-menu-btn"));
+    expect(
+      screen.getByRole("dialog", { name: "Chat navigation" }),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("mobile-chat-close-btn"));
+    expect(
+      screen.queryByRole("dialog", { name: "Chat navigation" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("closes the mobile chat navigation with Escape and the backdrop", () => {
+    renderChatPage();
+    const menuButton = screen.getByTestId("mobile-chat-menu-btn");
+
+    fireEvent.click(menuButton);
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(menuButton).toHaveFocus();
+
+    fireEvent.click(menuButton);
+    fireEvent.click(screen.getByTestId("mobile-chat-backdrop-btn"));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("creates and activates a chat from the mobile action", async () => {
+    renderChatPage();
+
+    fireEvent.click(screen.getByTestId("mobile-new-chat-btn"));
+    await act(async () => {});
+
+    expect(createChat).toHaveBeenCalledOnce();
+    expect(screen.getByText("Ask the Referee")).toBeInTheDocument();
+  });
+
+  it("closes mobile navigation after selecting a conversation", async () => {
+    await renderCreatedChatPage();
+    fireEvent.click(screen.getByTestId("mobile-chat-menu-btn"));
+
+    fireEvent.click(
+      screen.getByTestId("mobile-chat-select-conversation-1-btn"),
+    );
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("creates and activates a server chat from the button", async () => {
@@ -88,21 +139,23 @@ describe("ChatPage", () => {
   it("prevents duplicate creates while pending", async () => {
     createChat.mockReturnValue(new Promise(() => {}));
     renderChatPage();
-    const button = screen.getByRole("button", { name: "New chat" });
+    const button = screen.getByTestId("ask-new-chat-btn");
     fireEvent.click(button);
     fireEvent.click(button);
 
     expect(button).toBeDisabled();
+    expect(screen.getByTestId("mobile-new-chat-btn")).toBeDisabled();
     expect(createChat).toHaveBeenCalledOnce();
   });
 
   it("keeps the clean state and shows create errors", async () => {
     createChat.mockRejectedValue(new Error("creation unavailable"));
     renderChatPage();
-    fireEvent.click(screen.getByRole("button", { name: "New chat" }));
+    fireEvent.click(screen.getByTestId("ask-new-chat-btn"));
     await act(async () => {});
 
     expect(screen.getByRole("alert")).toHaveTextContent("creation unavailable");
+    expect(screen.getByTestId("mobile-new-chat-btn")).toBeInTheDocument();
     expect(
       screen.queryByRole("textbox", { name: "Ask a rules question" }),
     ).not.toBeInTheDocument();
@@ -209,7 +262,7 @@ describe("ChatPage", () => {
     expect(
       screen.getByText(/could not search.*network unavailable/i),
     ).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "New chat" }));
+    fireEvent.click(screen.getByTestId("ask-new-chat-btn"));
     await act(async () => {});
     expect(screen.getByText("Ask the Referee")).toBeInTheDocument();
     expect(screen.queryByText(/network unavailable/i)).not.toBeInTheDocument();
@@ -247,7 +300,7 @@ describe("ChatPage", () => {
     fireEvent.submit(screen.getByTestId("ask-chat-composer-form"));
     expect(searchRulebooks).toHaveBeenCalledOnce();
 
-    fireEvent.click(screen.getByRole("button", { name: "New chat" }));
+    fireEvent.click(screen.getByTestId("ask-new-chat-btn"));
     await act(async () => {
       resolveSearch?.({ answer: "Stale answer", matches: [] });
     });

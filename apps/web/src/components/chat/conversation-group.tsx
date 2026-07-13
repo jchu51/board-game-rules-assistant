@@ -7,14 +7,22 @@ export type ConversationGroupProps = {
   activeId: string | null;
   conversations: Conversation[];
   dotColor: string;
+  idPrefix?: string;
   label: string;
   onDelete: (id: string) => void;
   onSelect: (id: string) => void;
 };
 
 export function ConversationGroup(props: ConversationGroupProps) {
-  const { activeId, conversations, dotColor, label, onDelete, onSelect } =
-    props;
+  const {
+    activeId,
+    conversations,
+    dotColor,
+    idPrefix = "chat",
+    label,
+    onDelete,
+    onSelect,
+  } = props;
   return (
     <div className="flex flex-col gap-0.5">
       <div className="flex items-center gap-1.5 px-2.5 pb-1.5 text-[10.5px] font-bold tracking-[0.08em] text-[#9ca3af] uppercase">
@@ -29,8 +37,8 @@ export function ConversationGroup(props: ConversationGroupProps) {
         return (
           <div key={conversation.id} className="relative">
             <button
-              id={`chat-select-${conversation.id}-btn`}
-              data-testid={`chat-select-${conversation.id}-btn`}
+              id={`${idPrefix}-select-${conversation.id}-btn`}
+              data-testid={`${idPrefix}-select-${conversation.id}-btn`}
               type="button"
               aria-current={active ? "true" : undefined}
               className={cn(
@@ -46,8 +54,8 @@ export function ConversationGroup(props: ConversationGroupProps) {
               </span>
             </button>
             <button
-              id={`chat-delete-${conversation.id}-btn`}
-              data-testid={`chat-delete-${conversation.id}-btn`}
+              id={`${idPrefix}-delete-${conversation.id}-btn`}
+              data-testid={`${idPrefix}-delete-${conversation.id}-btn`}
               type="button"
               aria-label={`Delete ${conversation.title}`}
               className="absolute top-1/2 right-1.5 flex size-[26px] -translate-y-1/2 items-center justify-center rounded-lg text-[#9ca3af] hover:bg-[#edeafb] hover:text-[#c0362c]"
