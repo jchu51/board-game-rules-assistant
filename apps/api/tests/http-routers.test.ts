@@ -411,7 +411,11 @@ describe("HTTP routers", () => {
         response: Response,
         next: NextFunction,
       ) => Promise<unknown>;
-      deleteRulebook: (request: Request, response: Response) => unknown;
+      deleteRulebook: (
+        request: Request,
+        response: Response,
+        next: NextFunction,
+      ) => Promise<unknown>;
     };
     vi.mocked(ingestionService.ingestPdf).mockResolvedValue({
       documentCount: 2,
@@ -454,16 +458,18 @@ describe("HTTP routers", () => {
     expect(listResponse.json).toHaveBeenCalledWith({ rulebooks: [created] });
 
     const deleteResponse = createResponse();
-    router.deleteRulebook(
+    await router.deleteRulebook(
       { params: { id: created?.id } } as unknown as Request,
       deleteResponse,
+      vi.fn(),
     );
     expect(deleteResponse.status).toHaveBeenCalledWith(204);
 
     const missingResponse = createResponse();
-    router.deleteRulebook(
+    await router.deleteRulebook(
       { params: { id: "missing" } } as unknown as Request,
       missingResponse,
+      vi.fn(),
     );
     expect(missingResponse.status).toHaveBeenCalledWith(404);
   });
@@ -486,6 +492,32 @@ describe("HTTP routers", () => {
     const next = vi.fn();
 
     await router.listRulebooks({} as Request, createResponse(), next);
+
+    expect(next).toHaveBeenCalledWith(error);
+  });
+
+  it("forwards rulebook delete failures", async () => {
+    const repository = new InMemoryRulebookRepository();
+    const error = new Error("delete failed");
+    vi.spyOn(repository, "deleteById").mockRejectedValue(error);
+    const router = new IngestionRouter(ingestionService, repository, {
+      uploadDirectory: "/tmp",
+      maxUploadSizeBytes: 1024,
+      isProduction: false,
+    }) as unknown as {
+      deleteRulebook: (
+        request: Request,
+        response: Response,
+        next: NextFunction,
+      ) => Promise<unknown>;
+    };
+    const next = vi.fn();
+
+    await router.deleteRulebook(
+      { params: { id: "rulebook-1" } } as unknown as Request,
+      createResponse(),
+      next,
+    );
 
     expect(next).toHaveBeenCalledWith(error);
   });

@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { PostgresRulebookRepository } from "../src/infrastructure/persistence/rulebook/postgres-rulebook-repository";
 
 describe("PostgresRulebookRepository", () => {
-  it("persists PDF bytes and keeps current-process delete behavior", async () => {
+  it("persists PDF bytes", async () => {
     const query = vi.fn().mockResolvedValue({ rows: [] });
     const repository = new PostgresRulebookRepository({
       query,
@@ -31,9 +31,31 @@ describe("PostgresRulebookRepository", () => {
         Buffer.from(pdfData),
       ],
     );
-    expect(repository.deleteById("11111111-1111-4111-8111-111111111111")).toBe(
-      true,
+  });
+
+  it("deletes a persisted rulebook", async () => {
+    const query = vi.fn().mockResolvedValue({ rowCount: 1 });
+    const repository = new PostgresRulebookRepository({
+      query,
+    } as unknown as Pool);
+
+    await expect(
+      repository.deleteById("11111111-1111-4111-8111-111111111111"),
+    ).resolves.toBe(true);
+    expect(query).toHaveBeenCalledWith(
+      `DELETE FROM rulebooks
+       WHERE id = $1`,
+      ["11111111-1111-4111-8111-111111111111"],
     );
+  });
+
+  it("returns false when deleting a missing rulebook", async () => {
+    const query = vi.fn().mockResolvedValue({ rowCount: 0 });
+    const repository = new PostgresRulebookRepository({
+      query,
+    } as unknown as Pool);
+
+    await expect(repository.deleteById("missing")).resolves.toBe(false);
   });
 
   it("lists persisted metadata newest first without selecting PDF bytes", async () => {

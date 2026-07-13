@@ -206,8 +206,8 @@ paths:
     delete:
       tags:
         - Ingestion
-      summary: Delete an indexed rulebook from the list
-      description: Removes the in-memory rulebook record. Vector-store deletion is not implemented yet.
+      summary: Delete a persisted rulebook
+      description: Removes the rulebook metadata and stored PDF from the selected repository. Vector-store deletion is not implemented yet.
       parameters:
         - name: id
           in: path

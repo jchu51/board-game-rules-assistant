@@ -166,8 +166,7 @@ src/
 ## Current Limitations
 
 - `GET /rulebooks` lists persisted metadata without loading PDF bytes.
-- `DELETE /rulebooks/:id` still removes only process-local metadata; persisted
-  deletion is follow-up work.
+- `DELETE /rulebooks/:id` removes persisted metadata and PDF bytes.
 - Vector-store deletion is not implemented yet.
 - Temporary uploaded files are deleted after ingestion and repository
   persistence.

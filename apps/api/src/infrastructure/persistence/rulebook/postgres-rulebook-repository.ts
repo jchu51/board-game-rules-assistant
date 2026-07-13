@@ -5,7 +5,6 @@ import type {
   RulebookRepository,
   SaveRulebookRecord,
 } from "../../../domain/rulebook/rulebook-repository";
-import { InMemoryRulebookRepository } from "./in-memory-rulebook-repository";
 
 type RulebookRow = {
   id: string;
@@ -15,8 +14,6 @@ type RulebookRow = {
 };
 
 export class PostgresRulebookRepository implements RulebookRepository {
-  private readonly currentProcessRepository = new InMemoryRulebookRepository();
-
   constructor(private readonly pool: Pool) {}
 
   async save(record: SaveRulebookRecord): Promise<RulebookRecord> {
@@ -34,11 +31,22 @@ export class PostgresRulebookRepository implements RulebookRepository {
       ],
     );
 
-    return this.currentProcessRepository.save(record);
+    return {
+      id: record.id,
+      gameName: record.gameName,
+      pdfName: record.pdfName,
+      fileSize: record.fileSize,
+    };
   }
 
-  deleteById(id: string): boolean {
-    return this.currentProcessRepository.deleteById(id);
+  async deleteById(id: string): Promise<boolean> {
+    const result = await this.pool.query(
+      `DELETE FROM rulebooks
+       WHERE id = $1`,
+      [id],
+    );
+
+    return result.rowCount === 1;
   }
 
   async list(): Promise<RulebookRecord[]> {

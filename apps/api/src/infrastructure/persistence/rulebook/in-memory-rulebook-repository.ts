@@ -16,7 +16,7 @@ export class InMemoryRulebookRepository implements RulebookRepository {
     return this.toRulebookRecord(record);
   }
 
-  deleteById(id: string): boolean {
+  async deleteById(id: string): Promise<boolean> {
     return this.rulebooks.delete(id);
   }
 

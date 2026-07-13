@@ -33,5 +33,6 @@ TEST_DATABASE_URL=postgresql://board_game_rules:board_game_rules@127.0.0.1:55432
 The API can avoid PostgreSQL for lightweight local work by setting
 `PERSISTENCE_DRIVER=memory`. PostgreSQL mode does not support callback filters,
 and vector insertion is append-oriented without deduplication or replacement.
-Persisted PDF retrieval and deletion endpoints are not part of the upload-only
-phase.
+Deleting a rulebook removes its metadata and `BYTEA` PDF row. Vector deletion
+remains outside the repository because the vector-store contract does not yet
+support deleting chunks by rulebook id.

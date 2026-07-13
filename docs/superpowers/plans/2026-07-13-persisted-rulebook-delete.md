@@ -20,6 +20,7 @@
 ### Task 1: Repository Deletion
 
 **Files:**
+
 - Modify: `apps/api/src/domain/rulebook/rulebook-repository.ts`
 - Modify: `apps/api/src/infrastructure/persistence/rulebook/in-memory-rulebook-repository.ts`
 - Modify: `apps/api/src/infrastructure/persistence/rulebook/postgres-rulebook-repository.ts`
@@ -48,6 +49,7 @@ Rerun Step 2 and expect PASS.
 ### Task 2: HTTP Deletion
 
 **Files:**
+
 - Modify: `apps/api/src/presentation/http/ingestion/ingestion-router.ts`
 - Modify: `apps/api/tests/http-routers.test.ts`
 
@@ -72,6 +74,7 @@ Rerun Step 2 and expect PASS.
 ### Task 3: Documentation and Verification
 
 **Files:**
+
 - Modify: `apps/api/openapi.yml`
 - Modify: `apps/api/README.md`
 - Modify: `apps/packages/database/README.md`

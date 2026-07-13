@@ -28,8 +28,8 @@ describe("InMemoryRulebookRepository", () => {
         pdfName: "catan.pdf",
       },
     ]);
-    expect(repository.deleteById("missing")).toBe(false);
-    expect(repository.deleteById("rulebook-1")).toBe(true);
+    await expect(repository.deleteById("missing")).resolves.toBe(false);
+    await expect(repository.deleteById("rulebook-1")).resolves.toBe(true);
     await expect(repository.list()).resolves.toEqual([]);
   });
 });

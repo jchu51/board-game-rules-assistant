@@ -193,20 +193,27 @@ export class IngestionRouter {
     }
   };
 
-  private deleteRulebook = (
+  private deleteRulebook = async (
     request: Request<{ id: string }>,
     response: DeleteRulebookResponse,
+    next: NextFunction,
   ) => {
-    const deleted = this.rulebookRepository.deleteById(request.params.id);
-
-    if (!deleted) {
-      return this.sendError(
-        response,
-        HttpStatus.NOT_FOUND,
-        "Rulebook not found",
+    try {
+      const deleted = await this.rulebookRepository.deleteById(
+        request.params.id,
       );
-    }
 
-    return response.status(HttpStatus.NO_CONTENT).send();
+      if (!deleted) {
+        return this.sendError(
+          response,
+          HttpStatus.NOT_FOUND,
+          "Rulebook not found",
+        );
+      }
+
+      return response.status(HttpStatus.NO_CONTENT).send();
+    } catch (error) {
+      return next(error);
+    }
   };
 }
