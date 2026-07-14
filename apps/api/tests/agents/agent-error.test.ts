@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { AgentError } from "../../src/infrastructure/agents/agents/agent-error";
+import { AgentError } from "../../src/infrastructure/agents/agent-error";
 
 describe("AgentError", () => {
   it("wraps failed agent runs with the agent name and cause", () => {

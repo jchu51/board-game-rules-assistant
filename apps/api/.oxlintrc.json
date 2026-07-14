@@ -1,4 +1,75 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["typescript", "oxc"]
+  "plugins": ["typescript", "oxc"],
+  "overrides": [
+    {
+      "files": ["src/domain/**/*.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "**/application/**",
+                  "**/infrastructure/**",
+                  "**/presentation/**",
+                  "**/config/**"
+                ],
+                "message": "domain must not depend on outer layers"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/application/**/*.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["**/infrastructure/**", "**/presentation/**"],
+                "message": "application may only depend on domain and its own ports; implementations are wired in main.ts"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/presentation/**/*.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["**/infrastructure/**"],
+                "message": "presentation may only depend on application and domain"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/infrastructure/**/*.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["**/presentation/**"],
+                "message": "infrastructure must not depend on presentation"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
 }

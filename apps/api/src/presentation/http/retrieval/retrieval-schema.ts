@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { CONTEXT_ORIGINS } from "../../../infrastructure/agents/context-origin";
+import { CONTEXT_ORIGINS } from "../../../domain/retrieval/context-origin";
 
 export const RetrievalSearchRequestSchema = z
   .object({

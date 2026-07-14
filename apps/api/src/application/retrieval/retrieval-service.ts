@@ -1,7 +1,9 @@
-import type { ConversationTitleAgent } from "../../infrastructure/agents/agents/conversation-title-agent";
-import type { RuleAnswerAgent } from "../../infrastructure/agents/agents/rule-answer-agent";
-import type { RuleContextAgent } from "../../infrastructure/agents/agents/rule-context-agent";
-import { CONTEXT_ORIGIN } from "../../infrastructure/agents/context-origin";
+import { CONTEXT_ORIGIN } from "../../domain/retrieval/context-origin";
+import type {
+  CreateConversationTitleAgent,
+  CreateRuleAnswerAgent,
+  CreateRuleContextAgent,
+} from "./retrieval-agents";
 import type {
   PublicSearchResult,
   PublicSearchService,
@@ -12,7 +14,7 @@ import type {
 } from "../../domain/conversation/conversation";
 import type { ConversationRepository } from "../../domain/conversation/conversation-repository";
 import { ConversationNotFoundError } from "../../domain/conversation/conversation-errors";
-import type { VectorStore } from "../../infrastructure/rag/vector-store/vector-store";
+import type { VectorStore } from "../../domain/rulebook/vector-store";
 import type { RequestClassifierService } from "./request-classifier-service";
 import type {
   RetrievalMatch,
@@ -31,13 +33,9 @@ export class RetrievalService {
     private readonly requestClassifier: RequestClassifierService,
     private readonly publicSearchService: PublicSearchService,
     private readonly conversationRepository: ConversationRepository,
-    private readonly createRuleContextAgent: (
-      context: string,
-    ) => RuleContextAgent,
-    private readonly createRuleAnswerAgent: (
-      context: string,
-    ) => RuleAnswerAgent,
-    private readonly createConversationTitleAgent?: () => ConversationTitleAgent,
+    private readonly createRuleContextAgent: CreateRuleContextAgent,
+    private readonly createRuleAnswerAgent: CreateRuleAnswerAgent,
+    private readonly createConversationTitleAgent?: CreateConversationTitleAgent,
   ) {}
 
   async search({

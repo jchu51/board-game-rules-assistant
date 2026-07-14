@@ -1,13 +1,12 @@
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
-import type { Pool } from "pg";
+import type { Pool, PoolClient } from "pg";
 
-const migrationVersions = [
-  "0001_conversation_messages",
-  "0002_conversations",
-  "0003_rulebooks",
-  "0004_conversation_message_foreign_key",
-] as const;
+const migrationVersions = ["0001_initial_schema"] as const;
+
+// Serializes concurrent migration runs against the same database:
+// statements like CREATE EXTENSION IF NOT EXISTS are not concurrency-safe.
+const MIGRATION_LOCK_KEY = 723561;
 
 const migrationUrl = (version: string): URL => {
   const sourceUrl = new URL(
@@ -21,8 +20,8 @@ const migrationUrl = (version: string): URL => {
     : sourceUrl;
 };
 
-export const runMigrations = async (pool: Pool): Promise<void> => {
-  await pool.query(`
+const applyPendingMigrations = async (client: PoolClient): Promise<void> => {
+  await client.query(`
     CREATE TABLE IF NOT EXISTS app_migrations (
       version TEXT PRIMARY KEY,
       applied_at TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -30,7 +29,7 @@ export const runMigrations = async (pool: Pool): Promise<void> => {
   `);
 
   for (const version of migrationVersions) {
-    const applied = await pool.query(
+    const applied = await client.query(
       "SELECT 1 FROM app_migrations WHERE version = $1",
       [version],
     );
@@ -39,7 +38,6 @@ export const runMigrations = async (pool: Pool): Promise<void> => {
     }
 
     const sql = await readFile(migrationUrl(version), "utf8");
-    const client = await pool.connect();
     try {
       await client.query("BEGIN");
       await client.query(sql);
@@ -51,8 +49,22 @@ export const runMigrations = async (pool: Pool): Promise<void> => {
     } catch (error) {
       await client.query("ROLLBACK");
       throw error;
-    } finally {
-      client.release();
     }
+  }
+};
+
+export const runMigrations = async (pool: Pool): Promise<void> => {
+  const client = await pool.connect();
+  try {
+    await client.query("SELECT pg_advisory_lock($1)", [MIGRATION_LOCK_KEY]);
+    try {
+      await applyPendingMigrations(client);
+    } finally {
+      await client.query("SELECT pg_advisory_unlock($1)", [
+        MIGRATION_LOCK_KEY,
+      ]);
+    }
+  } finally {
+    client.release();
   }
 };

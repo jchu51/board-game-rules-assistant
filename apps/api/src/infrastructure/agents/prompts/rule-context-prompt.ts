@@ -1,6 +1,6 @@
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 
-import { CONTEXT_ORIGIN } from "../context-origin.js";
+import { CONTEXT_ORIGIN } from "../../../domain/retrieval/context-origin.js";
 
 export const ruleContextPrompt = ChatPromptTemplate.fromTemplate(
   [

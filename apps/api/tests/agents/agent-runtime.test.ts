@@ -8,7 +8,7 @@ const { createAgent, invoke } = vi.hoisted(() => ({
 
 vi.mock("langchain", () => ({ createAgent }));
 
-import { createLangChainAgentRuntime } from "../../src/infrastructure/agents/agents/agent";
+import { createLangChainAgentRuntime } from "../../src/infrastructure/agents/agent";
 
 describe("createLangChainAgentRuntime", () => {
   it("invokes LangChain and maps response messages to runtime text", async () => {

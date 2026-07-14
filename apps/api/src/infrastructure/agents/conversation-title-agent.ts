@@ -6,7 +6,7 @@ import {
   type AgentRuntime,
 } from "./agent.js";
 import { AgentError } from "./agent-error.js";
-import { conversationTitlePrompt } from "../prompts/conversation-title-prompt.js";
+import { conversationTitlePrompt } from "./prompts/conversation-title-prompt.js";
 
 const stripJsonFence = (text: string): string =>
   text

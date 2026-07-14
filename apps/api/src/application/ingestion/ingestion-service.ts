@@ -1,16 +1,18 @@
 import { InvalidSplitterParamsError } from "../../domain/ingestion/ingestion-errors";
-import { chunkDocuments } from "../../infrastructure/rag/chunking/chunk-documents";
-import { loadPdfDocuments } from "../../infrastructure/rag/loaders/pdf-loader";
-import type { VectorStore } from "../../infrastructure/rag/vector-store/vector-store";
+import type { VectorStore } from "../../domain/rulebook/vector-store";
 import type {
+  DocumentChunker,
   IngestPdfInput,
   IngestionResult,
   IngestionServiceOptions,
+  PdfLoader,
 } from "./ingestion-types";
 
 export class IngestionService {
   constructor(
     private readonly vectorStore: VectorStore,
+    private readonly loadPdfDocuments: PdfLoader,
+    private readonly chunkDocuments: DocumentChunker,
     private readonly options: IngestionServiceOptions,
   ) {}
 
@@ -32,7 +34,7 @@ export class IngestionService {
       );
     }
 
-    const documents = await loadPdfDocuments(filePath, { source });
+    const documents = await this.loadPdfDocuments(filePath, { source });
 
     if (metadata) {
       for (const document of documents) {
@@ -43,7 +45,7 @@ export class IngestionService {
       }
     }
 
-    const chunks = await chunkDocuments(documents, mergedSplitterParams);
+    const chunks = await this.chunkDocuments(documents, mergedSplitterParams);
 
     await this.vectorStore.upsert(chunks);
 

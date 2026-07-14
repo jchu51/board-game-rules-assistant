@@ -6,7 +6,7 @@ import {
   type AgentRuntime,
 } from "./agent.js";
 import { AgentError } from "./agent-error.js";
-import { boardGameRuleMasterPrompt } from "../prompts/board-game-rule-master-prompt.js";
+import { boardGameRuleMasterPrompt } from "./prompts/board-game-rule-master-prompt.js";
 
 /**
  * RuleAnswerAgent

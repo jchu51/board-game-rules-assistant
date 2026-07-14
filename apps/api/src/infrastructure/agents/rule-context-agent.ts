@@ -6,7 +6,7 @@ import {
   type AgentRuntime,
 } from "./agent.js";
 import { AgentError } from "./agent-error.js";
-import { ruleContextPrompt } from "../prompts/rule-context-prompt.js";
+import { ruleContextPrompt } from "./prompts/rule-context-prompt.js";
 
 /**
  * RuleContextAgent

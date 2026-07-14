@@ -3,8 +3,8 @@ import type { EmbeddingsInterface } from "@langchain/core/embeddings";
 import { Pool } from "pg";
 
 import { runMigrations } from "./migrations.js";
-import { LangchainPgVectorStoreAdapter } from "./vector/langchain-pg-vector-store.js";
-import type { VectorStore } from "../rag/vector-store/vector-store.js";
+import { LangchainPgVectorStoreAdapter } from "../rag/vector-store/langchain-pg-vector-store.js";
+import type { VectorStore } from "../../domain/rulebook/vector-store.js";
 
 export type CreatePostgresPersistenceOptions = {
   databaseUrl: string;

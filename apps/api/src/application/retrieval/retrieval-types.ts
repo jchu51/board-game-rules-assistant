@@ -1,9 +1,9 @@
+import type { ContextOrigin } from "../../domain/retrieval/context-origin";
+
 export type RetrievalSearchInput = {
   conversationId: string;
   query: string;
 };
-
-import type { ContextOrigin } from "../../infrastructure/agents/context-origin";
 
 export type RetrievalMatchOrigin = ContextOrigin;
 

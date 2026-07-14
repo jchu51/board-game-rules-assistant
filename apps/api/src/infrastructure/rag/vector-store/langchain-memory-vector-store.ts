@@ -1,13 +1,10 @@
 import { MemoryVectorStore } from "@langchain/classic/vectorstores/memory";
 import type { EmbeddingsInterface } from "@langchain/core/embeddings";
 import type {
-  RulebookDocument,
-  RulebookDocumentInterface,
-} from "../documents/rulebook-document.js";
-import type {
   VectorStore,
   VectorStoreSimilaritySearchInput,
-} from "./vector-store.js";
+} from "../../../domain/rulebook/vector-store.js";
+import type { RulebookDocument } from "../documents/rulebook-document.js";
 
 export class LangchainMemoryVectorStore implements VectorStore {
   readonly vectorStore: MemoryVectorStore;
@@ -28,23 +25,21 @@ export class LangchainMemoryVectorStore implements VectorStore {
 
   async similaritySearch(
     input: VectorStoreSimilaritySearchInput,
-  ): Promise<RulebookDocumentInterface[]> {
+  ): Promise<RulebookDocument[]> {
     return this.vectorStore.similaritySearch(
       input.query,
       input.topK,
       input.filter,
-      input.callbacks,
     );
   }
 
   async similaritySearchVectorWithScore(
     input: VectorStoreSimilaritySearchInput,
-  ): Promise<[RulebookDocumentInterface, number][]> {
+  ): Promise<[RulebookDocument, number][]> {
     return this.vectorStore.similaritySearchWithScore(
       input.query,
       input.topK,
       input.filter,
-      input.callbacks,
     );
   }
 }

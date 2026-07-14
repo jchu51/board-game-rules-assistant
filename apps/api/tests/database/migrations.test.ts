@@ -23,19 +23,14 @@ describe("runMigrations", () => {
             "SELECT version FROM app_migrations ORDER BY version",
           )
         ).rows,
-      ).toEqual([
-        { version: "0001_conversation_messages" },
-        { version: "0002_conversations" },
-        { version: "0003_rulebooks" },
-        { version: "0004_conversation_message_foreign_key" },
-      ]);
+      ).toEqual([{ version: "0001_initial_schema" }]);
       expect(
         (
           await database.pool.query(
-            "SELECT to_regclass('public.conversations') AS table_name",
+            "SELECT to_regclass('conversations') IS NOT NULL AS table_exists",
           )
         ).rows,
-      ).toEqual([{ table_name: "public.conversations" }]);
+      ).toEqual([{ table_exists: true }]);
       expect(
         (
           await database.pool.query(

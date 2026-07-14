@@ -10,6 +10,7 @@ const candidatePaths = [
   join(currentDirectory, "../openapi.yml"),
   join(currentDirectory, "../../openapi.yml"),
   join(currentDirectory, "../../../openapi.yml"),
+  join(currentDirectory, "../../../../openapi.yml"),
 ];
 
 const openApiFile = candidatePaths.find((path) => existsSync(path));

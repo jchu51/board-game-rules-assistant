@@ -1,25 +1,24 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Document } from "@langchain/core/documents";
-import type { VectorStore } from "../src/infrastructure/rag/vector-store/vector-store";
-
-const { chunkDocuments, loadPdfDocuments } = vi.hoisted(() => ({
-  chunkDocuments: vi.fn(),
-  loadPdfDocuments: vi.fn(),
-}));
-
-vi.mock("../src/infrastructure/rag/chunking/chunk-documents", () => ({
-  chunkDocuments,
-}));
-vi.mock("../src/infrastructure/rag/loaders/pdf-loader", () => ({
-  loadPdfDocuments,
-}));
+import type { VectorStore } from "../src/domain/rulebook/vector-store";
 
 import { IngestionService } from "../src/application/ingestion/ingestion-service";
 import { InvalidSplitterParamsError } from "../src/domain/ingestion/ingestion-errors";
 
+const chunkDocuments = vi.fn();
+const loadPdfDocuments = vi.fn();
+
 const vectorStore = {
   upsert: vi.fn(),
 } as unknown as VectorStore;
+
+const createService = (defaultSplitterParams: {
+  chunkSize: number;
+  chunkOverlap: number;
+}) =>
+  new IngestionService(vectorStore, loadPdfDocuments, chunkDocuments, {
+    defaultSplitterParams,
+  });
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -34,9 +33,7 @@ describe("IngestionService", () => {
     const chunks = [new Document({ pageContent: "Chunk one", metadata: {} })];
     loadPdfDocuments.mockResolvedValue(documents);
     chunkDocuments.mockResolvedValue(chunks);
-    const service = new IngestionService(vectorStore, {
-      defaultSplitterParams: { chunkSize: 500, chunkOverlap: 50 },
-    });
+    const service = createService({ chunkSize: 500, chunkOverlap: 50 });
 
     const result = await service.ingestPdf({
       filePath: "/tmp/catan.pdf",
@@ -63,9 +60,7 @@ describe("IngestionService", () => {
   it("supports ingestion without metadata", async () => {
     loadPdfDocuments.mockResolvedValue([]);
     chunkDocuments.mockResolvedValue([]);
-    const service = new IngestionService(vectorStore, {
-      defaultSplitterParams: { chunkSize: 500, chunkOverlap: 50 },
-    });
+    const service = createService({ chunkSize: 500, chunkOverlap: 50 });
 
     await expect(
       service.ingestPdf({ filePath: "/tmp/empty.pdf" }),
@@ -76,9 +71,7 @@ describe("IngestionService", () => {
   });
 
   it("rejects overlap greater than or equal to chunk size", async () => {
-    const service = new IngestionService(vectorStore, {
-      defaultSplitterParams: { chunkSize: 100, chunkOverlap: 100 },
-    });
+    const service = createService({ chunkSize: 100, chunkOverlap: 100 });
 
     await expect(
       service.ingestPdf({ filePath: "/tmp/catan.pdf" }),

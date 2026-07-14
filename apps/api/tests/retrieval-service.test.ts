@@ -1,9 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { Document } from "@langchain/core/documents";
 import type { EmbeddingsInterface } from "@langchain/core/embeddings";
-import type { ConversationTitleAgent } from "../src/infrastructure/agents/agents/conversation-title-agent";
-import type { RuleAnswerAgent } from "../src/infrastructure/agents/agents/rule-answer-agent";
-import type { RuleContextAgent } from "../src/infrastructure/agents/agents/rule-context-agent";
+import type { RetrievalAgent } from "../src/application/retrieval/retrieval-agents";
 
 import type {
   PublicSearchInput,
@@ -21,7 +19,7 @@ import { LangchainMemoryVectorStore } from "../src/infrastructure/rag/vector-sto
 import type {
   VectorStore,
   VectorStoreSimilaritySearchInput,
-} from "../src/infrastructure/rag/vector-store/vector-store";
+} from "../src/domain/rulebook/vector-store";
 
 const CONVERSATION_ID = "11111111-1111-4111-8111-111111111111";
 
@@ -271,14 +269,14 @@ describe("RetrievalService", () => {
           async run() {
             return "Relevant rule: A city produces two resources.";
           },
-        } as unknown as RuleContextAgent;
+        } as unknown as RetrievalAgent;
       },
       () => {
         return {
           async run() {
             return "A city produces two resources.";
           },
-        } as unknown as RuleAnswerAgent;
+        } as unknown as RetrievalAgent;
       },
     );
 
@@ -354,7 +352,7 @@ describe("RetrievalService", () => {
           async run() {
             return "Relevant rule: Cities produce two resources.";
           },
-        } as unknown as RuleContextAgent;
+        } as unknown as RetrievalAgent;
       },
       (context) => {
         answerAgentContext = context;
@@ -363,7 +361,7 @@ describe("RetrievalService", () => {
             answerAgentQuestion = question;
             return "A city produces two resources.";
           },
-        } as unknown as RuleAnswerAgent;
+        } as unknown as RetrievalAgent;
       },
     );
 
@@ -424,14 +422,14 @@ describe("RetrievalService", () => {
             agentQuestions.push(question);
             return "The second player starts with six cards.";
           },
-        }) as unknown as RuleContextAgent,
+        }) as unknown as RetrievalAgent,
       () =>
         ({
           async run(question: string) {
             agentQuestions.push(question);
             return "The second player starts with six cards.";
           },
-        }) as unknown as RuleAnswerAgent,
+        }) as unknown as RetrievalAgent,
     );
 
     await service.search({
@@ -485,7 +483,7 @@ describe("RetrievalService", () => {
     const conversationId = await conversationRepository.createConversation();
     const titleAgent = {
       run: vi.fn().mockResolvedValue("Catan city production"),
-    } as unknown as ConversationTitleAgent;
+    } as unknown as RetrievalAgent;
     const service = new RetrievalService(
       new RecordingVectorStore(),
       new RequestClassifierService(),
@@ -531,7 +529,7 @@ describe("RetrievalService", () => {
       () => {
         throw new Error("should not create answer agent");
       },
-      () => ({ run }) as unknown as ConversationTitleAgent,
+      () => ({ run }) as unknown as RetrievalAgent,
     );
 
     await service.search({ conversationId, query: "Can I trade this?" });
@@ -599,7 +597,7 @@ describe("RetrievalService", () => {
       () =>
         ({
           run: vi.fn().mockRejectedValue(new Error("metadata unavailable")),
-        }) as unknown as ConversationTitleAgent,
+        }) as unknown as RetrievalAgent,
     );
 
     const result = await service.search({

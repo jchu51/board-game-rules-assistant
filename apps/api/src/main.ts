@@ -1,14 +1,17 @@
+import { ConversationService } from "./application/conversation/conversation-service";
 import { IngestionService } from "./application/ingestion/ingestion-service";
 import { RequestClassifierService } from "./application/retrieval/request-classifier-service";
 import { RetrievalService } from "./application/retrieval/retrieval-service";
 import { config } from "./config/config";
-import { ConversationTitleAgent } from "./infrastructure/agents/agents/conversation-title-agent";
-import { RuleAnswerAgent } from "./infrastructure/agents/agents/rule-answer-agent";
-import { RuleContextAgent } from "./infrastructure/agents/agents/rule-context-agent";
+import { ConversationTitleAgent } from "./infrastructure/agents/conversation-title-agent";
+import { RuleAnswerAgent } from "./infrastructure/agents/rule-answer-agent";
+import { RuleContextAgent } from "./infrastructure/agents/rule-context-agent";
 import { LLMService } from "./infrastructure/agents/llm/llm-service";
 import { createPersistence } from "./infrastructure/persistence/create-persistence";
 import { TavilyPublicSearchService } from "./infrastructure/public-search/tavily-public-search-service";
+import { chunkDocuments } from "./infrastructure/rag/chunking/chunk-documents";
 import { createOpenAIEmbeddings } from "./infrastructure/rag/embeddings/embed-text";
+import { loadPdfDocuments } from "./infrastructure/rag/loaders/pdf-loader";
 import { createApp } from "./presentation/http/app";
 import { ChatRouter } from "./presentation/http/chat/chat-router";
 import { HealthRouter } from "./presentation/http/health/health-router";
@@ -29,12 +32,18 @@ const chatModel = await llmService.init(config.agent.chatModel, {
 const vectorStore = persistence.vectorStore;
 const rulebookRepository = persistence.rulebookRepository;
 const conversationRepository = persistence.conversationRepository;
-const ingestionService = new IngestionService(vectorStore, {
-  defaultSplitterParams: {
-    chunkSize: config.ingestion.defaultChunkSize,
-    chunkOverlap: config.ingestion.defaultChunkOverlap,
+const conversationService = new ConversationService(conversationRepository);
+const ingestionService = new IngestionService(
+  vectorStore,
+  loadPdfDocuments,
+  chunkDocuments,
+  {
+    defaultSplitterParams: {
+      chunkSize: config.ingestion.defaultChunkSize,
+      chunkOverlap: config.ingestion.defaultChunkOverlap,
+    },
   },
-});
+);
 const requestClassifier = new RequestClassifierService();
 const publicSearchService = new TavilyPublicSearchService({
   apiKey: config.publicSearch.tavilyApiKey,
@@ -63,7 +72,7 @@ const ingestionRouter = new IngestionRouter(
   },
 );
 const retrievalRouter = new RetrievalRouter(retrievalService);
-const chatRouter = new ChatRouter(conversationRepository);
+const chatRouter = new ChatRouter(conversationService);
 const routers = [
   healthRouter.router,
   chatRouter.router,

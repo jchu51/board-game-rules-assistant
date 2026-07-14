@@ -1,7 +1,7 @@
 import type { NextFunction, Request } from "express";
 import { Router } from "express";
 
-import type { ConversationRepository } from "../../../domain/conversation/conversation-repository";
+import type { ConversationService } from "../../../application/conversation/conversation-service";
 import { HttpStatus } from "../shared/http-status";
 import type { ErrorResponseBody, TypedResponse } from "../shared/http-types";
 import {
@@ -18,7 +18,7 @@ import type {
 export class ChatRouter {
   readonly router: Router;
 
-  constructor(private readonly conversationRepository: ConversationRepository) {
+  constructor(private readonly conversationService: ConversationService) {
     const router = Router();
 
     router.post("/chats", this.createChat);
@@ -36,7 +36,7 @@ export class ChatRouter {
   ) => {
     try {
       const conversationId =
-        await this.conversationRepository.createConversation();
+        await this.conversationService.createConversation();
       const responseBody = CreateChatResponseSchema.parse({ conversationId });
 
       return response.status(HttpStatus.CREATED).json(responseBody);
@@ -51,7 +51,7 @@ export class ChatRouter {
     next: NextFunction,
   ) => {
     try {
-      const chats = await this.conversationRepository.getChats();
+      const chats = await this.conversationService.getChats();
       const responseBody = GetChatsResponseSchema.parse({ chats });
 
       return response.status(HttpStatus.OK).json(responseBody);
@@ -66,7 +66,7 @@ export class ChatRouter {
     next: NextFunction,
   ) => {
     try {
-      const chat = await this.conversationRepository.getChat(request.params.id);
+      const chat = await this.conversationService.getChat(request.params.id);
 
       if (!chat) {
         return response
@@ -88,7 +88,7 @@ export class ChatRouter {
     next: NextFunction,
   ) => {
     try {
-      const deleted = await this.conversationRepository.deleteConversation(
+      const deleted = await this.conversationService.deleteConversation(
         request.params.id,
       );
 

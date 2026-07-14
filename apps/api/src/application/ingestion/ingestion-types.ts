@@ -1,9 +1,22 @@
-import type { RulebookChunkMetadata } from "../../infrastructure/rag/documents/rulebook-document";
+import type {
+  RulebookChunk,
+  RulebookChunkMetadata,
+} from "../../domain/rulebook/rulebook-chunk";
 
 export type IngestionSplitterParams = {
   chunkSize: number;
   chunkOverlap: number;
 };
+
+export type PdfLoader = (
+  filePath: string,
+  options?: { source?: string },
+) => Promise<RulebookChunk[]>;
+
+export type DocumentChunker = (
+  documents: RulebookChunk[],
+  splitterParams: IngestionSplitterParams,
+) => Promise<RulebookChunk[]>;
 
 export type IngestionServiceOptions = {
   defaultSplitterParams: IngestionSplitterParams;

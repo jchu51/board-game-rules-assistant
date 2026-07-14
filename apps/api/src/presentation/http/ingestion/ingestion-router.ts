@@ -7,7 +7,7 @@ import multer, { MulterError } from "multer";
 import { IngestionService } from "../../../application/ingestion/ingestion-service";
 import { InvalidSplitterParamsError } from "../../../domain/ingestion/ingestion-errors";
 import type { RulebookRepository } from "../../../domain/rulebook/rulebook-repository";
-import type { VectorStore } from "../../../infrastructure/rag/vector-store/vector-store";
+import type { VectorStore } from "../../../domain/rulebook/vector-store";
 import { getErrorMessage } from "../shared/get-error-message";
 import { HttpStatus } from "../shared/http-status";
 import type { ErrorResponseBody, TypedResponse } from "../shared/http-types";

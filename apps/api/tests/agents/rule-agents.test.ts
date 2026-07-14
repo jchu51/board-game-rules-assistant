@@ -2,10 +2,10 @@ import type { BaseMessageLike } from "@langchain/core/messages";
 import type { ConfigurableModel } from "langchain/chat_models/universal";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { AgentRuntime } from "../../src/infrastructure/agents/agents/agent";
-import { AgentError } from "../../src/infrastructure/agents/agents/agent-error";
-import { RuleAnswerAgent } from "../../src/infrastructure/agents/agents/rule-answer-agent";
-import { RuleContextAgent } from "../../src/infrastructure/agents/agents/rule-context-agent";
+import type { AgentRuntime } from "../../src/infrastructure/agents/agent";
+import { AgentError } from "../../src/infrastructure/agents/agent-error";
+import { RuleAnswerAgent } from "../../src/infrastructure/agents/rule-answer-agent";
+import { RuleContextAgent } from "../../src/infrastructure/agents/rule-context-agent";
 
 const fakeModel = {} as ConfigurableModel;
 

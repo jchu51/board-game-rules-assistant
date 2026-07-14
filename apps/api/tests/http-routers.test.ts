@@ -11,6 +11,7 @@ import { RetrievalRouter } from "../src/presentation/http/retrieval/retrieval-ro
 import { HealthRouter } from "../src/presentation/http/health/health-router";
 import { DocsRouter } from "../src/presentation/http/docs/docs-router";
 import { ChatRouter } from "../src/presentation/http/chat/chat-router";
+import { ConversationService } from "../src/application/conversation/conversation-service";
 import { createApp } from "../src/presentation/http/app";
 import { InMemoryRulebookRepository } from "../src/infrastructure/persistence/rulebook/in-memory-rulebook-repository";
 import type { IngestionService } from "../src/application/ingestion/ingestion-service";
@@ -19,7 +20,7 @@ import { InvalidSplitterParamsError } from "../src/domain/ingestion/ingestion-er
 import { ConversationNotFoundError } from "../src/domain/conversation/conversation-errors";
 import { testConfig } from "./test-config";
 import type { ConversationRepository } from "../src/domain/conversation/conversation-repository";
-import type { VectorStore } from "../src/infrastructure/rag/vector-store/vector-store";
+import type { VectorStore } from "../src/domain/rulebook/vector-store";
 
 const createResponse = () => {
   const response = {
@@ -59,6 +60,7 @@ const conversationRepository = {
   appendMessages: vi.fn(),
   getMessages: vi.fn(),
 } satisfies ConversationRepository;
+const conversationService = new ConversationService(conversationRepository);
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -70,7 +72,7 @@ describe("HTTP routers", () => {
     vi.mocked(conversationRepository.createConversation).mockResolvedValue(
       "11111111-1111-4111-8111-111111111111",
     );
-    const router = new ChatRouter(conversationRepository);
+    const router = new ChatRouter(conversationService);
     const handler = router.router.stack[0]?.route.stack[0]?.handle;
     const response = createResponse();
 
@@ -88,7 +90,7 @@ describe("HTTP routers", () => {
     vi.mocked(conversationRepository.createConversation).mockRejectedValue(
       error,
     );
-    const router = new ChatRouter(conversationRepository);
+    const router = new ChatRouter(conversationService);
     const handler = router.router.stack[0]?.route.stack[0]?.handle;
     const next = vi.fn();
 
@@ -108,7 +110,7 @@ describe("HTTP routers", () => {
         title: "New chat",
       },
     ]);
-    const router = new ChatRouter(conversationRepository);
+    const router = new ChatRouter(conversationService);
     const handler = router.router.stack.find(
       (layer) => layer.route?.path === "/chats" && layer.route.methods.get,
     )?.route.stack[0]?.handle;
@@ -135,7 +137,7 @@ describe("HTTP routers", () => {
   it("forwards chat listing failures", async () => {
     const error = new Error("list failed");
     vi.mocked(conversationRepository.getChats).mockRejectedValue(error);
-    const router = new ChatRouter(conversationRepository);
+    const router = new ChatRouter(conversationService);
     const handler = router.router.stack.find(
       (layer) => layer.route?.path === "/chats" && layer.route.methods.get,
     )?.route.stack[0]?.handle;
@@ -155,7 +157,7 @@ describe("HTTP routers", () => {
         { role: "assistant", content: "Answer" },
       ],
     });
-    const router = new ChatRouter(conversationRepository);
+    const router = new ChatRouter(conversationService);
     const handler = router.router.stack.find(
       (layer) => layer.route?.path === "/chats/:id" && layer.route.methods.get,
     )?.route.stack[0]?.handle;
@@ -185,7 +187,7 @@ describe("HTTP routers", () => {
 
   it("returns not found when getting a missing chat", async () => {
     vi.mocked(conversationRepository.getChat).mockResolvedValue(null);
-    const router = new ChatRouter(conversationRepository);
+    const router = new ChatRouter(conversationService);
     const handler = router.router.stack.find(
       (layer) => layer.route?.path === "/chats/:id" && layer.route.methods.get,
     )?.route.stack[0]?.handle;
@@ -204,7 +206,7 @@ describe("HTTP routers", () => {
   it("forwards chat history failures", async () => {
     const error = new Error("get failed");
     vi.mocked(conversationRepository.getChat).mockRejectedValue(error);
-    const router = new ChatRouter(conversationRepository);
+    const router = new ChatRouter(conversationService);
     const handler = router.router.stack.find(
       (layer) => layer.route?.path === "/chats/:id" && layer.route.methods.get,
     )?.route.stack[0]?.handle;
@@ -223,7 +225,7 @@ describe("HTTP routers", () => {
     vi.mocked(conversationRepository.deleteConversation).mockResolvedValue(
       true,
     );
-    const router = new ChatRouter(conversationRepository);
+    const router = new ChatRouter(conversationService);
     const handler = router.router.stack.find(
       (layer) => layer.route?.methods.delete,
     )?.route.stack[0]?.handle;
@@ -248,7 +250,7 @@ describe("HTTP routers", () => {
     vi.mocked(conversationRepository.deleteConversation).mockResolvedValue(
       false,
     );
-    const router = new ChatRouter(conversationRepository);
+    const router = new ChatRouter(conversationService);
     const handler = router.router.stack.find(
       (layer) => layer.route?.methods.delete,
     )?.route.stack[0]?.handle;

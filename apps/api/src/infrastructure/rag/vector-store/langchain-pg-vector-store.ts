@@ -1,11 +1,8 @@
 import type {
-  RulebookDocument,
-  RulebookDocumentInterface,
-} from "../../rag/documents/rulebook-document.js";
-import type {
   VectorStore,
   VectorStoreSimilaritySearchInput,
-} from "../../rag/vector-store/vector-store.js";
+} from "../../../domain/rulebook/vector-store.js";
+import type { RulebookDocument } from "../documents/rulebook-document.js";
 import { PGVectorStore } from "@langchain/community/vectorstores/pgvector";
 
 const assertNoCallbackFilter = (
@@ -31,25 +28,18 @@ export class LangchainPgVectorStoreAdapter implements VectorStore {
 
   async similaritySearch(
     input: VectorStoreSimilaritySearchInput,
-  ): Promise<RulebookDocumentInterface[]> {
+  ): Promise<RulebookDocument[]> {
     assertNoCallbackFilter(input);
-    return this.vectorStore.similaritySearch(
-      input.query,
-      input.topK,
-      undefined,
-      input.callbacks,
-    );
+    return this.vectorStore.similaritySearch(input.query, input.topK);
   }
 
   async similaritySearchVectorWithScore(
     input: VectorStoreSimilaritySearchInput,
-  ): Promise<[RulebookDocumentInterface, number][]> {
+  ): Promise<[RulebookDocument, number][]> {
     assertNoCallbackFilter(input);
     const results = await this.vectorStore.similaritySearchWithScore(
       input.query,
       input.topK,
-      undefined,
-      input.callbacks,
     );
 
     return results.map(([document, cosineDistance]) => [
