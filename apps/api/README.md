@@ -15,6 +15,8 @@ frontend, and exposes similarity search over indexed chunks.
 - Multer
 - Swagger UI Express
 - `@board-game-rules-assistant/rag-core`
+- `@board-game-rules-assistant/agent-core`
+- `@board-game-rules-assistant/database`
 
 ## Environment
 
@@ -81,6 +83,10 @@ http://127.0.0.1:8000
 
 ```text
 GET    /health
+POST   /chats
+GET    /chats
+GET    /chats/:id
+DELETE /chats/:id
 POST   /rulebooks
 GET    /rulebooks
 DELETE /rulebooks/:id
@@ -150,10 +156,11 @@ src/
   config/                        # env schema, config type, config singleton
   domain/                        # domain contracts and domain errors
     ingestion/                   # ingestion domain errors
+    conversation/               # chat and message repository contract
     rulebook/                    # rulebook repository contract
   infrastructure/                # adapters for external/storage concerns
     openapi/                     # OpenAPI document loading
-    persistence/rulebook/        # in-memory and PostgreSQL rulebook repositories
+    persistence/                 # driver composition and repository adapters
   presentation/http/             # Express routers and HTTP schemas
     app.ts                       # Express app factory
     docs/                        # local-only Swagger/OpenAPI routes

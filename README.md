@@ -3,23 +3,24 @@
 A full-stack TypeScript app for uploading board-game rulebook PDFs and building
 toward source-backed rules Q&A.
 
-The current slice lets a user upload PDF rulebooks, index them into a selectable
-in-memory or PostgreSQL/pgvector store, search those indexed chunks, and use a prototype Ask screen that
-returns an agent-generated answer with retrieved source snippets. RAG primitives
-and agent primitives live in shared packages so the API can grow this flow
-without tying those pieces directly to Express.
+The current app lets a user upload and persist PDF rulebooks, index them into a
+selectable in-memory or PostgreSQL/pgvector store, manage chat threads, and ask
+follow-up questions that return agent-generated answers with source snippets.
+RAG primitives and agent primitives live in shared packages so the API can grow
+this flow without tying those pieces directly to Express.
 
 ## Current Features
 
 - React Ask and Library pages
 - Express API with health, rulebook upload/list/delete, and retrieval endpoints
 - Multipart PDF upload with file type and size validation
-- PDF loading, chunking, embeddings, and in-memory vector-store indexing
+- PDF loading, chunking, embeddings, and selectable memory/pgvector indexing
 - Similarity search over indexed rulebook chunks
 - Rule-question classification with a public-search fallback when indexed
   rulebook context has no relevant match
 - Agent-core package with prompt and LangChain agent primitives
-- In-memory rulebook repository for the current API process
+- Selectable in-memory or PostgreSQL persistence for chats and rulebooks
+- PostgreSQL `BYTEA` storage for original uploaded PDFs
 - Local Swagger UI for API exploration
 - Docker Compose setup for running web and API together
 - PostgreSQL/pgvector persistence for conversation history and rulebook vectors
@@ -73,6 +74,10 @@ board-game-rules-assistant/
 ```
 
 See the [Phase 0 flow](docs/tech-reviews/000-phase-0-single-pdf-rag-agent/diagrams/phase-0-flow.png).
+
+![Current system architecture](docs/tech-reviews/001-phase-01-tavily-public-search/diagrams/phase-01-system-architecture.png)
+
+[Current architecture PlantUML source](docs/tech-reviews/001-phase-01-tavily-public-search/diagrams/phase-01-system-architecture.puml)
 
 See the
 [Phase 01 Tavily retrieval low-level design](docs/tech-reviews/001-phase-01-tavily-public-search/low-level-design.md)
@@ -182,6 +187,10 @@ Endpoints:
 
 ```text
 GET    /health
+POST   /chats
+GET    /chats
+GET    /chats/:id
+DELETE /chats/:id
 POST   /rulebooks
 GET    /rulebooks
 DELETE /rulebooks/:id
@@ -250,8 +259,10 @@ TEST_DATABASE_URL=postgresql://board_game_rules:board_game_rules@127.0.0.1:55432
 
 ## Current Limitations
 
-- Rulebook records are stored in memory and reset when the API process restarts.
-- Uploaded PDF files are removed after ingestion.
+- Memory-driver chats, rulebooks, PDFs, and vectors reset when the API process
+  restarts; PostgreSQL mode persists them.
+- Temporary upload files are removed after ingestion; the selected rulebook
+  repository retains the PDF bytes.
 - Vector-store deletion is not implemented yet.
 - The Ask UI currently returns an agent-generated answer plus retrieval-backed
   source snippets.
