@@ -1,0 +1,78 @@
+@startuml phase-04-consolidated-architecture
+!theme plain
+top to bottom direction
+
+skinparam backgroundColor #FEFEFE
+skinparam shadowing false
+skinparam componentStyle rectangle
+skinparam defaultFontSize 11
+skinparam linetype polyline
+skinparam nodesep 70
+skinparam ranksep 60
+
+title Phase 04 — Consolidated API Architecture
+
+actor "Player" as player
+
+package "apps/web" as web #E0F7FA {
+  rectangle "**React Application**\nChat and rulebook library\nUpload PDFs and ask questions" as react #FFFFFF
+}
+
+package "apps/api" as api #E8EAF6 {
+  rectangle "**Presentation**\nsrc/presentation/http\nRouters, schemas, middleware" as presentation #FFFFFF
+  rectangle "**Application**\nsrc/application\nIngestion and retrieval workflows" as application #FFFFFF
+  rectangle "**Domain**\nsrc/domain\nRepository contracts and errors" as domain #FFFFFF
+
+  package "src/infrastructure" as infrastructure #F5F5F5 {
+    rectangle "**RAG**\nPDF loading and chunking\nEmbeddings and vector contract" as rag #E8F5E9
+    rectangle "**Agents**\nAnswer, context, and title agents\nPrompts and chat model helper" as agents #FCE4EC
+    rectangle "**Persistence**\nDriver composition\nConversation and rulebook adapters" as persistence #FFFDE7
+    rectangle "**Database**\nMigrations and shared pg.Pool\nPGVectorStore adapter" as database #FFF9C4
+    rectangle "**Public Search**\nTavily adapter and allowlist" as public_search #FFF3E0
+    rectangle "**OpenAPI**\nLocal API documentation loader" as openapi #F3E5F5
+  }
+}
+
+package "Persistence Targets" as targets #FFFDE7 {
+  database "**PostgreSQL 17 + pgvector**\nChats, messages, PDFs, metadata, vectors" as postgres #FFFFFF
+  collections "**In-Memory Adapters**\nChats, rulebooks, and vectors" as memory #FFFFFF
+}
+
+cloud "**OpenAI APIs**\nEmbeddings and chat models" as openai #FFF3E0
+cloud "**Tavily Search API**\nPublic rule sources" as tavily #FFF3E0
+
+player -down-> react : uses assistant
+react -down-> presentation : HTTPS / JSON + PDF
+presentation -down-> application : invokes workflows
+application -left-> domain : uses contracts
+application -down-> rag : load, chunk, search
+application -down-> agents : filter, answer, title
+application -right-> persistence : save and load state
+application -right-> public_search : fallback search
+presentation -right-> openapi : serves local docs
+
+persistence -down-> database : postgres driver
+persistence -down-> memory : memory driver
+database -down-> postgres : SQL + pgvector
+rag -down-> openai : embedding requests
+agents -down-> openai : chat requests
+public_search -down-> tavily : search requests
+
+rag -[hidden]right- agents
+agents -[hidden]right- persistence
+persistence -[hidden]right- database
+postgres -[hidden]right- memory
+openai -[hidden]right- tavily
+
+legend bottom
+|= Color |= Boundary |
+| <#E0F7FA> | Web application |
+| <#E8EAF6> | API application |
+| <#E8F5E9> | RAG infrastructure |
+| <#FCE4EC> | Agent infrastructure |
+| <#FFFDE7> | Persistence composition |
+| <#FFF9C4> | Database infrastructure |
+| <#FFF3E0> | External integration |
+endlegend
+
+@enduml

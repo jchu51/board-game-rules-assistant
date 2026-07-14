@@ -64,9 +64,14 @@ board-game-rules-assistant/
 
 See the [Phase 0 flow](docs/tech-reviews/000-phase-0-single-pdf-rag-agent/diagrams/phase-0-flow.png).
 
-![Current system architecture](docs/tech-reviews/002-phase-02-postgres-pgvector-persistence/diagrams/phase-02-system-architecture.png)
+![Current system architecture](docs/tech-reviews/004-phase-04-api-consolidation/diagrams/phase-04-consolidated-architecture.png)
 
-[Current architecture PlantUML source](docs/tech-reviews/002-phase-02-postgres-pgvector-persistence/diagrams/phase-02-system-architecture.puml)
+[Current architecture PlantUML source](docs/tech-reviews/004-phase-04-api-consolidation/diagrams/phase-04-consolidated-architecture.puml)
+
+See the
+[Phase 04 API consolidation HLD](docs/tech-reviews/004-phase-04-api-consolidation/high-level-design.md)
+for the current server-side folder boundaries and the rationale for moving
+database, RAG, and agent modules into the API.
 
 See the
 [Phase 02 PostgreSQL and pgvector HLD](docs/tech-reviews/002-phase-02-postgres-pgvector-persistence/high-level-design.md)
