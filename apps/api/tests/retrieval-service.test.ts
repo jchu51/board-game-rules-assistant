@@ -1,9 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { Document } from "@langchain/core/documents";
 import type { EmbeddingsInterface } from "@langchain/core/embeddings";
-import type {
-  ConversationTitleAgent,
-} from "../src/infrastructure/agents/agents/conversation-title-agent";
+import type { ConversationTitleAgent } from "../src/infrastructure/agents/agents/conversation-title-agent";
 import type { RuleAnswerAgent } from "../src/infrastructure/agents/agents/rule-answer-agent";
 import type { RuleContextAgent } from "../src/infrastructure/agents/agents/rule-context-agent";
 

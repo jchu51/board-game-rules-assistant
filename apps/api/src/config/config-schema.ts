@@ -30,7 +30,7 @@ export const EnvSchema = z
     OPENAI_API_KEY: z
       .string({
         message:
-          "OPENAI_API_KEY is required (used by rag-core's embeddings client) - set it in apps/api/.env",
+          "OPENAI_API_KEY is required (used by the embeddings client) - set it in apps/api/.env",
       })
       .min(1, "OPENAI_API_KEY must not be empty"),
     TAVILY_API_KEY: z

@@ -1,6 +1,4 @@
-import type {
-  ConversationTitleAgent,
-} from "../../infrastructure/agents/agents/conversation-title-agent";
+import type { ConversationTitleAgent } from "../../infrastructure/agents/agents/conversation-title-agent";
 import type { RuleAnswerAgent } from "../../infrastructure/agents/agents/rule-answer-agent";
 import type { RuleContextAgent } from "../../infrastructure/agents/agents/rule-context-agent";
 import { CONTEXT_ORIGIN } from "../../infrastructure/agents/context-origin";

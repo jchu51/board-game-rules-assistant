@@ -2,10 +2,10 @@
 
 Express API for the Board Game Rules Assistant.
 
-The API accepts rulebook PDF uploads, extracts and chunks PDF text through
-`rag-core`, creates embeddings, stores vectors in memory or PostgreSQL/pgvector,
-persists original PDFs in PostgreSQL, returns rulebook summaries for the
-frontend, and exposes similarity search over indexed chunks.
+The API accepts rulebook PDF uploads, extracts and chunks PDF text through its
+RAG infrastructure, creates embeddings, stores vectors in memory or
+PostgreSQL/pgvector, persists original PDFs in PostgreSQL, returns rulebook
+summaries for the frontend, and exposes similarity search over indexed chunks.
 
 ## Stack
 
@@ -14,8 +14,7 @@ frontend, and exposes similarity search over indexed chunks.
 - Zod
 - Multer
 - Swagger UI Express
-- `@board-game-rules-assistant/rag-core`
-- `@board-game-rules-assistant/agent-core`
+- LangChain RAG and agent modules
 - PostgreSQL and pgvector
 
 ## Environment
@@ -174,9 +173,11 @@ src/
     conversation/               # chat and message repository contract
     rulebook/                    # rulebook repository contract
   infrastructure/                # adapters for external/storage concerns
+    agents/                      # agents, prompts, and chat model helper
     database/                    # pool, migrations, and pgvector adapter
     openapi/                     # OpenAPI document loading
     persistence/                 # driver composition and repository adapters
+    rag/                         # PDF, chunking, embeddings, and vector stores
   presentation/http/             # Express routers and HTTP schemas
     app.ts                       # Express app factory
     docs/                        # local-only Swagger/OpenAPI routes
@@ -185,7 +186,9 @@ src/
     retrieval/                   # retrieval HTTP layer
     shared/                      # HTTP status, typed responses, error middleware
 migrations/                      # ordered PostgreSQL schema migrations
+tests/agents/                    # agent and prompt unit tests
 tests/database/                  # PostgreSQL and pgvector integration tests
+tests/rag/                       # RAG unit tests
 ```
 
 The API owns one shared PostgreSQL pool. Ordered migrations create conversation

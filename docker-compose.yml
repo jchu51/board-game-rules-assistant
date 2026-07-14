@@ -32,10 +32,7 @@ services:
       - .:/workspace
       - api_node_modules:/workspace/node_modules
     command: >-
-      sh -c "npm run build -w @board-game-rules-assistant/rag-core &&
-      npm run build -w @board-game-rules-assistant/agent-core &&
-      npm run build -w @board-game-rules-assistant/database &&
-      npm run dev -w api"
+      sh -c "npm run dev -w api"
 
   web:
     build:
@@ -50,10 +47,7 @@ services:
       - .:/workspace
       - web_node_modules:/workspace/node_modules
     command: >-
-      sh -c "npm run build -w @board-game-rules-assistant/rag-core &&
-      npm run build -w @board-game-rules-assistant/agent-core &&
-      npm run build -w @board-game-rules-assistant/database &&
-      npm run dev -w web -- --host 0.0.0.0"
+      sh -c "npm run dev -w web -- --host 0.0.0.0"
 
 volumes:
   postgres_data:

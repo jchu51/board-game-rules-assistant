@@ -6,8 +6,8 @@ toward source-backed rules Q&A.
 The current app lets a user upload and persist PDF rulebooks, index them into a
 selectable in-memory or PostgreSQL/pgvector store, manage chat threads, and ask
 follow-up questions that return agent-generated answers with source snippets.
-RAG primitives and agent primitives live in shared packages so the API can grow
-this flow without tying those pieces directly to Express.
+RAG and agent primitives live inside the API behind focused infrastructure
+modules.
 
 ## Current Features
 
@@ -18,7 +18,7 @@ this flow without tying those pieces directly to Express.
 - Similarity search over indexed rulebook chunks
 - Rule-question classification with a public-search fallback when indexed
   rulebook context has no relevant match
-- Agent-core package with prompt and LangChain agent primitives
+- API-owned prompt and LangChain agent primitives
 - Selectable in-memory or PostgreSQL persistence for chats and rulebooks
 - PostgreSQL `BYTEA` storage for original uploaded PDFs
 - Local Swagger UI for API exploration
@@ -39,24 +39,13 @@ board-game-rules-assistant/
         application/             # use-case services and application types
         config/                  # environment parsing and typed app config
         domain/                  # repository contracts and domain errors
-        infrastructure/          # OpenAPI and persistence adapters
+        infrastructure/
+          agents/                # LangChain agents, prompts, and model helper
+          database/              # PostgreSQL pool, migrations, and pgvector
+          openapi/               # OpenAPI document loading
+          persistence/           # repository and persistence adapters
+          rag/                   # PDF, chunking, embeddings, and vector stores
         presentation/http/        # Express app, routers, and HTTP contracts
-    packages/
-      agent-core/
-        src/
-          agents/                 # LangChain-backed agent primitives
-          llm/                    # chat model initialization helper
-          prompts/                # reusable prompt templates
-      rag-core/
-        src/
-          chunking/               # document splitting
-          documents/              # shared document types
-          embeddings/             # embedding model factories
-          loaders/                # PDF loading
-          vector-store/           # vector-store interface/adapters
-      database/
-        src/                       # PostgreSQL repositories and pgvector adapter
-        migrations/                # ordered application SQL migrations
     web/
       src/
         api/                      # browser API clients
@@ -252,13 +241,8 @@ Workspace commands:
 ```bash
 npm run build -w web
 npm run build -w api
-npm run build -w @board-game-rules-assistant/agent-core
-npm run build -w @board-game-rules-assistant/rag-core
-npm run build -w @board-game-rules-assistant/database
 npm run typecheck -w api
-npm run typecheck -w @board-game-rules-assistant/agent-core
-npm run typecheck -w @board-game-rules-assistant/rag-core
-TEST_DATABASE_URL=postgresql://board_game_rules:board_game_rules@127.0.0.1:55432/board_game_rules npm test -w @board-game-rules-assistant/database
+TEST_DATABASE_URL=postgresql://board_game_rules:board_game_rules@127.0.0.1:55432/board_game_rules npm test -w api -- tests/database
 ```
 
 ## Current Limitations

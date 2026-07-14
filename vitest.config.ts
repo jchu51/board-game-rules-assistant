@@ -4,13 +4,11 @@ export default defineConfig({
   test: {
     projects: [
       "./apps/api/vitest.config.ts",
-      "./apps/packages/agent-core/vitest.config.ts",
-      "./apps/packages/rag-core/vitest.config.ts",
       "./apps/web/vitest.config.ts",
     ],
     coverage: {
       provider: "v8",
-      include: ["apps/{api,web,packages/*}/src/**/*.{ts,tsx}"],
+      include: ["apps/{api,web}/src/**/*.{ts,tsx}"],
       reporter: ["text", "html", "json", "lcov"],
       thresholds: {
         lines: 80,
