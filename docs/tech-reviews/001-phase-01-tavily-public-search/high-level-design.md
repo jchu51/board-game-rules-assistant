@@ -10,7 +10,7 @@
 
 ## Problem Statement
 
-The Phase 0 assistant could answer only when its internal vector store returned
+The Phase 0 assistant can answer only when the in-memory vector store returns
 relevant uploaded rulebook chunks. A supported board-game question with no
 matching indexed evidence therefore stops without trying an available public
 source. Phase 01 adds a bounded Tavily fallback while keeping unrelated requests
@@ -18,19 +18,12 @@ out of scope and preserving the origin of every piece of evidence.
 
 ## Current State
 
-The API exposes chat, rulebook, and retrieval endpoints. It classifies each
-question, searches the selected vector store, and accepts rulebook matches whose
-similarity score is greater than `0.65`. If candidates exist but all are weak,
-the API asks the user to clarify rather than searching the web. Tavily is used
-only when the vector store returns no candidates. Its results are labeled
-`public_web`, passed through the existing context and answer agents, and returned
-with source URLs.
-
-Persistence is now selected at startup. Memory mode keeps conversations,
-rulebooks, PDFs, and vectors process-local. PostgreSQL mode uses one shared pool,
-versioned migrations, relational conversation and rulebook repositories, and
-LangChain `PGVectorStore` over pgvector. The PostgreSQL rulebook table retains
-original PDF bytes while the vector table stores searchable chunks and metadata.
+The API exposes `POST /retrieval/search`. It classifies the question, searches
+the shared in-memory vector store, and accepts rulebook matches whose similarity
+score is greater than `0.65`. If candidates exist but all are weak, the API asks
+the user to clarify rather than searching the web. Tavily is used only when the
+vector store returns no candidates. Its results are labeled `public_web`, passed
+through the existing context and answer agents, and returned with source URLs.
 
 The fallback is domain-restricted only when
 `PUBLIC_SEARCH_INCLUDE_DOMAINS` is configured. Tavily scores and source authority
@@ -94,28 +87,28 @@ accurately described as public search with an optional trusted-domain allowlist.
 
 ### Diagram Decision
 
-- Diagram decision: use a full-system architecture diagram because the current
-  flow spans the React client, Express HTTP and application layers, three shared
-  packages, selectable persistence, and two external AI/search providers. The
-  branch-level retrieval decision remains in the low-level design.
+- Diagram decision: use a full-system architecture diagram because Phase 01
+  spans the React client, Express HTTP and application layers, shared RAG and
+  agent packages, in-memory storage, and two external AI/search providers. The
+  branch-level decision flow remains in the low-level design.
 
-![Current full-system architecture](./diagrams/phase-01-system-architecture.png)
+![Phase 01 full-system architecture](./diagrams/phase-01-system-architecture.png)
 
 [PlantUML source](./diagrams/phase-01-system-architecture.puml)
 
 ### Description
 
-The React web app uses the Express API to manage chats and rulebooks and to ask
-rules questions. `IngestionRouter` and `IngestionService` load uploaded PDFs
-through `rag-core`, generate OpenAI embeddings, and write chunks to the selected
-vector store. The selected rulebook repository stores metadata and original PDF
-bytes; PostgreSQL keeps them in a relational `rulebooks` table.
+Phase 01 preserves the Phase 0 system boundaries. The React web app continues to
+use the Express API for rulebook management and questions. `IngestionRouter` and
+`IngestionService` load uploaded PDFs through `rag-core`, generate OpenAI
+embeddings, and write chunks to the shared in-memory vector store. Rulebook list
+metadata remains in the in-memory repository, separate from vector content.
 
 For questions, `RetrievalRouter` delegates to `RetrievalService`, which remains
 the retrieval decision owner. It uses `RequestClassifierService` as the domain
-guard, searches the same selected vector store used by ingestion, and treats
-accepted indexed chunks as `rulebook` evidence. When internal evidence is
-unavailable, it calls the provider-neutral `PublicSearchService`, implemented by
+guard, searches the same vector store used by ingestion, and treats accepted
+indexed chunks as `rulebook` evidence. When internal evidence is unavailable,
+it calls the provider-neutral `PublicSearchService`, implemented by
 `TavilyPublicSearchService`.
 
 The Tavily adapter applies the configured domain list and normalizes provider
@@ -125,12 +118,9 @@ rulebook and public-web evidence flow through `RuleContextAgent` and
 provider errors stop without generating an answer from unsupported evidence.
 
 This architecture separates ingestion, retrieval decisions, provider adapters,
-answer generation, and persistence composition. `rag-core` owns storage-neutral
-RAG contracts, `agent-core` owns model-facing agents, and the database package
-owns PostgreSQL migrations, pool lifecycle, and the LangChain pgvector adapter.
-Evidence provenance remains separate from generation: prompts distinguish
-uploaded rules from potentially unofficial public content, while the web app
-can render the source of each returned match.
+and answer generation. It also separates evidence provenance from generation:
+prompts distinguish authoritative uploaded rules from potentially unofficial
+public content, while the web app can render the source of each returned match.
 
 ### Pros
 
@@ -166,9 +156,6 @@ can render the source of each returned match.
   and Tavily adapter.
 - `apps/packages/rag-core`: vector-store interface and scored similarity search.
 - `apps/packages/agent-core`: context-origin labels and answer agents.
-- `apps/packages/database`: PostgreSQL migrations, connection-pool lifecycle,
-  and the LangChain pgvector adapter.
-- PostgreSQL 17 with pgvector when `PERSISTENCE_DRIVER=postgres`.
 - Tavily API and `@langchain/tavily`.
 - OpenAI chat model used by the context and answer agents.
 
@@ -188,11 +175,10 @@ domains during early use.
 
 ## Rollback Plan
 
-The Tavily feature remains a code-and-configuration rollback: remove or disable
-the Tavily-backed service and restore the internal-only not-found behavior.
-PostgreSQL conversations, rulebooks, PDFs, and vector rows are independent of
-that fallback and require no rollback migration. Expected recovery time is under
-one deployment cycle.
+Rollback is code- and configuration-only because the feature writes no durable
+data. Remove or disable construction of the Tavily-backed service and restore the
+internal-only not-found behavior. Existing vector data and API request schemas do
+not require migration. Expected recovery time is under one deployment cycle.
 
 ## Testing & Validation Approach
 

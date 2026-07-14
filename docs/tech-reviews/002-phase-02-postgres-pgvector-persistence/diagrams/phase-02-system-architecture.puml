@@ -1,0 +1,80 @@
+@startuml phase-02-system-architecture
+!theme plain
+top to bottom direction
+
+skinparam backgroundColor #FEFEFE
+skinparam shadowing false
+skinparam componentStyle rectangle
+skinparam defaultFontSize 11
+skinparam linetype polyline
+skinparam nodesep 70
+skinparam ranksep 65
+
+title Phase 02 — PostgreSQL and pgvector Persistence
+
+actor "Player" as player
+
+package "Browser — apps/web" as web #E0F7FA {
+  rectangle "**React Application**\nManage chats and rulebooks\nAsk rules questions\nRender answers and sources" as browser_app #FFFFFF
+}
+
+package "Express API — apps/api" as api #E8EAF6 {
+  rectangle "**HTTP Routers**\n/chats\n/rulebooks\n/retrieval/search\n/health" as http_api #FFFFFF
+  rectangle "**Ingestion Service**\nLoad and chunk PDFs\nIndex rulebook content" as ingestion #FFFFFF
+  rectangle "**Retrieval Service**\nClassify questions\nSearch indexed rules\nFallback to public search\nGenerate chat titles" as retrieval #FFFFFF
+  rectangle "**Persistence Composition**\nSelect memory or postgres\nWire repositories and vector store\nOwn startup and shutdown" as composition #FFFFFF
+  rectangle "**Tavily Adapter**\nApply optional domain allowlist\nNormalize public results" as tavily_adapter #FFFFFF
+}
+
+package "Shared Workspaces" as shared #F5F5F5 {
+  rectangle "**rag-core**\nPDF loading and chunking\nEmbedding interface\nVectorStore contract" as rag_core #E8F5E9
+  rectangle "**agent-core**\nContext and answer agents\nConversation title agent\nEvidence origin labels" as agent_core #FCE4EC
+  rectangle "**database**\nSQL migrations\nShared pg.Pool lifecycle\nLangChain PGVectorStore adapter" as database_package #FFF9C4
+}
+
+package "Selected Persistence" as persistence #FFFDE7 {
+  database "**PostgreSQL 17 + pgvector**\nconversations + messages\nrulebooks + PDF BYTEA\nrulebook_vectors + JSONB metadata" as postgres #FFFFFF
+  collections "**In-Memory Adapters**\nConversation repository\nRulebook repository\nLangChain memory vectors" as memory #FFFFFF
+}
+
+cloud "**OpenAI APIs**\nEmbeddings and chat models" as openai #FFF3E0
+cloud "**Tavily Search API**\nPublic rules sources" as tavily #FFF3E0
+
+player -down-> browser_app : use assistant
+browser_app -down-> http_api : HTTPS / JSON + PDF
+
+http_api -down-> ingestion : upload rulebooks
+http_api -down-> retrieval : chats and questions
+http_api -right-> composition : persist chat + rulebook state
+
+ingestion -down-> rag_core : load, chunk, embed
+ingestion -down-> composition : save PDF + vectors
+retrieval -down-> composition : conversations + vector search
+retrieval -down-> agent_core : context, answer, title
+retrieval -right-> tavily_adapter : fallback with no evidence
+tavily_adapter -right-> tavily : public search
+
+composition -down-> database_package : postgres driver
+composition -right-> memory : memory driver
+database_package -down-> postgres : migrations + SQL + pgvector
+
+rag_core -down-> openai : embedding requests
+agent_core -down-> openai : chat requests
+
+ingestion -[hidden]right- retrieval
+rag_core -[hidden]right- agent_core
+database_package -[hidden]right- memory
+openai -[hidden]right- tavily
+
+legend bottom
+|= Color |= Boundary |
+| <#E0F7FA> | React web application |
+| <#E8EAF6> | Express API |
+| <#E8F5E9> | RAG package |
+| <#FCE4EC> | Agent package |
+| <#FFF9C4> | Database package |
+| <#FFFDE7> | Persistence implementation |
+| <#FFF3E0> | External provider |
+endlegend
+
+@enduml

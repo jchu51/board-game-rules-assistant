@@ -75,9 +75,13 @@ board-game-rules-assistant/
 
 See the [Phase 0 flow](docs/tech-reviews/000-phase-0-single-pdf-rag-agent/diagrams/phase-0-flow.png).
 
-![Current system architecture](docs/tech-reviews/001-phase-01-tavily-public-search/diagrams/phase-01-system-architecture.png)
+![Current system architecture](docs/tech-reviews/002-phase-02-postgres-pgvector-persistence/diagrams/phase-02-system-architecture.png)
 
-[Current architecture PlantUML source](docs/tech-reviews/001-phase-01-tavily-public-search/diagrams/phase-01-system-architecture.puml)
+[Current architecture PlantUML source](docs/tech-reviews/002-phase-02-postgres-pgvector-persistence/diagrams/phase-02-system-architecture.puml)
+
+See the
+[Phase 02 PostgreSQL and pgvector HLD](docs/tech-reviews/002-phase-02-postgres-pgvector-persistence/high-level-design.md)
+for persistence boundaries, decisions, rollout, and known risks.
 
 See the
 [Phase 01 Tavily retrieval low-level design](docs/tech-reviews/001-phase-01-tavily-public-search/low-level-design.md)
