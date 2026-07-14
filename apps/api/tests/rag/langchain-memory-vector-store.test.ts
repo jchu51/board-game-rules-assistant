@@ -102,4 +102,24 @@ describe("LangchainMemoryVectorStore", () => {
     expect(results.length).toBe(1);
     expect(results[0]?.metadata.documentId).toBe("pandemic");
   });
+
+  it("deletes every vector for one document without affecting others", async () => {
+    const vectorStore = new LangchainMemoryVectorStore(new KeywordEmbeddings());
+
+    await vectorStore.upsert([
+      createDocument("A city produces two resources.", "catan"),
+      createDocument("The longest road scores points.", "catan"),
+      createDocument("Increase the infection rate.", "pandemic"),
+    ]);
+
+    await vectorStore.deleteByDocumentId("catan");
+
+    const results = await vectorStore.similaritySearch({
+      query: "resource road infection",
+      topK: 10,
+    });
+    expect(results.map((document) => document.metadata.documentId)).toEqual([
+      "pandemic",
+    ]);
+  });
 });

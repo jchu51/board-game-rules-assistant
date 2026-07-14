@@ -27,6 +27,7 @@ describe("runMigrations", () => {
         { version: "0001_conversation_messages" },
         { version: "0002_conversations" },
         { version: "0003_rulebooks" },
+        { version: "0004_conversation_message_foreign_key" },
       ]);
       expect(
         (
@@ -35,6 +36,46 @@ describe("runMigrations", () => {
           )
         ).rows,
       ).toEqual([{ table_name: "public.conversations" }]);
+      expect(
+        (
+          await database.pool.query(
+            `SELECT data_type
+             FROM information_schema.columns
+             WHERE table_schema = current_schema()
+               AND table_name = 'conversation_messages'
+               AND column_name = 'conversation_id'`,
+          )
+        ).rows,
+      ).toEqual([{ data_type: "uuid" }]);
+      await expect(
+        database.pool.query(
+          `INSERT INTO conversation_messages (conversation_id, role, content)
+           VALUES ($1, 'user', 'orphan')`,
+          ["11111111-1111-4111-8111-111111111111"],
+        ),
+      ).rejects.toMatchObject({ code: "23503" });
+
+      const conversationId = "22222222-2222-4222-8222-222222222222";
+      await database.pool.query(
+        "INSERT INTO conversations (id, title) VALUES ($1, 'New chat')",
+        [conversationId],
+      );
+      await database.pool.query(
+        `INSERT INTO conversation_messages (conversation_id, role, content)
+         VALUES ($1, 'user', 'question')`,
+        [conversationId],
+      );
+      await database.pool.query("DELETE FROM conversations WHERE id = $1", [
+        conversationId,
+      ]);
+      expect(
+        (
+          await database.pool.query(
+            "SELECT 1 FROM conversation_messages WHERE conversation_id = $1",
+            [conversationId],
+          )
+        ).rowCount,
+      ).toBe(0);
       expect(
         (
           await database.pool.query(

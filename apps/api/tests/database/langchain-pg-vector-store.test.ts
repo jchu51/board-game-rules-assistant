@@ -68,4 +68,34 @@ describe("LangchainPgVectorStoreAdapter", () => {
       await database.dispose();
     }
   });
+
+  it("deletes every vector for one document without affecting others", async () => {
+    const database = await createTestDatabase();
+    const persistence = await createPostgresPersistence({
+      databaseUrl: database.databaseUrl,
+      embeddings: new KeywordEmbeddings(),
+      vectorTableName: `rulebook_vectors_${Date.now()}`,
+    });
+
+    try {
+      await persistence.vectorStore.upsert([
+        createDocument("A city produces two resources.", "catan"),
+        createDocument("The longest road scores points.", "catan"),
+        createDocument("Increase the infection rate.", "pandemic"),
+      ]);
+
+      await persistence.vectorStore.deleteByDocumentId("catan");
+
+      const results = await persistence.vectorStore.similaritySearch({
+        query: "resource road infection",
+        topK: 10,
+      });
+      expect(results.map((document) => document.metadata.documentId)).toEqual([
+        "pandemic",
+      ]);
+    } finally {
+      await persistence.close();
+      await database.dispose();
+    }
+  });
 });

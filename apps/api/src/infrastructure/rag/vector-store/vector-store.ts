@@ -15,6 +15,7 @@ export type VectorStoreSimilaritySearchInput = {
 
 export interface VectorStore {
   upsert(records: RulebookDocument[]): Promise<void>;
+  deleteByDocumentId(documentId: string): Promise<void>;
   similaritySearch(
     input: VectorStoreSimilaritySearchInput,
   ): Promise<RulebookDocumentInterface[]>;

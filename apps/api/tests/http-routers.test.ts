@@ -16,8 +16,10 @@ import { InMemoryRulebookRepository } from "../src/infrastructure/persistence/ru
 import type { IngestionService } from "../src/application/ingestion/ingestion-service";
 import type { RetrievalService } from "../src/application/retrieval/retrieval-service";
 import { InvalidSplitterParamsError } from "../src/domain/ingestion/ingestion-errors";
+import { ConversationNotFoundError } from "../src/domain/conversation/conversation-errors";
 import { testConfig } from "./test-config";
 import type { ConversationRepository } from "../src/domain/conversation/conversation-repository";
+import type { VectorStore } from "../src/infrastructure/rag/vector-store/vector-store";
 
 const createResponse = () => {
   const response = {
@@ -42,6 +44,12 @@ const ingestionService = {
 const retrievalService = {
   search: vi.fn(),
 } as unknown as RetrievalService;
+const vectorStore = {
+  upsert: vi.fn(),
+  deleteByDocumentId: vi.fn(),
+  similaritySearch: vi.fn(),
+  similaritySearchVectorWithScore: vi.fn(),
+} satisfies VectorStore;
 const conversationRepository = {
   createConversation: vi.fn(),
   deleteConversation: vi.fn(),
@@ -54,6 +62,7 @@ const conversationRepository = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(vectorStore.deleteByDocumentId).mockResolvedValue();
 });
 
 describe("HTTP routers", () => {
@@ -256,7 +265,7 @@ describe("HTTP routers", () => {
   });
 
   it("creates the app and serves health and OpenAPI handlers", () => {
-    const health = new HealthRouter();
+    const health = new HealthRouter(vi.fn().mockResolvedValue(undefined));
     const docs = new DocsRouter();
     expect(
       createApp({
@@ -314,6 +323,10 @@ describe("HTTP routers", () => {
         }),
       }),
     );
+    expect(
+      jsonResponse.json.mock.calls[0]?.[0].paths["/retrieval/search"].post
+        .responses["404"],
+    ).toEqual(expect.any(Object));
 
     const yamlResponse = createResponse();
     docs.router.stack[1]?.route.stack[0]?.handle(
@@ -326,6 +339,33 @@ describe("HTTP routers", () => {
       expect.stringMatching(/openapi:/),
     );
     expect(yamlResponse.send.mock.calls[0]?.[0]).not.toContain("gameTitle");
+  });
+
+  it("reports persistence readiness and dependency outages", async () => {
+    const readinessCheck = vi
+      .fn()
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error("database unavailable"));
+    const health = new HealthRouter(readinessCheck);
+    const readyHandler = health.router.stack.find(
+      (layer) => layer.route?.path === "/ready",
+    )?.route.stack[0]?.handle;
+
+    const readyResponse = createResponse();
+    await readyHandler?.({} as Request, readyResponse, vi.fn());
+    expect(readyResponse.status).toHaveBeenCalledWith(200);
+    expect(readyResponse.json).toHaveBeenCalledWith({
+      status: "ok",
+      service: "board-game-rules-assistant-api",
+    });
+
+    const unavailableResponse = createResponse();
+    await readyHandler?.({} as Request, unavailableResponse, vi.fn());
+    expect(unavailableResponse.status).toHaveBeenCalledWith(503);
+    expect(unavailableResponse.json).toHaveBeenCalledWith({
+      error: "Service unavailable",
+    });
+    expect(readinessCheck).toHaveBeenCalledTimes(2);
   });
 
   it("validates and completes retrieval searches", async () => {
@@ -393,14 +433,51 @@ describe("HTTP routers", () => {
     expect(next).toHaveBeenCalledWith(error);
   });
 
+  it("returns not found when retrieval targets a missing conversation", async () => {
+    const router = new RetrievalRouter(retrievalService) as unknown as {
+      search: (
+        request: Request,
+        response: Response,
+        next: NextFunction,
+      ) => Promise<unknown>;
+    };
+    const next = vi.fn();
+    vi.mocked(retrievalService.search).mockRejectedValue(
+      new ConversationNotFoundError("11111111-1111-4111-8111-111111111111"),
+    );
+    const response = createResponse();
+
+    await router.search(
+      {
+        body: {
+          conversationId: "11111111-1111-4111-8111-111111111111",
+          query: "How many resources?",
+        },
+      } as Request,
+      response,
+      next,
+    );
+
+    expect(response.status).toHaveBeenCalledWith(404);
+    expect(response.json).toHaveBeenCalledWith({
+      error: "Conversation not found",
+    });
+    expect(next).not.toHaveBeenCalled();
+  });
+
   it("uploads, lists, and deletes rulebooks", async () => {
     const repository = new InMemoryRulebookRepository();
     const save = vi.spyOn(repository, "save");
-    const router = new IngestionRouter(ingestionService, repository, {
-      uploadDirectory: "/tmp",
-      maxUploadSizeBytes: 1024,
-      isProduction: false,
-    }) as unknown as {
+    const router = new IngestionRouter(
+      ingestionService,
+      repository,
+      vectorStore,
+      {
+        uploadDirectory: "/tmp",
+        maxUploadSizeBytes: 1024,
+        isProduction: false,
+      },
+    ) as unknown as {
       uploadPdfs: (
         request: Request,
         response: Response,
@@ -464,6 +541,7 @@ describe("HTTP routers", () => {
       vi.fn(),
     );
     expect(deleteResponse.status).toHaveBeenCalledWith(204);
+    expect(vectorStore.deleteByDocumentId).toHaveBeenCalledWith(created?.id);
 
     const missingResponse = createResponse();
     await router.deleteRulebook(
@@ -472,17 +550,124 @@ describe("HTTP routers", () => {
       vi.fn(),
     );
     expect(missingResponse.status).toHaveBeenCalledWith(404);
+    expect(vectorStore.deleteByDocumentId).toHaveBeenCalledOnce();
+  });
+
+  it("removes ingested vectors when rulebook persistence fails", async () => {
+    const repository = new InMemoryRulebookRepository();
+    const persistenceError = new Error("save failed");
+    vi.spyOn(repository, "save").mockRejectedValue(persistenceError);
+    vi.mocked(ingestionService.ingestPdf).mockResolvedValue({
+      documentCount: 1,
+      chunkCount: 2,
+    });
+    const router = new IngestionRouter(
+      ingestionService,
+      repository,
+      vectorStore,
+      {
+        uploadDirectory: "/tmp",
+        maxUploadSizeBytes: 1024,
+        isProduction: false,
+      },
+    ) as unknown as {
+      uploadPdfs: (
+        request: Request,
+        response: Response,
+        next: NextFunction,
+      ) => Promise<unknown>;
+    };
+    const filePath = join(tmpdir(), `${randomUUID()}.pdf`);
+    await writeFile(filePath, Uint8Array.from([0x25, 0x50, 0x44, 0x46]));
+    const next = vi.fn();
+
+    await router.uploadPdfs(
+      {
+        body: { gameName: "Catan" },
+        file: {
+          originalname: "catan.pdf",
+          mimetype: "application/pdf",
+          size: 4,
+          path: filePath,
+        },
+      } as Request,
+      createResponse(),
+      next,
+    );
+
+    const documentId = vi.mocked(ingestionService.ingestPdf).mock.calls[0]?.[0]
+      .metadata.documentId;
+    expect(vectorStore.deleteByDocumentId).toHaveBeenCalledWith(documentId);
+    expect(next).toHaveBeenCalledWith(persistenceError);
+  });
+
+  it("reports both persistence and vector cleanup failures", async () => {
+    const repository = new InMemoryRulebookRepository();
+    const persistenceError = new Error("save failed");
+    const cleanupError = new Error("cleanup failed");
+    vi.spyOn(repository, "save").mockRejectedValue(persistenceError);
+    vi.mocked(ingestionService.ingestPdf).mockResolvedValue({
+      documentCount: 1,
+      chunkCount: 2,
+    });
+    vi.mocked(vectorStore.deleteByDocumentId).mockRejectedValue(cleanupError);
+    const router = new IngestionRouter(
+      ingestionService,
+      repository,
+      vectorStore,
+      {
+        uploadDirectory: "/tmp",
+        maxUploadSizeBytes: 1024,
+        isProduction: false,
+      },
+    ) as unknown as {
+      uploadPdfs: (
+        request: Request,
+        response: Response,
+        next: NextFunction,
+      ) => Promise<unknown>;
+    };
+    const filePath = join(tmpdir(), `${randomUUID()}.pdf`);
+    await writeFile(filePath, Uint8Array.from([0x25, 0x50, 0x44, 0x46]));
+    const next = vi.fn();
+
+    await router.uploadPdfs(
+      {
+        body: { gameName: "Catan" },
+        file: {
+          originalname: "catan.pdf",
+          mimetype: "application/pdf",
+          size: 4,
+          path: filePath,
+        },
+      } as Request,
+      createResponse(),
+      next,
+    );
+
+    expect(next).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: "AggregateError",
+        message: "Rulebook upload and vector cleanup failed",
+        errors: [persistenceError, cleanupError],
+      }),
+    );
   });
 
   it("forwards rulebook list failures", async () => {
     const repository = new InMemoryRulebookRepository();
     const error = new Error("list failed");
     vi.spyOn(repository, "list").mockRejectedValue(error);
-    const router = new IngestionRouter(ingestionService, repository, {
-      uploadDirectory: "/tmp",
-      maxUploadSizeBytes: 1024,
-      isProduction: false,
-    }) as unknown as {
+    const router = new IngestionRouter(
+      ingestionService,
+      repository,
+      vectorStore,
+      {
+        uploadDirectory: "/tmp",
+        maxUploadSizeBytes: 1024,
+        isProduction: false,
+      },
+    ) as unknown as {
       listRulebooks: (
         request: Request,
         response: Response,
@@ -498,13 +683,26 @@ describe("HTTP routers", () => {
 
   it("forwards rulebook delete failures", async () => {
     const repository = new InMemoryRulebookRepository();
+    await repository.save({
+      id: "rulebook-1",
+      gameName: "Catan",
+      pdfName: "catan.pdf",
+      mimeType: "application/pdf",
+      fileSize: 4,
+      pdfData: Uint8Array.from([1, 2, 3, 4]),
+    });
     const error = new Error("delete failed");
     vi.spyOn(repository, "deleteById").mockRejectedValue(error);
-    const router = new IngestionRouter(ingestionService, repository, {
-      uploadDirectory: "/tmp",
-      maxUploadSizeBytes: 1024,
-      isProduction: false,
-    }) as unknown as {
+    const router = new IngestionRouter(
+      ingestionService,
+      repository,
+      vectorStore,
+      {
+        uploadDirectory: "/tmp",
+        maxUploadSizeBytes: 1024,
+        isProduction: false,
+      },
+    ) as unknown as {
       deleteRulebook: (
         request: Request,
         response: Response,
@@ -522,14 +720,61 @@ describe("HTTP routers", () => {
     expect(next).toHaveBeenCalledWith(error);
   });
 
+  it("keeps a rulebook record when vector deletion fails", async () => {
+    const repository = new InMemoryRulebookRepository();
+    await repository.save({
+      id: "rulebook-1",
+      gameName: "Catan",
+      pdfName: "catan.pdf",
+      mimeType: "application/pdf",
+      fileSize: 4,
+      pdfData: Uint8Array.from([1, 2, 3, 4]),
+    });
+    const deleteRecord = vi.spyOn(repository, "deleteById");
+    const error = new Error("vector delete failed");
+    vi.mocked(vectorStore.deleteByDocumentId).mockRejectedValue(error);
+    const router = new IngestionRouter(
+      ingestionService,
+      repository,
+      vectorStore,
+      {
+        uploadDirectory: "/tmp",
+        maxUploadSizeBytes: 1024,
+        isProduction: false,
+      },
+    ) as unknown as {
+      deleteRulebook: (
+        request: Request,
+        response: Response,
+        next: NextFunction,
+      ) => Promise<unknown>;
+    };
+    const next = vi.fn();
+
+    await router.deleteRulebook(
+      { params: { id: "rulebook-1" } } as unknown as Request,
+      createResponse(),
+      next,
+    );
+
+    expect(next).toHaveBeenCalledWith(error);
+    expect(deleteRecord).not.toHaveBeenCalled();
+    await expect(repository.getById("rulebook-1")).resolves.not.toBeNull();
+  });
+
   it("rejects missing files, invalid bodies, and invalid splitter settings", async () => {
     const repository = new InMemoryRulebookRepository();
     const save = vi.spyOn(repository, "save");
-    const router = new IngestionRouter(ingestionService, repository, {
-      uploadDirectory: "/tmp",
-      maxUploadSizeBytes: 1024,
-      isProduction: false,
-    }) as unknown as {
+    const router = new IngestionRouter(
+      ingestionService,
+      repository,
+      vectorStore,
+      {
+        uploadDirectory: "/tmp",
+        maxUploadSizeBytes: 1024,
+        isProduction: false,
+      },
+    ) as unknown as {
       uploadPdfs: (
         request: Request,
         response: Response,
@@ -576,11 +821,16 @@ describe("HTTP routers", () => {
 
   it("handles upload middleware failures and success", () => {
     const createRouter = (isProduction: boolean) =>
-      new IngestionRouter(ingestionService, new InMemoryRulebookRepository(), {
-        uploadDirectory: "/tmp",
-        maxUploadSizeBytes: 1024,
-        isProduction,
-      }) as unknown as {
+      new IngestionRouter(
+        ingestionService,
+        new InMemoryRulebookRepository(),
+        vectorStore,
+        {
+          uploadDirectory: "/tmp",
+          maxUploadSizeBytes: 1024,
+          isProduction,
+        },
+      ) as unknown as {
         handleUpload: (
           middleware: (
             request: Request,

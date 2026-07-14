@@ -25,6 +25,10 @@ export class LangchainPgVectorStoreAdapter implements VectorStore {
     await this.vectorStore.addDocuments(records);
   }
 
+  async deleteByDocumentId(documentId: string): Promise<void> {
+    await this.vectorStore.delete({ filter: { documentId } });
+  }
+
   async similaritySearch(
     input: VectorStoreSimilaritySearchInput,
   ): Promise<RulebookDocumentInterface[]> {

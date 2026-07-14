@@ -7,6 +7,7 @@ import multer, { MulterError } from "multer";
 import { IngestionService } from "../../../application/ingestion/ingestion-service";
 import { InvalidSplitterParamsError } from "../../../domain/ingestion/ingestion-errors";
 import type { RulebookRepository } from "../../../domain/rulebook/rulebook-repository";
+import type { VectorStore } from "../../../infrastructure/rag/vector-store/vector-store";
 import { getErrorMessage } from "../shared/get-error-message";
 import { HttpStatus } from "../shared/http-status";
 import type { ErrorResponseBody, TypedResponse } from "../shared/http-types";
@@ -34,6 +35,7 @@ export class IngestionRouter {
   constructor(
     private readonly ingestionService: IngestionService,
     private readonly rulebookRepository: RulebookRepository,
+    private readonly vectorStore: VectorStore,
     {
       uploadDirectory,
       maxUploadSizeBytes,
@@ -121,6 +123,8 @@ export class IngestionRouter {
       );
     }
 
+    let documentIdToCleanup: string | undefined;
+
     try {
       const parseResult = UploadPdfsRequestSchema.safeParse(request.body);
 
@@ -145,6 +149,7 @@ export class IngestionRouter {
         source: pdfName,
         splitterParams,
       });
+      documentIdToCleanup = id;
 
       const pdfData = await readFile(request.file.path);
       await this.rulebookRepository.save({
@@ -155,6 +160,7 @@ export class IngestionRouter {
         fileSize,
         pdfData,
       });
+      documentIdToCleanup = undefined;
 
       const responseBody = UploadPdfsResponseSchema.parse({
         ...result,
@@ -171,7 +177,20 @@ export class IngestionRouter {
         return this.sendError(response, HttpStatus.BAD_REQUEST, error.message);
       }
 
-      next(error);
+      if (documentIdToCleanup) {
+        try {
+          await this.vectorStore.deleteByDocumentId(documentIdToCleanup);
+        } catch (cleanupError) {
+          return next(
+            new AggregateError(
+              [error, cleanupError],
+              "Rulebook upload and vector cleanup failed",
+            ),
+          );
+        }
+      }
+
+      return next(error);
     } finally {
       await rm(request.file.path, { force: true });
     }
@@ -199,6 +218,17 @@ export class IngestionRouter {
     next: NextFunction,
   ) => {
     try {
+      const rulebook = await this.rulebookRepository.getById(request.params.id);
+
+      if (!rulebook) {
+        return this.sendError(
+          response,
+          HttpStatus.NOT_FOUND,
+          "Rulebook not found",
+        );
+      }
+
+      await this.vectorStore.deleteByDocumentId(request.params.id);
       const deleted = await this.rulebookRepository.deleteById(
         request.params.id,
       );

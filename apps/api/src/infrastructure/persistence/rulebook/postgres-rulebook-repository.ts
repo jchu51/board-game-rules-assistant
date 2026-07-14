@@ -49,6 +49,18 @@ export class PostgresRulebookRepository implements RulebookRepository {
     return result.rowCount === 1;
   }
 
+  async getById(id: string): Promise<RulebookRecord | null> {
+    const result = await this.pool.query<RulebookRow>(
+      `SELECT id, game_name, pdf_name, file_size
+       FROM rulebooks
+       WHERE id = $1`,
+      [id],
+    );
+    const row = result.rows[0];
+
+    return row ? this.toRulebookRecord(row) : null;
+  }
+
   async list(): Promise<RulebookRecord[]> {
     const result = await this.pool.query<RulebookRow>(
       `SELECT id, game_name, pdf_name, file_size
@@ -56,11 +68,15 @@ export class PostgresRulebookRepository implements RulebookRepository {
        ORDER BY created_at DESC, id DESC`,
     );
 
-    return result.rows.map((row) => ({
+    return result.rows.map((row) => this.toRulebookRecord(row));
+  }
+
+  private toRulebookRecord(row: RulebookRow): RulebookRecord {
+    return {
       id: row.id,
       gameName: row.game_name,
       pdfName: row.pdf_name,
       fileSize: row.file_size,
-    }));
+    };
   }
 }

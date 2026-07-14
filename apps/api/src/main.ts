@@ -51,10 +51,11 @@ const retrievalService = new RetrievalService(
 );
 
 // Routers
-const healthRouter = new HealthRouter();
+const healthRouter = new HealthRouter(persistence.healthCheck);
 const ingestionRouter = new IngestionRouter(
   ingestionService,
   rulebookRepository,
+  vectorStore,
   {
     uploadDirectory: config.ingestion.uploadDirectory,
     maxUploadSizeBytes: config.ingestion.maxUploadSizeBytes,

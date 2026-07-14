@@ -65,11 +65,6 @@ export class PostgresConversationRepository implements ConversationRepository {
 
     try {
       await client.query("BEGIN");
-      await client.query(
-        `DELETE FROM conversation_messages
-         WHERE conversation_id = $1`,
-        [conversationId],
-      );
       const result = await client.query(
         `DELETE FROM conversations
          WHERE id = $1`,

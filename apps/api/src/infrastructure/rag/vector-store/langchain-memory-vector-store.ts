@@ -20,6 +20,12 @@ export class LangchainMemoryVectorStore implements VectorStore {
     await this.vectorStore.addDocuments(records);
   }
 
+  async deleteByDocumentId(documentId: string): Promise<void> {
+    this.vectorStore.memoryVectors = this.vectorStore.memoryVectors.filter(
+      (record) => record.metadata.documentId !== documentId,
+    );
+  }
+
   async similaritySearch(
     input: VectorStoreSimilaritySearchInput,
   ): Promise<RulebookDocumentInterface[]> {

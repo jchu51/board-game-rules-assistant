@@ -12,6 +12,7 @@ export type SaveRulebookRecord = RulebookRecord & {
 
 export interface RulebookRepository {
   save(record: SaveRulebookRecord): Promise<RulebookRecord>;
+  getById(id: string): Promise<RulebookRecord | null>;
   deleteById(id: string): Promise<boolean>;
   list(): Promise<RulebookRecord[]>;
 }

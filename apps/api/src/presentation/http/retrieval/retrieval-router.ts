@@ -1,6 +1,7 @@
 import type { NextFunction, Response } from "express";
 import { Router } from "express";
 import { RetrievalService } from "../../../application/retrieval/retrieval-service";
+import { ConversationNotFoundError } from "../../../domain/conversation/conversation-errors";
 import { HttpStatus } from "../shared/http-status";
 import type {
   ErrorResponseBody,
@@ -56,6 +57,14 @@ export class RetrievalRouter {
 
       return response.status(HttpStatus.OK).json(responseBody);
     } catch (error) {
+      if (error instanceof ConversationNotFoundError) {
+        return this.sendError(
+          response,
+          HttpStatus.NOT_FOUND,
+          "Conversation not found",
+        );
+      }
+
       next(error);
     }
   };

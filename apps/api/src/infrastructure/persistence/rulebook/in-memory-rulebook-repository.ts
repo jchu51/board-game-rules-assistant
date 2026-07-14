@@ -8,6 +8,7 @@ export class InMemoryRulebookRepository implements RulebookRepository {
   private readonly rulebooks = new Map<string, SaveRulebookRecord>();
 
   async save(record: SaveRulebookRecord): Promise<RulebookRecord> {
+    this.rulebooks.delete(record.id);
     this.rulebooks.set(record.id, {
       ...record,
       pdfData: record.pdfData.slice(),
@@ -20,10 +21,15 @@ export class InMemoryRulebookRepository implements RulebookRepository {
     return this.rulebooks.delete(id);
   }
 
+  async getById(id: string): Promise<RulebookRecord | null> {
+    const record = this.rulebooks.get(id);
+    return record ? this.toRulebookRecord(record) : null;
+  }
+
   async list(): Promise<RulebookRecord[]> {
     return Array.from(this.rulebooks.values(), (record) =>
       this.toRulebookRecord(record),
-    );
+    ).reverse();
   }
 
   private toRulebookRecord(record: SaveRulebookRecord): RulebookRecord {

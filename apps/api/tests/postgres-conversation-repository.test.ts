@@ -126,11 +126,10 @@ describe("PostgresConversationRepository", () => {
     );
   });
 
-  it("hard deletes messages and their conversation in one transaction", async () => {
+  it("deletes a conversation and relies on the foreign-key cascade", async () => {
     const query = vi
       .fn()
       .mockResolvedValueOnce({ rows: [] })
-      .mockResolvedValueOnce({ rowCount: 2 })
       .mockResolvedValueOnce({ rowCount: 1 })
       .mockResolvedValueOnce({ rows: [] });
     const release = vi.fn();
@@ -146,10 +145,6 @@ describe("PostgresConversationRepository", () => {
     expect(query.mock.calls).toEqual([
       ["BEGIN"],
       [
-        expect.stringContaining("DELETE FROM conversation_messages"),
-        ["11111111-1111-4111-8111-111111111111"],
-      ],
-      [
         expect.stringContaining("DELETE FROM conversations"),
         ["11111111-1111-4111-8111-111111111111"],
       ],
@@ -162,7 +157,6 @@ describe("PostgresConversationRepository", () => {
     const query = vi
       .fn()
       .mockResolvedValueOnce({ rows: [] })
-      .mockResolvedValueOnce({ rowCount: 0 })
       .mockResolvedValueOnce({ rowCount: 0 })
       .mockResolvedValueOnce({ rows: [] });
     const release = vi.fn();

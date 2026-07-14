@@ -6,6 +6,7 @@ const migrationVersions = [
   "0001_conversation_messages",
   "0002_conversations",
   "0003_rulebooks",
+  "0004_conversation_message_foreign_key",
 ] as const;
 
 const migrationUrl = (version: string): URL => {

@@ -53,6 +53,8 @@ class RecordingVectorStore implements VectorStore {
 
   async upsert(): Promise<void> {}
 
+  async deleteByDocumentId(): Promise<void> {}
+
   async similaritySearch(
     input: VectorStoreSimilaritySearchInput,
   ): Promise<RulebookDocumentInterface[]> {
@@ -100,16 +102,50 @@ const createVectorStore = async (
   return vectorStore;
 };
 
+const createConversationRepository = async () => {
+  const repository = new InMemoryConversationRepository();
+  const conversationId = await repository.createConversation();
+
+  return { conversationId, repository };
+};
+
 describe("RetrievalService", () => {
-  it("returns a not-found answer when vector and public search have no matches", async () => {
-    let createdAgent = false;
-    const vectorStore = await createVectorStore();
+  it("rejects a missing conversation before retrieval side effects", async () => {
+    const vectorStore = new RecordingVectorStore();
     const publicSearchService = new StubPublicSearchService();
     const service = new RetrievalService(
       vectorStore,
       new RequestClassifierService(),
       publicSearchService,
       new InMemoryConversationRepository(),
+      () => {
+        throw new Error("should not create context agent");
+      },
+      () => {
+        throw new Error("should not create answer agent");
+      },
+    );
+
+    await expect(
+      service.search({
+        conversationId: CONVERSATION_ID,
+        query: "How many resources does a city produce?",
+      }),
+    ).rejects.toThrow("Conversation not found");
+    expect(vectorStore.searches).toEqual([]);
+    expect(publicSearchService.searches).toEqual([]);
+  });
+
+  it("returns a not-found answer when vector and public search have no matches", async () => {
+    let createdAgent = false;
+    const vectorStore = await createVectorStore();
+    const publicSearchService = new StubPublicSearchService();
+    const { conversationId, repository } = await createConversationRepository();
+    const service = new RetrievalService(
+      vectorStore,
+      new RequestClassifierService(),
+      publicSearchService,
+      repository,
       () => {
         createdAgent = true;
         throw new Error("should not create context agent");
@@ -121,7 +157,7 @@ describe("RetrievalService", () => {
     );
 
     const result = await service.search({
-      conversationId: CONVERSATION_ID,
+      conversationId,
       query: "How many resources does a city produce?",
     });
 
@@ -142,11 +178,12 @@ describe("RetrievalService", () => {
       }),
     ]);
     const publicSearchService = new StubPublicSearchService();
+    const { conversationId, repository } = await createConversationRepository();
     const service = new RetrievalService(
       vectorStore,
       new RequestClassifierService(),
       publicSearchService,
-      new InMemoryConversationRepository(),
+      repository,
       () => {
         createdAgent = true;
         throw new Error("should not create context agent");
@@ -158,7 +195,7 @@ describe("RetrievalService", () => {
     );
 
     const result = await service.search({
-      conversationId: CONVERSATION_ID,
+      conversationId,
       query: "How many resources does a city produce?",
     });
 
@@ -181,11 +218,12 @@ describe("RetrievalService", () => {
         throw publicSearchError;
       },
     };
+    const { conversationId, repository } = await createConversationRepository();
     const service = new RetrievalService(
       vectorStore,
       new RequestClassifierService(),
       failingPublicSearchService,
-      new InMemoryConversationRepository(),
+      repository,
       () => {
         createdAgent = true;
         throw new Error("should not create context agent");
@@ -197,7 +235,7 @@ describe("RetrievalService", () => {
     );
 
     const result = await service.search({
-      conversationId: CONVERSATION_ID,
+      conversationId,
       query: "How many resources does a city produce?",
     });
 
@@ -221,11 +259,12 @@ describe("RetrievalService", () => {
         score: 0.9,
       },
     ]);
+    const { conversationId, repository } = await createConversationRepository();
     const service = new RetrievalService(
       vectorStore,
       new RequestClassifierService(),
       publicSearchService,
-      new InMemoryConversationRepository(),
+      repository,
       (context) => {
         contextAgentInput = context;
         return {
@@ -244,7 +283,7 @@ describe("RetrievalService", () => {
     );
 
     const result = await service.search({
-      conversationId: CONVERSATION_ID,
+      conversationId,
       query: "How many resources does a city produce?",
     });
 
@@ -267,11 +306,12 @@ describe("RetrievalService", () => {
   it("skips RAG for out-of-scope requests", async () => {
     const vectorStore = new RecordingVectorStore();
     const publicSearchService = new StubPublicSearchService();
+    const { conversationId, repository } = await createConversationRepository();
     const service = new RetrievalService(
       vectorStore,
       new RequestClassifierService(),
       publicSearchService,
-      new InMemoryConversationRepository(),
+      repository,
       () => {
         throw new Error("should not create context agent");
       },
@@ -281,7 +321,7 @@ describe("RetrievalService", () => {
     );
 
     const result = await service.search({
-      conversationId: CONVERSATION_ID,
+      conversationId,
       query: "What is the weather tomorrow?",
     });
 
@@ -302,11 +342,12 @@ describe("RetrievalService", () => {
         source: "catan.pdf",
       }),
     ]);
+    const { conversationId, repository } = await createConversationRepository();
     const service = new RetrievalService(
       vectorStore,
       new RequestClassifierService(),
       new StubPublicSearchService(),
-      new InMemoryConversationRepository(),
+      repository,
       (context) => {
         contextAgentInput = context;
         return {
@@ -327,7 +368,7 @@ describe("RetrievalService", () => {
     );
 
     const result = await service.search({
-      conversationId: CONVERSATION_ID,
+      conversationId,
       query: "How many resources does a city produce?",
     });
 
@@ -360,6 +401,9 @@ describe("RetrievalService", () => {
   it("uses saved thread context for follow-ups and isolates other conversations", async () => {
     const vectorStore = new RecordingVectorStore();
     const conversationRepository = new InMemoryConversationRepository();
+    const conversationId = await conversationRepository.createConversation();
+    const isolatedConversationId =
+      await conversationRepository.createConversation();
     const publicSearchService = new StubPublicSearchService([
       {
         title: "Everdell setup",
@@ -391,15 +435,15 @@ describe("RetrievalService", () => {
     );
 
     await service.search({
-      conversationId: CONVERSATION_ID,
+      conversationId,
       query: "In Everdell, how many cards does the first player start with?",
     });
     const followUpResult = await service.search({
-      conversationId: CONVERSATION_ID,
+      conversationId,
       query: "And the second one?",
     });
     const isolatedResult = await service.search({
-      conversationId: "22222222-2222-4222-8222-222222222222",
+      conversationId: isolatedConversationId,
       query: "And the second one?",
     });
 
@@ -418,7 +462,7 @@ describe("RetrievalService", () => {
     expect(isolatedResult.answer).toMatch(
       /only answer board-game rules questions/i,
     );
-    expect(await conversationRepository.getMessages(CONVERSATION_ID)).toEqual([
+    expect(await conversationRepository.getMessages(conversationId)).toEqual([
       {
         role: "user",
         content:

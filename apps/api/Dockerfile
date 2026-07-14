@@ -22,6 +22,6 @@ COPY . .
 EXPOSE 8000
 
 HEALTHCHECK --interval=5s --timeout=3s --start-period=30s --retries=10 \
-  CMD node -e "fetch('http://127.0.0.1:8000/health').then(response => { if (!response.ok) process.exit(1) }).catch(() => process.exit(1))"
+  CMD node -e "fetch('http://127.0.0.1:8000/ready').then(response => { if (!response.ok) process.exit(1) }).catch(() => process.exit(1))"
 
 CMD ["npm", "run", "dev", "-w", "api"]

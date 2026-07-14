@@ -11,6 +11,7 @@ import type {
   ConversationMessage,
 } from "../../domain/conversation/conversation";
 import type { ConversationRepository } from "../../domain/conversation/conversation-repository";
+import { ConversationNotFoundError } from "../../domain/conversation/conversation-errors";
 import type { VectorStore } from "../../infrastructure/rag/vector-store/vector-store";
 import type { RequestClassifierService } from "./request-classifier-service";
 import type {
@@ -45,11 +46,11 @@ export class RetrievalService {
   }: RetrievalSearchInput): Promise<RetrievalSearchResult> {
     const storedConversation =
       await this.conversationRepository.getChat(conversationId);
-    const conversation: ConversationDetail = storedConversation ?? {
-      conversationId,
-      title: "New chat",
-      messages: await this.conversationRepository.getMessages(conversationId),
-    };
+    if (!storedConversation) {
+      throw new ConversationNotFoundError(conversationId);
+    }
+
+    const conversation: ConversationDetail = storedConversation;
     const conversationMessages =
       conversation.messages.slice(-MAX_CONTEXT_MESSAGES);
     const contextualQuery = this.formatContextualQuery(

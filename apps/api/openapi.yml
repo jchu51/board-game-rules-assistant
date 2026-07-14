@@ -133,6 +133,25 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthResponse"
+  /ready:
+    get:
+      tags:
+        - Health
+      summary: Readiness check
+      description: Returns success only when required persistence dependencies are available.
+      responses:
+        "200":
+          description: API dependencies are ready
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+        "503":
+          description: A required dependency is unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /rulebooks:
     post:
       tags:
@@ -207,7 +226,7 @@ paths:
       tags:
         - Ingestion
       summary: Delete a persisted rulebook
-      description: Removes the rulebook metadata and stored PDF from the selected repository. Vector-store deletion is not implemented yet.
+      description: Removes the indexed vectors, rulebook metadata, and stored PDF.
       parameters:
         - name: id
           in: path
@@ -239,7 +258,7 @@ paths:
       tags:
         - Retrieval
       summary: Search indexed rulebook chunks
-      description: Runs vector similarity search against the API process-local in-memory vector store.
+      description: Runs vector similarity search for an existing conversation.
       requestBody:
         required: true
         content:
@@ -263,6 +282,16 @@ paths:
                 missingQuery:
                   value:
                     error: query is required
+        "404":
+          description: Conversation not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                notFound:
+                  value:
+                    error: Conversation not found
         "500":
           description: Unexpected retrieval failure
           content:

@@ -49,6 +49,41 @@ describe("PostgresRulebookRepository", () => {
     );
   });
 
+  it("gets persisted metadata without selecting PDF bytes", async () => {
+    const query = vi.fn().mockResolvedValue({
+      rows: [
+        {
+          id: "11111111-1111-4111-8111-111111111111",
+          game_name: "Catan",
+          pdf_name: "catan.pdf",
+          file_size: 1024,
+        },
+      ],
+    });
+    const repository = new PostgresRulebookRepository({
+      query,
+    } as unknown as Pool);
+
+    await expect(
+      repository.getById("11111111-1111-4111-8111-111111111111"),
+    ).resolves.toEqual({
+      id: "11111111-1111-4111-8111-111111111111",
+      gameName: "Catan",
+      pdfName: "catan.pdf",
+      fileSize: 1024,
+    });
+    expect(query.mock.calls[0]?.[0]).not.toContain("pdf_data");
+  });
+
+  it("returns null when getting a missing rulebook", async () => {
+    const query = vi.fn().mockResolvedValue({ rows: [] });
+    const repository = new PostgresRulebookRepository({
+      query,
+    } as unknown as Pool);
+
+    await expect(repository.getById("missing")).resolves.toBeNull();
+  });
+
   it("returns false when deleting a missing rulebook", async () => {
     const query = vi.fn().mockResolvedValue({ rowCount: 0 });
     const repository = new PostgresRulebookRepository({
