@@ -16,7 +16,7 @@ frontend, and exposes similarity search over indexed chunks.
 - Swagger UI Express
 - `@board-game-rules-assistant/rag-core`
 - `@board-game-rules-assistant/agent-core`
-- `@board-game-rules-assistant/database`
+- PostgreSQL and pgvector
 
 ## Environment
 
@@ -145,6 +145,21 @@ npm run typecheck
 npm run lint
 ```
 
+For PostgreSQL mode, start the local database from the repository root:
+
+```bash
+docker compose up -d postgres
+docker compose ps postgres
+```
+
+The Compose service is available at `127.0.0.1:55432` and uses
+`board_game_rules` for the database, user, and password. Run the API-owned
+database integration tests with:
+
+```bash
+TEST_DATABASE_URL=postgresql://board_game_rules:board_game_rules@127.0.0.1:55432/board_game_rules npm test -w api -- tests/database
+```
+
 ## Source Layout
 
 ```text
@@ -159,6 +174,7 @@ src/
     conversation/               # chat and message repository contract
     rulebook/                    # rulebook repository contract
   infrastructure/                # adapters for external/storage concerns
+    database/                    # pool, migrations, and pgvector adapter
     openapi/                     # OpenAPI document loading
     persistence/                 # driver composition and repository adapters
   presentation/http/             # Express routers and HTTP schemas
@@ -168,7 +184,14 @@ src/
     ingestion/                   # rulebook upload/list/delete HTTP layer
     retrieval/                   # retrieval HTTP layer
     shared/                      # HTTP status, typed responses, error middleware
+migrations/                      # ordered PostgreSQL schema migrations
+tests/database/                  # PostgreSQL and pgvector integration tests
 ```
+
+The API owns one shared PostgreSQL pool. Ordered migrations create conversation
+history, conversation metadata, rulebook PDF storage, and pgvector support. The
+`rulebooks` table stores upload metadata and complete PDF bytes in a `BYTEA`
+column; list queries select only metadata and do not load `pdf_data`.
 
 ## Current Limitations
 

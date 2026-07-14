@@ -1,9 +1,9 @@
-import { Document } from "@langchain/core/documents";
 import type { RulebookDocument } from "@board-game-rules-assistant/rag-core";
+import { Document } from "@langchain/core/documents";
 import { describe, expect, it } from "vitest";
 
-import { createPostgresPersistence } from "../src/persistence.js";
-import { createTestDatabase, KeywordEmbeddings } from "./test-database.js";
+import { createPostgresPersistence } from "../../src/infrastructure/database/persistence";
+import { createTestDatabase, KeywordEmbeddings } from "./test-database";
 
 const createDocument = (
   pageContent: string,
@@ -15,7 +15,7 @@ describe("LangchainPgVectorStoreAdapter", () => {
   it("round-trips metadata and orders unfiltered results by cosine similarity", async () => {
     const database = await createTestDatabase();
     const persistence = await createPostgresPersistence({
-      databaseUrl: database.pool.options.connectionString!,
+      databaseUrl: database.databaseUrl,
       embeddings: new KeywordEmbeddings(),
       vectorTableName: `rulebook_vectors_${Date.now()}`,
     });
@@ -49,7 +49,7 @@ describe("LangchainPgVectorStoreAdapter", () => {
   it("rejects callback filters explicitly", async () => {
     const database = await createTestDatabase();
     const persistence = await createPostgresPersistence({
-      databaseUrl: database.pool.options.connectionString!,
+      databaseUrl: database.databaseUrl,
       embeddings: new KeywordEmbeddings(),
       vectorTableName: `rulebook_vectors_${Date.now()}`,
     });

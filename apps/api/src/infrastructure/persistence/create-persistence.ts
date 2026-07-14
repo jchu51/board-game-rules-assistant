@@ -1,4 +1,3 @@
-import { createPostgresPersistence } from "@board-game-rules-assistant/database";
 import {
   LangchainMemoryVectorStore,
   type VectorStore,
@@ -8,6 +7,7 @@ import type { EmbeddingsInterface } from "@langchain/core/embeddings";
 import type { Config } from "../../config/config-types";
 import type { ConversationRepository } from "../../domain/conversation/conversation-repository";
 import type { RulebookRepository } from "../../domain/rulebook/rulebook-repository";
+import { createPostgresPersistence } from "../database/persistence";
 import { InMemoryConversationRepository } from "./conversation/in-memory-conversation-repository";
 import { PostgresConversationRepository } from "./conversation/postgres-conversation-repository";
 import { InMemoryRulebookRepository } from "./rulebook/in-memory-rulebook-repository";

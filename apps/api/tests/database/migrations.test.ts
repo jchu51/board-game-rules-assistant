@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { runMigrations } from "../src/migrations.js";
-import { createTestDatabase } from "./test-database.js";
+import { runMigrations } from "../../src/infrastructure/database/migrations";
+import { createTestDatabase } from "./test-database";
 
 describe("runMigrations", () => {
-  it("enables pgvector and records an idempotent schema migration", async () => {
+  it("enables pgvector and records idempotent schema migrations", async () => {
     const database = await createTestDatabase();
     try {
       await runMigrations(database.pool);

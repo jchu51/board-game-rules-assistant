@@ -1,11 +1,12 @@
 import { randomUUID } from "node:crypto";
-import { Pool } from "pg";
 import type { EmbeddingsInterface } from "@langchain/core/embeddings";
+import { Pool } from "pg";
 
 const DEFAULT_TEST_DATABASE_URL =
   "postgresql://board_game_rules:board_game_rules@127.0.0.1:55432/board_game_rules";
 
 export type TestDatabase = {
+  databaseUrl: string;
   pool: Pool;
   dispose(): Promise<void>;
 };
@@ -38,12 +39,18 @@ export const createTestDatabase = async (): Promise<TestDatabase> => {
   const adminPool = new Pool({ connectionString: databaseUrl });
   await adminPool.query(`CREATE SCHEMA "${schema}"`);
 
+  const isolatedDatabaseUrl = new URL(databaseUrl);
+  isolatedDatabaseUrl.searchParams.set(
+    "options",
+    `-c search_path=${schema},public`,
+  );
+
   const pool = new Pool({
-    connectionString: databaseUrl,
-    options: `-c search_path=${schema},public`,
+    connectionString: isolatedDatabaseUrl.toString(),
   });
 
   return {
+    databaseUrl: isolatedDatabaseUrl.toString(),
     pool,
     async dispose() {
       await pool.end();

@@ -5,7 +5,7 @@
   "main": "dist/main.js",
   "scripts": {
     "dev": "nodemon",
-    "build": "tsup src/main.ts --format esm --platform node --target node22 --out-dir dist --clean && cp openapi.yml dist/openapi.yml",
+    "build": "tsup src/main.ts --format esm --platform node --target node22 --out-dir dist --clean && cp openapi.yml dist/openapi.yml && cp -R migrations dist/migrations",
     "start": "node dist/main.js",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -18,8 +18,8 @@
   "type": "module",
   "dependencies": {
     "@board-game-rules-assistant/agent-core": "^0.1.0",
-    "@board-game-rules-assistant/database": "^0.1.0",
     "@board-game-rules-assistant/rag-core": "^0.1.0",
+    "@langchain/community": "0.3.57",
     "@langchain/tavily": "^1.2.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",

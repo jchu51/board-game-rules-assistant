@@ -9,7 +9,10 @@ const migrationVersions = [
 ] as const;
 
 const migrationUrl = (version: string): URL => {
-  const sourceUrl = new URL(`../migrations/${version}.sql`, import.meta.url);
+  const sourceUrl = new URL(
+    `../../../migrations/${version}.sql`,
+    import.meta.url,
+  );
   const compiledUrl = new URL(`./migrations/${version}.sql`, import.meta.url);
 
   return fileURLToPath(import.meta.url).includes("/dist/")
