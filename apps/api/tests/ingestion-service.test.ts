@@ -1,15 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { VectorStore } from "@board-game-rules-assistant/rag-core";
 import { Document } from "@langchain/core/documents";
+import type { VectorStore } from "../src/infrastructure/rag/vector-store/vector-store";
 
 const { chunkDocuments, loadPdfDocuments } = vi.hoisted(() => ({
   chunkDocuments: vi.fn(),
   loadPdfDocuments: vi.fn(),
 }));
 
-vi.mock("@board-game-rules-assistant/rag-core", async (importOriginal) => ({
-  ...(await importOriginal()),
+vi.mock("../src/infrastructure/rag/chunking/chunk-documents", () => ({
   chunkDocuments,
+}));
+vi.mock("../src/infrastructure/rag/loaders/pdf-loader", () => ({
   loadPdfDocuments,
 }));
 

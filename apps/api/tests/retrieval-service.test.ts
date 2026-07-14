@@ -6,13 +6,6 @@ import type {
   RuleAnswerAgent,
   RuleContextAgent,
 } from "@board-game-rules-assistant/agent-core";
-import {
-  LangchainMemoryVectorStore,
-  type RulebookDocument,
-  type RulebookDocumentInterface,
-  type VectorStore,
-  type VectorStoreSimilaritySearchInput,
-} from "@board-game-rules-assistant/rag-core";
 
 import type {
   PublicSearchInput,
@@ -22,6 +15,15 @@ import type {
 import { RequestClassifierService } from "../src/application/retrieval/request-classifier-service";
 import { RetrievalService } from "../src/application/retrieval/retrieval-service";
 import { InMemoryConversationRepository } from "../src/infrastructure/persistence/conversation/in-memory-conversation-repository";
+import type {
+  RulebookDocument,
+  RulebookDocumentInterface,
+} from "../src/infrastructure/rag/documents/rulebook-document";
+import { LangchainMemoryVectorStore } from "../src/infrastructure/rag/vector-store/langchain-memory-vector-store";
+import type {
+  VectorStore,
+  VectorStoreSimilaritySearchInput,
+} from "../src/infrastructure/rag/vector-store/vector-store";
 
 const CONVERSATION_ID = "11111111-1111-4111-8111-111111111111";
 

@@ -1,9 +1,7 @@
-import {
-  chunkDocuments,
-  loadPdfDocuments,
-  type VectorStore,
-} from "@board-game-rules-assistant/rag-core";
 import { InvalidSplitterParamsError } from "../../domain/ingestion/ingestion-errors";
+import { chunkDocuments } from "../../infrastructure/rag/chunking/chunk-documents";
+import { loadPdfDocuments } from "../../infrastructure/rag/loaders/pdf-loader";
+import type { VectorStore } from "../../infrastructure/rag/vector-store/vector-store";
 import type {
   IngestPdfInput,
   IngestionResult,

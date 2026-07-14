@@ -1,9 +1,11 @@
 import type {
   RulebookDocument,
   RulebookDocumentInterface,
+} from "../../rag/documents/rulebook-document.js";
+import type {
   VectorStore,
   VectorStoreSimilaritySearchInput,
-} from "@board-game-rules-assistant/rag-core";
+} from "../../rag/vector-store/vector-store.js";
 import { PGVectorStore } from "@langchain/community/vectorstores/pgvector";
 
 const assertNoCallbackFilter = (

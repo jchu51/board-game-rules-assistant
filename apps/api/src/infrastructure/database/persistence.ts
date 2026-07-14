@@ -1,10 +1,10 @@
-import type { VectorStore } from "@board-game-rules-assistant/rag-core";
 import { PGVectorStore } from "@langchain/community/vectorstores/pgvector";
 import type { EmbeddingsInterface } from "@langchain/core/embeddings";
 import { Pool } from "pg";
 
 import { runMigrations } from "./migrations.js";
 import { LangchainPgVectorStoreAdapter } from "./vector/langchain-pg-vector-store.js";
+import type { VectorStore } from "../rag/vector-store/vector-store.js";
 
 export type CreatePostgresPersistenceOptions = {
   databaseUrl: string;

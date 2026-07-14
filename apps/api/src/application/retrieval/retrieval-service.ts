@@ -1,4 +1,3 @@
-import type { VectorStore } from "@board-game-rules-assistant/rag-core";
 import { CONTEXT_ORIGIN } from "@board-game-rules-assistant/agent-core";
 import type {
   ConversationTitleAgent,
@@ -14,6 +13,7 @@ import type {
   ConversationMessage,
 } from "../../domain/conversation/conversation";
 import type { ConversationRepository } from "../../domain/conversation/conversation-repository";
+import type { VectorStore } from "../../infrastructure/rag/vector-store/vector-store";
 import type { RequestClassifierService } from "./request-classifier-service";
 import type {
   RetrievalMatch,

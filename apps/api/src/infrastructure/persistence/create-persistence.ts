@@ -1,13 +1,11 @@
-import {
-  LangchainMemoryVectorStore,
-  type VectorStore,
-} from "@board-game-rules-assistant/rag-core";
 import type { EmbeddingsInterface } from "@langchain/core/embeddings";
 
 import type { Config } from "../../config/config-types";
 import type { ConversationRepository } from "../../domain/conversation/conversation-repository";
 import type { RulebookRepository } from "../../domain/rulebook/rulebook-repository";
 import { createPostgresPersistence } from "../database/persistence";
+import { LangchainMemoryVectorStore } from "../rag/vector-store/langchain-memory-vector-store";
+import type { VectorStore } from "../rag/vector-store/vector-store";
 import { InMemoryConversationRepository } from "./conversation/in-memory-conversation-repository";
 import { PostgresConversationRepository } from "./conversation/postgres-conversation-repository";
 import { InMemoryRulebookRepository } from "./rulebook/in-memory-rulebook-repository";

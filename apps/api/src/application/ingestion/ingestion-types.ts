@@ -1,4 +1,4 @@
-import type { RulebookChunkMetadata } from "@board-game-rules-assistant/rag-core";
+import type { RulebookChunkMetadata } from "../../infrastructure/rag/documents/rulebook-document";
 
 export type IngestionSplitterParams = {
   chunkSize: number;

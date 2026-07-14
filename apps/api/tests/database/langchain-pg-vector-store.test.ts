@@ -1,8 +1,8 @@
-import type { RulebookDocument } from "@board-game-rules-assistant/rag-core";
 import { Document } from "@langchain/core/documents";
 import { describe, expect, it } from "vitest";
 
 import { createPostgresPersistence } from "../../src/infrastructure/database/persistence";
+import type { RulebookDocument } from "../../src/infrastructure/rag/documents/rulebook-document";
 import { createTestDatabase, KeywordEmbeddings } from "./test-database";
 
 const createDocument = (

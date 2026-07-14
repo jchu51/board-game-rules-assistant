@@ -1,4 +1,3 @@
-import { createOpenAIEmbeddings } from "@board-game-rules-assistant/rag-core";
 import {
   ConversationTitleAgent,
   LLMService,
@@ -12,6 +11,7 @@ import { RetrievalService } from "./application/retrieval/retrieval-service";
 import { config } from "./config/config";
 import { createPersistence } from "./infrastructure/persistence/create-persistence";
 import { TavilyPublicSearchService } from "./infrastructure/public-search/tavily-public-search-service";
+import { createOpenAIEmbeddings } from "./infrastructure/rag/embeddings/embed-text";
 import { createApp } from "./presentation/http/app";
 import { ChatRouter } from "./presentation/http/chat/chat-router";
 import { HealthRouter } from "./presentation/http/health/health-router";
