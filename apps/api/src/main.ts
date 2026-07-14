@@ -1,14 +1,11 @@
-import {
-  ConversationTitleAgent,
-  LLMService,
-  RuleAnswerAgent,
-  RuleContextAgent,
-} from "@board-game-rules-assistant/agent-core";
-
 import { IngestionService } from "./application/ingestion/ingestion-service";
 import { RequestClassifierService } from "./application/retrieval/request-classifier-service";
 import { RetrievalService } from "./application/retrieval/retrieval-service";
 import { config } from "./config/config";
+import { ConversationTitleAgent } from "./infrastructure/agents/agents/conversation-title-agent";
+import { RuleAnswerAgent } from "./infrastructure/agents/agents/rule-answer-agent";
+import { RuleContextAgent } from "./infrastructure/agents/agents/rule-context-agent";
+import { LLMService } from "./infrastructure/agents/llm/llm-service";
 import { createPersistence } from "./infrastructure/persistence/create-persistence";
 import { TavilyPublicSearchService } from "./infrastructure/public-search/tavily-public-search-service";
 import { createOpenAIEmbeddings } from "./infrastructure/rag/embeddings/embed-text";

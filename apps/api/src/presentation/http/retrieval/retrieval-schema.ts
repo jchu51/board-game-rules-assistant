@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { CONTEXT_ORIGINS } from "@board-game-rules-assistant/agent-core";
+import { CONTEXT_ORIGINS } from "../../../infrastructure/agents/context-origin";
 
 export const RetrievalSearchRequestSchema = z
   .object({

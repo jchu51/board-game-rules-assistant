@@ -1,9 +1,9 @@
-import { CONTEXT_ORIGIN } from "@board-game-rules-assistant/agent-core";
 import type {
   ConversationTitleAgent,
-  RuleAnswerAgent,
-  RuleContextAgent,
-} from "@board-game-rules-assistant/agent-core";
+} from "../../infrastructure/agents/agents/conversation-title-agent";
+import type { RuleAnswerAgent } from "../../infrastructure/agents/agents/rule-answer-agent";
+import type { RuleContextAgent } from "../../infrastructure/agents/agents/rule-context-agent";
+import { CONTEXT_ORIGIN } from "../../infrastructure/agents/context-origin";
 import type {
   PublicSearchResult,
   PublicSearchService,

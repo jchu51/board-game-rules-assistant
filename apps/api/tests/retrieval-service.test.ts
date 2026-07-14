@@ -3,9 +3,9 @@ import { Document } from "@langchain/core/documents";
 import type { EmbeddingsInterface } from "@langchain/core/embeddings";
 import type {
   ConversationTitleAgent,
-  RuleAnswerAgent,
-  RuleContextAgent,
-} from "@board-game-rules-assistant/agent-core";
+} from "../src/infrastructure/agents/agents/conversation-title-agent";
+import type { RuleAnswerAgent } from "../src/infrastructure/agents/agents/rule-answer-agent";
+import type { RuleContextAgent } from "../src/infrastructure/agents/agents/rule-context-agent";
 
 import type {
   PublicSearchInput,

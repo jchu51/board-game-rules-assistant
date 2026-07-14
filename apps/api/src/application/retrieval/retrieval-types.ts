@@ -3,7 +3,7 @@ export type RetrievalSearchInput = {
   query: string;
 };
 
-import type { ContextOrigin } from "@board-game-rules-assistant/agent-core";
+import type { ContextOrigin } from "../../infrastructure/agents/context-origin";
 
 export type RetrievalMatchOrigin = ContextOrigin;
 
