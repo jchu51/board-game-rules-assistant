@@ -32,7 +32,13 @@ export const config: Config = {
   },
   ingestion: {
     openAiApiKey: env.OPENAI_API_KEY,
-    embeddingModel: env.INGESTION_EMBEDDING_MODEL,
+    embeddingProvider: env.EMBEDDING_PROVIDER,
+    embeddingModel:
+      env.INGESTION_EMBEDDING_MODEL ??
+      (env.EMBEDDING_PROVIDER === "ollama"
+        ? "nomic-embed-text"
+        : "text-embedding-3-large"),
+    ollamaBaseUrl: env.OLLAMA_BASE_URL,
     defaultChunkSize: env.INGESTION_CHUNK_SIZE,
     defaultChunkOverlap: env.INGESTION_CHUNK_OVERLAP,
     uploadDirectory: env.INGESTION_UPLOAD_DIRECTORY,

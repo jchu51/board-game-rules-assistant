@@ -27,12 +27,10 @@ export const EnvSchema = z
     HOST: withDefault("127.0.0.1"),
     PORT: numberWithDefault(8000).pipe(z.number().int().min(0).max(65535)),
     CORS_ORIGIN: withDefault("http://localhost:5173"),
-    OPENAI_API_KEY: z
-      .string({
-        message:
-          "OPENAI_API_KEY is required (used by the embeddings client) - set it in apps/api/.env",
-      })
-      .min(1, "OPENAI_API_KEY must not be empty"),
+    OPENAI_API_KEY: z.preprocess(
+      emptyToUndefined,
+      z.string().min(1).optional(),
+    ),
     TAVILY_API_KEY: z
       .string({
         message:
@@ -44,7 +42,14 @@ export const EnvSchema = z
       z.string().min(1).optional(),
     ),
     AGENT_CHAT_MODEL: withDefault("openai:gpt-4o-mini"),
-    INGESTION_EMBEDDING_MODEL: withDefault("text-embedding-3-large"),
+    EMBEDDING_PROVIDER: z
+      .preprocess(emptyToUndefined, z.enum(["openai", "ollama"]))
+      .default("openai"),
+    OLLAMA_BASE_URL: withDefault("http://127.0.0.1:11434"),
+    INGESTION_EMBEDDING_MODEL: z.preprocess(
+      emptyToUndefined,
+      z.string().min(1).optional(),
+    ),
     INGESTION_CHUNK_SIZE: numberWithDefault(500).pipe(
       z.number().int().positive(),
     ),
@@ -64,6 +69,18 @@ export const EnvSchema = z
     ),
   })
   .superRefine((env, context) => {
+    const usesOpenAi =
+      env.EMBEDDING_PROVIDER === "openai" ||
+      env.AGENT_CHAT_MODEL.startsWith("openai:");
+    if (usesOpenAi && !env.OPENAI_API_KEY) {
+      context.addIssue({
+        code: "custom",
+        path: ["OPENAI_API_KEY"],
+        message:
+          "OPENAI_API_KEY is required when the embedding provider or chat model uses OpenAI - set it in apps/api/.env",
+      });
+    }
+
     if (env.PERSISTENCE_DRIVER === "postgres" && !env.DATABASE_URL) {
       context.addIssue({
         code: "custom",

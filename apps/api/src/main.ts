@@ -10,7 +10,7 @@ import { LLMService } from "./infrastructure/agents/llm/llm-service";
 import { createPersistence } from "./infrastructure/persistence/create-persistence";
 import { TavilyPublicSearchService } from "./infrastructure/public-search/tavily-public-search-service";
 import { chunkDocuments } from "./infrastructure/rag/chunking/chunk-documents";
-import { createOpenAIEmbeddings } from "./infrastructure/rag/embeddings/embed-text";
+import { createEmbeddings } from "./infrastructure/rag/embeddings/embed-text";
 import { loadPdfDocuments } from "./infrastructure/rag/loaders/pdf-loader";
 import { createApp } from "./presentation/http/app";
 import { ChatRouter } from "./presentation/http/chat/chat-router";
@@ -19,8 +19,11 @@ import { IngestionRouter } from "./presentation/http/ingestion/ingestion-router"
 import { RetrievalRouter } from "./presentation/http/retrieval/retrieval-router";
 
 // Services
-const embeddings = createOpenAIEmbeddings(config.ingestion.embeddingModel, {
-  apiKey: config.ingestion.openAiApiKey,
+const embeddings = createEmbeddings({
+  provider: config.ingestion.embeddingProvider,
+  model: config.ingestion.embeddingModel,
+  openAiApiKey: config.ingestion.openAiApiKey,
+  ollamaBaseUrl: config.ingestion.ollamaBaseUrl,
 });
 const persistence = await createPersistence({ config, embeddings });
 await persistence.healthCheck();

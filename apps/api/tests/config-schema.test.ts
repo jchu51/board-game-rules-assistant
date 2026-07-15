@@ -14,7 +14,9 @@ describe("EnvSchema", () => {
     expect(env.PORT).toBe(8000);
     expect(env.CORS_ORIGIN).toBe("http://localhost:5173");
     expect(env.AGENT_CHAT_MODEL).toBe("openai:gpt-4o-mini");
-    expect(env.INGESTION_EMBEDDING_MODEL).toBe("text-embedding-3-large");
+    expect(env.EMBEDDING_PROVIDER).toBe("openai");
+    expect(env.OLLAMA_BASE_URL).toBe("http://127.0.0.1:11434");
+    expect(env.INGESTION_EMBEDDING_MODEL).toBe(undefined);
     expect(env.INGESTION_CHUNK_SIZE).toBe(500);
     expect(env.INGESTION_CHUNK_OVERLAP).toBe(100);
     expect(env.INGESTION_MAX_UPLOAD_SIZE_BYTES).toBe(40 * 1024 * 1024);
@@ -78,6 +80,26 @@ describe("EnvSchema", () => {
     const result = EnvSchema.safeParse({
       OPENAI_API_KEY: "",
       TAVILY_API_KEY: "test-tavily-key",
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("allows a missing OpenAI API key when nothing uses OpenAI", () => {
+    const env = EnvSchema.parse({
+      TAVILY_API_KEY: "test-tavily-key",
+      EMBEDDING_PROVIDER: "ollama",
+      AGENT_CHAT_MODEL: "ollama:llama3.1",
+    });
+
+    expect(env.OPENAI_API_KEY).toBe(undefined);
+    expect(env.EMBEDDING_PROVIDER).toBe("ollama");
+  });
+
+  it("requires the OpenAI API key when the chat model uses OpenAI", () => {
+    const result = EnvSchema.safeParse({
+      TAVILY_API_KEY: "test-tavily-key",
+      EMBEDDING_PROVIDER: "ollama",
     });
 
     expect(result.success).toBe(false);

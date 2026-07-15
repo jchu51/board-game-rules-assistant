@@ -9,8 +9,10 @@ export type Config = {
     chatModel: string;
   };
   ingestion: {
-    openAiApiKey: string;
+    openAiApiKey?: string;
+    embeddingProvider: "openai" | "ollama";
     embeddingModel: string;
+    ollamaBaseUrl: string;
     defaultChunkSize: number;
     defaultChunkOverlap: number;
     uploadDirectory: string;

@@ -79,7 +79,9 @@ describe("config", () => {
   });
 
   it("reports invalid configuration before exiting", async () => {
-    vi.stubEnv("NODE_ENV", "invalid");
+    vi.stubEnv("TAVILY_API_KEY", "tavily");
+    vi.stubEnv("OPENAI_API_KEY", "");
+    vi.stubEnv("AGENT_CHAT_MODEL", "openai:gpt-4o-mini");
     const error = vi.spyOn(console, "error").mockImplementation(() => {});
     vi.spyOn(process, "exit").mockImplementation(() => {
       throw new Error("exit called");
