@@ -82,6 +82,9 @@ See the
 for the implemented classification, relevance, clarification, and public-search
 decision flow.
 
+See the [RulesGuru guardrail architecture](docs/guardrails.md) for the layered
+application and LangChain safety boundaries.
+
 ## Requirements
 
 - Node.js 22+
