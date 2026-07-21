@@ -1,3 +1,4 @@
+import { piiMiddleware } from "langchain";
 import { ConfigurableModel } from "langchain/chat_models/universal";
 
 import {
@@ -21,7 +22,13 @@ export class RuleContextAgent extends Agent {
     name: string,
     model: ConfigurableModel,
     context: string,
-    agent: AgentRuntime = createLangChainAgentRuntime(model),
+    agent: AgentRuntime = createLangChainAgentRuntime(model, [
+      piiMiddleware("email", { strategy: "redact" }),
+      piiMiddleware("credit_card", { strategy: "redact" }),
+      piiMiddleware("ip", { strategy: "redact" }),
+      piiMiddleware("mac_address", { strategy: "redact" }),
+      piiMiddleware("url", { strategy: "redact" }),
+    ]),
   ) {
     super(name);
     this.agent = agent;
