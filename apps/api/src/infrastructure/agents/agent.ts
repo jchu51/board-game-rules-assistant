@@ -1,5 +1,5 @@
 import type { BaseMessageLike } from "@langchain/core/messages";
-import { createAgent } from "langchain";
+import { createAgent, type AnyAgentMiddleware } from "langchain";
 import type { ConfigurableModel } from "langchain/chat_models/universal";
 
 export abstract class Agent<Output = string> {
@@ -22,8 +22,9 @@ export type AgentRuntime = {
 
 export const createLangChainAgentRuntime = (
   model: ConfigurableModel,
+  middleware: AnyAgentMiddleware[] = [],
 ): AgentRuntime => {
-  const agent = createAgent({ model });
+  const agent = createAgent({ model, middleware });
 
   return {
     async invoke({ messages }) {

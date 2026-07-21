@@ -22,10 +22,20 @@ describe("createLangChainAgentRuntime", () => {
     const runtime = createLangChainAgentRuntime(model);
     const response = await runtime.invoke({ messages });
 
-    expect(createAgent).toHaveBeenCalledWith({ model });
+    expect(createAgent).toHaveBeenCalledWith({ model, middleware: [] });
     expect(invoke).toHaveBeenCalledWith({ messages });
     expect(response).toEqual({
       messages: [{ text: "First" }, { text: "Cities score points." }],
     });
+  });
+
+  it("passes provided middleware through to LangChain", () => {
+    const model = {} as ConfigurableModel;
+    const middleware = [{ name: "fake-middleware" }] as never;
+    createAgent.mockReturnValue({ invoke });
+
+    createLangChainAgentRuntime(model, middleware);
+
+    expect(createAgent).toHaveBeenCalledWith({ model, middleware });
   });
 });
