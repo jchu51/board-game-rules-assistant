@@ -1,4 +1,3 @@
-import { piiMiddleware } from "langchain";
 import { ConfigurableModel } from "langchain/chat_models/universal";
 
 import {
@@ -7,6 +6,7 @@ import {
   type AgentRuntime,
 } from "./agent.js";
 import { AgentError } from "./agent-error.js";
+import { piiRedactionMiddleware } from "./pii-redaction-middleware.js";
 import { ruleContextPrompt } from "./prompts/rule-context-prompt.js";
 
 /**
@@ -22,13 +22,10 @@ export class RuleContextAgent extends Agent {
     name: string,
     model: ConfigurableModel,
     context: string,
-    agent: AgentRuntime = createLangChainAgentRuntime(model, [
-      piiMiddleware("email", { strategy: "redact" }),
-      piiMiddleware("credit_card", { strategy: "redact" }),
-      piiMiddleware("ip", { strategy: "redact" }),
-      piiMiddleware("mac_address", { strategy: "redact" }),
-      piiMiddleware("url", { strategy: "redact" }),
-    ]),
+    agent: AgentRuntime = createLangChainAgentRuntime(
+      model,
+      piiRedactionMiddleware({ applyToInput: true, applyToOutput: false }),
+    ),
   ) {
     super(name);
     this.agent = agent;

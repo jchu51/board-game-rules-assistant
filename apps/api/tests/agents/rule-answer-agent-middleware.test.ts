@@ -54,15 +54,9 @@ describe("RuleAnswerAgent default runtime", () => {
       applyToOutput: true,
     };
     expect(piiMiddleware).toHaveBeenCalledWith("email", outputPiiOptions);
-    expect(piiMiddleware).toHaveBeenCalledWith(
-      "credit_card",
-      outputPiiOptions,
-    );
+    expect(piiMiddleware).toHaveBeenCalledWith("credit_card", outputPiiOptions);
     expect(piiMiddleware).toHaveBeenCalledWith("ip", outputPiiOptions);
-    expect(piiMiddleware).toHaveBeenCalledWith(
-      "mac_address",
-      outputPiiOptions,
-    );
+    expect(piiMiddleware).toHaveBeenCalledWith("mac_address", outputPiiOptions);
     expect(piiMiddleware).toHaveBeenCalledWith("url", outputPiiOptions);
     expect(createAgent).toHaveBeenCalledWith({
       model,

@@ -6,6 +6,7 @@ import {
   type AgentRuntime,
 } from "./agent.js";
 import { AgentError } from "./agent-error.js";
+import { piiRedactionMiddleware } from "./pii-redaction-middleware.js";
 import { conversationTitlePrompt } from "./prompts/conversation-title-prompt.js";
 
 const stripJsonFence = (text: string): string =>
@@ -42,7 +43,10 @@ export class ConversationTitleAgent extends Agent {
   constructor(
     name: string,
     model: ConfigurableModel,
-    agent: AgentRuntime = createLangChainAgentRuntime(model),
+    agent: AgentRuntime = createLangChainAgentRuntime(
+      model,
+      piiRedactionMiddleware({ applyToInput: true, applyToOutput: true }),
+    ),
   ) {
     super(name);
     this.agent = agent;
