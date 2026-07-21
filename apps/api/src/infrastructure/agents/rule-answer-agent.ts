@@ -1,4 +1,4 @@
-import { modelCallLimitMiddleware } from "langchain";
+import { modelCallLimitMiddleware, piiMiddleware } from "langchain";
 import { ConfigurableModel } from "langchain/chat_models/universal";
 
 import {
@@ -24,6 +24,31 @@ export class RuleAnswerAgent extends Agent {
     context: string,
     agent: AgentRuntime = createLangChainAgentRuntime(model, [
       modelCallLimitMiddleware({ runLimit: 3, exitBehavior: "error" }),
+      piiMiddleware("email", {
+        strategy: "redact",
+        applyToInput: false,
+        applyToOutput: true,
+      }),
+      piiMiddleware("credit_card", {
+        strategy: "redact",
+        applyToInput: false,
+        applyToOutput: true,
+      }),
+      piiMiddleware("ip", {
+        strategy: "redact",
+        applyToInput: false,
+        applyToOutput: true,
+      }),
+      piiMiddleware("mac_address", {
+        strategy: "redact",
+        applyToInput: false,
+        applyToOutput: true,
+      }),
+      piiMiddleware("url", {
+        strategy: "redact",
+        applyToInput: false,
+        applyToOutput: true,
+      }),
     ]),
   ) {
     super(name);
