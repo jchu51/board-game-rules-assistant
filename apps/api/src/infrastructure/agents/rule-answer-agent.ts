@@ -1,3 +1,4 @@
+import { modelCallLimitMiddleware } from "langchain";
 import { ConfigurableModel } from "langchain/chat_models/universal";
 
 import {
@@ -21,7 +22,9 @@ export class RuleAnswerAgent extends Agent {
     name: string,
     model: ConfigurableModel,
     context: string,
-    agent: AgentRuntime = createLangChainAgentRuntime(model),
+    agent: AgentRuntime = createLangChainAgentRuntime(model, [
+      modelCallLimitMiddleware({ runLimit: 3, exitBehavior: "error" }),
+    ]),
   ) {
     super(name);
     this.agent = agent;
