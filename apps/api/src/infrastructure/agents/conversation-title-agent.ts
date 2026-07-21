@@ -8,6 +8,7 @@ import {
 import { AgentError } from "./agent-error.js";
 import { piiRedactionMiddleware } from "./pii-redaction-middleware.js";
 import { conversationTitlePrompt } from "./prompts/conversation-title-prompt.js";
+import { titleLengthGuardMiddleware } from "./title-length-guard-middleware.js";
 
 const stripJsonFence = (text: string): string =>
   text
@@ -43,10 +44,10 @@ export class ConversationTitleAgent extends Agent {
   constructor(
     name: string,
     model: ConfigurableModel,
-    agent: AgentRuntime = createLangChainAgentRuntime(
-      model,
-      piiRedactionMiddleware({ applyToInput: true, applyToOutput: true }),
-    ),
+    agent: AgentRuntime = createLangChainAgentRuntime(model, [
+      ...piiRedactionMiddleware({ applyToInput: true, applyToOutput: true }),
+      titleLengthGuardMiddleware(),
+    ]),
   ) {
     super(name);
     this.agent = agent;
