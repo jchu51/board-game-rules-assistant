@@ -103,6 +103,29 @@ describe("LangchainMemoryVectorStore", () => {
     expect(results[0]?.metadata.documentId).toBe("pandemic");
   });
 
+  it("re-ranks with maximal marginal relevance to diversify results", async () => {
+    const vectorStore = new LangchainMemoryVectorStore(new KeywordEmbeddings());
+
+    await vectorStore.upsert([
+      createDocument("A city produces two resources.", "catan"),
+      createDocument("A city produces two resources for its owner.", "catan"),
+      createDocument("The longest road scores points.", "catan"),
+    ]);
+
+    const results = await vectorStore.maxMarginalRelevanceSearch({
+      query: "resources and roads",
+      topK: 2,
+      fetchK: 3,
+      lambda: 0.5,
+    });
+
+    // Plain similarity would return the two near-duplicate resource chunks;
+    // MMR swaps the duplicate for the road chunk.
+    expect(results.length).toBe(2);
+    expect(results[0]?.pageContent).toContain("city produces two resources");
+    expect(results[1]?.pageContent).toContain("longest road");
+  });
+
   it("deletes every vector for one document without affecting others", async () => {
     const vectorStore = new LangchainMemoryVectorStore(new KeywordEmbeddings());
 

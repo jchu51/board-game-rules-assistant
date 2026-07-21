@@ -1,12 +1,13 @@
 import type {
   VectorStore,
+  VectorStoreMmrSearchInput,
   VectorStoreSimilaritySearchInput,
 } from "../../../domain/rulebook/vector-store.js";
 import type { RulebookDocument } from "../documents/rulebook-document.js";
 import { PGVectorStore } from "@langchain/community/vectorstores/pgvector";
 
 const assertNoCallbackFilter = (
-  input: VectorStoreSimilaritySearchInput,
+  input: Pick<VectorStoreSimilaritySearchInput, "filter">,
 ): void => {
   if (input.filter) {
     throw new Error(
@@ -46,5 +47,16 @@ export class LangchainPgVectorStoreAdapter implements VectorStore {
       document,
       1 - cosineDistance,
     ]);
+  }
+
+  async maxMarginalRelevanceSearch(
+    input: VectorStoreMmrSearchInput,
+  ): Promise<RulebookDocument[]> {
+    assertNoCallbackFilter(input);
+    return this.vectorStore.maxMarginalRelevanceSearch(input.query, {
+      k: input.topK ?? 4,
+      fetchK: input.fetchK ?? 20,
+      lambda: input.lambda ?? 0.5,
+    });
   }
 }

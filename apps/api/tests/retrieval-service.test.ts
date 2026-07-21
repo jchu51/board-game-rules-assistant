@@ -66,6 +66,13 @@ class RecordingVectorStore implements VectorStore {
     this.searches.push(input);
     return [];
   }
+
+  async maxMarginalRelevanceSearch(
+    input: VectorStoreSimilaritySearchInput,
+  ): Promise<RulebookDocumentInterface[]> {
+    this.searches.push(input);
+    return [];
+  }
 }
 
 class StubPublicSearchService implements PublicSearchService {

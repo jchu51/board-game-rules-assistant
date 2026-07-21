@@ -26,6 +26,10 @@ import type {
 const DEFAULT_TOP_K = 5;
 const MIN_RELEVANCE_SCORE = 0.65;
 const MAX_CONTEXT_MESSAGES = 10;
+// MMR re-ranking: fetch a wide candidate pool, lean towards relevance over
+// diversity; the rule-context agent prunes any weaker chunk MMR lets through.
+const MMR_FETCH_K = 20;
+const MMR_LAMBDA = 0.7;
 
 export class RetrievalService {
   constructor(
@@ -73,20 +77,11 @@ export class RetrievalService {
       query: classification.normalizedQuery,
       topK: DEFAULT_TOP_K,
     });
+    const relevantResults = results.filter(
+      ([, score]) => score > MIN_RELEVANCE_SCORE,
+    );
 
-    const matches: RetrievalMatch[] = results
-      .filter(([, score]) => score > MIN_RELEVANCE_SCORE)
-      .map(([document]) => ({
-        origin: CONTEXT_ORIGIN.rulebook,
-        content: document.pageContent,
-        metadata: {
-          documentId: document.metadata.documentId,
-          pageNumber: document.metadata.loc?.pageNumber,
-          source: document.metadata.source,
-        },
-      }));
-
-    if (results.length > 0 && matches.length === 0) {
+    if (results.length > 0 && relevantResults.length === 0) {
       return await this.completeTurn(conversation, query, {
         answer:
           "I found potentially related rulebook content, but it was not relevant enough to answer confidently. Please clarify the game and the specific rule, action, card, or situation you are asking about.",
@@ -94,7 +89,7 @@ export class RetrievalService {
       });
     }
 
-    if (matches.length === 0) {
+    if (relevantResults.length === 0) {
       const result = await this.searchPublicSources(
         conversationQuestion,
         classification.normalizedQuery,
@@ -102,6 +97,25 @@ export class RetrievalService {
 
       return await this.completeTurn(conversation, query, result);
     }
+
+    const diversifiedChunks = await this.vectorStore.maxMarginalRelevanceSearch(
+      {
+        query: classification.normalizedQuery,
+        topK: DEFAULT_TOP_K,
+        fetchK: MMR_FETCH_K,
+        lambda: MMR_LAMBDA,
+      },
+    );
+
+    const matches: RetrievalMatch[] = diversifiedChunks.map((chunk) => ({
+      origin: CONTEXT_ORIGIN.rulebook,
+      content: chunk.pageContent,
+      metadata: {
+        documentId: chunk.metadata.documentId,
+        pageNumber: chunk.metadata.loc?.pageNumber,
+        source: chunk.metadata.source,
+      },
+    }));
 
     const result = await this.answerFromMatches(conversationQuestion, matches);
 

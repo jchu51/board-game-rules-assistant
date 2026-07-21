@@ -50,6 +50,7 @@ const vectorStore = {
   deleteByDocumentId: vi.fn(),
   similaritySearch: vi.fn(),
   similaritySearchVectorWithScore: vi.fn(),
+  maxMarginalRelevanceSearch: vi.fn(),
 } satisfies VectorStore;
 const conversationRepository = {
   createConversation: vi.fn(),

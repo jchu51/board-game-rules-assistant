@@ -2,6 +2,7 @@ import { MemoryVectorStore } from "@langchain/classic/vectorstores/memory";
 import type { EmbeddingsInterface } from "@langchain/core/embeddings";
 import type {
   VectorStore,
+  VectorStoreMmrSearchInput,
   VectorStoreSimilaritySearchInput,
 } from "../../../domain/rulebook/vector-store.js";
 import type { RulebookDocument } from "../documents/rulebook-document.js";
@@ -41,5 +42,16 @@ export class LangchainMemoryVectorStore implements VectorStore {
       input.topK,
       input.filter,
     );
+  }
+
+  async maxMarginalRelevanceSearch(
+    input: VectorStoreMmrSearchInput,
+  ): Promise<RulebookDocument[]> {
+    return this.vectorStore.maxMarginalRelevanceSearch(input.query, {
+      k: input.topK ?? 4,
+      fetchK: input.fetchK ?? 20,
+      lambda: input.lambda ?? 0.5,
+      filter: input.filter,
+    });
   }
 }
