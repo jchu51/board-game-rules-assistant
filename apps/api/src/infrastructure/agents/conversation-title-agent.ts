@@ -53,12 +53,15 @@ export class ConversationTitleAgent extends Agent {
     this.agent = agent;
   }
 
-  async run(question: string): Promise<string> {
+  async run(
+    question: string,
+    runtimeContext: Record<string, unknown> = {},
+  ): Promise<string> {
     try {
       const messages = await conversationTitlePrompt.formatMessages({
         question,
       });
-      const response = await this.agent.invoke({ messages });
+      const response = await this.agent.invoke({ messages, runtimeContext });
       const text = response.messages.at(-1)?.text;
 
       if (!text) {

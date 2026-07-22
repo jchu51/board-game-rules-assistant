@@ -9,11 +9,17 @@ export abstract class Agent<Output = string> {
     this.name = name;
   }
 
-  abstract run(input: string): Promise<Output>;
+  abstract run(
+    input: string,
+    runtimeContext?: Record<string, unknown>,
+  ): Promise<Output>;
 }
 
 export type AgentRuntime = {
-  invoke(input: { messages: BaseMessageLike[] }): Promise<{
+  invoke(input: {
+    messages: BaseMessageLike[];
+    runtimeContext?: Record<string, unknown>;
+  }): Promise<{
     messages: Array<{
       text?: string;
     }>;
@@ -27,8 +33,11 @@ export const createLangChainAgentRuntime = (
   const agent = createAgent({ model, middleware });
 
   return {
-    async invoke({ messages }) {
-      const response = await agent.invoke({ messages });
+    async invoke({ messages, runtimeContext }) {
+      const response = await agent.invoke(
+        { messages },
+        { context: runtimeContext ?? {} },
+      );
 
       return {
         messages: response.messages.map((message) => ({

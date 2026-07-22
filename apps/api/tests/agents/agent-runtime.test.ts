@@ -23,10 +23,28 @@ describe("createLangChainAgentRuntime", () => {
     const response = await runtime.invoke({ messages });
 
     expect(createAgent).toHaveBeenCalledWith({ model, middleware: [] });
-    expect(invoke).toHaveBeenCalledWith({ messages });
+    expect(invoke).toHaveBeenCalledWith({ messages }, { context: {} });
     expect(response).toEqual({
       messages: [{ text: "First" }, { text: "Cities score points." }],
     });
+  });
+
+  it("forwards runtimeContext to LangChain as the invoke config context", async () => {
+    const model = {} as ConfigurableModel;
+    const messages = [{ role: "user", content: "How do cities score?" }];
+    createAgent.mockReturnValue({ invoke });
+    invoke.mockResolvedValue({ messages: [] });
+
+    const runtime = createLangChainAgentRuntime(model);
+    await runtime.invoke({
+      messages,
+      runtimeContext: { policyApproved: true },
+    });
+
+    expect(invoke).toHaveBeenCalledWith(
+      { messages },
+      { context: { policyApproved: true } },
+    );
   });
 
   it("passes provided middleware through to LangChain", () => {

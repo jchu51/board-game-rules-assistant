@@ -32,14 +32,17 @@ export class RuleContextAgent extends Agent {
     this.context = context;
   }
 
-  async run(question: string): Promise<string> {
+  async run(
+    question: string,
+    runtimeContext: Record<string, unknown> = {},
+  ): Promise<string> {
     try {
       const messages = await ruleContextPrompt.formatMessages({
         question,
         context: this.context,
       });
 
-      const response = await this.agent.invoke({ messages });
+      const response = await this.agent.invoke({ messages, runtimeContext });
 
       return response.messages.at(-1)?.text ?? "No response";
     } catch (error) {
