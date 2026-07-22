@@ -8,6 +8,7 @@ import {
 } from "./agent.js";
 import { AgentError } from "./agent-error.js";
 import { piiRedactionMiddleware } from "./pii-redaction-middleware.js";
+import { policyBackstopMiddleware } from "./policy-backstop-middleware.js";
 import { boardGameRuleMasterPrompt } from "./prompts/board-game-rule-master-prompt.js";
 
 /**
@@ -24,6 +25,7 @@ export class RuleAnswerAgent extends Agent {
     model: ConfigurableModel,
     context: string,
     agent: AgentRuntime = createLangChainAgentRuntime(model, [
+      policyBackstopMiddleware(),
       modelCallLimitMiddleware({ runLimit: 3, exitBehavior: "error" }),
       ...piiRedactionMiddleware({ applyToInput: false, applyToOutput: true }),
     ]),

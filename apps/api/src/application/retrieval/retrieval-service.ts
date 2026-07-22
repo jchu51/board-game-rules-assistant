@@ -241,11 +241,14 @@ export class RetrievalService {
     query: string,
     matches: RetrievalMatch[],
   ): Promise<RetrievalAnswerResult> {
+    // Only ever reached after `search()` has confirmed the request classifier
+    // approved the query, so agents' policy-backstop guard can be satisfied here.
+    const policyApprovedContext = { policyApproved: true };
     const retrievedContext = this.formatRetrievedContext(matches);
     const contextAgent = this.createRuleContextAgent(retrievedContext);
-    const relevantRules = await contextAgent.run(query);
+    const relevantRules = await contextAgent.run(query, policyApprovedContext);
     const answerAgent = this.createRuleAnswerAgent(relevantRules);
-    const answer = await answerAgent.run(query);
+    const answer = await answerAgent.run(query, policyApprovedContext);
 
     return { answer, matches };
   }

@@ -340,6 +340,8 @@ describe("RetrievalService", () => {
     let contextAgentInput = "";
     let answerAgentContext = "";
     let answerAgentQuestion = "";
+    let contextAgentRuntimeContext: Record<string, unknown> | undefined;
+    let answerAgentRuntimeContext: Record<string, unknown> | undefined;
     const vectorStore = await createVectorStore([
       createRulebookDocument("Cities produce two resources.", {
         documentId: "11111111-1111-4111-8111-111111111111",
@@ -356,7 +358,8 @@ describe("RetrievalService", () => {
       (context) => {
         contextAgentInput = context;
         return {
-          async run() {
+          async run(_question: string, runtimeContext) {
+            contextAgentRuntimeContext = runtimeContext;
             return "Relevant rule: Cities produce two resources.";
           },
         } as unknown as RetrievalAgent;
@@ -364,8 +367,9 @@ describe("RetrievalService", () => {
       (context) => {
         answerAgentContext = context;
         return {
-          async run(question: string) {
+          async run(question: string, runtimeContext) {
             answerAgentQuestion = question;
+            answerAgentRuntimeContext = runtimeContext;
             return "A city produces two resources.";
           },
         } as unknown as RetrievalAgent;
@@ -386,6 +390,8 @@ describe("RetrievalService", () => {
       "Relevant rule: Cities produce two resources.",
     );
     expect(answerAgentQuestion).toBe("How many resources does a city produce?");
+    expect(contextAgentRuntimeContext).toEqual({ policyApproved: true });
+    expect(answerAgentRuntimeContext).toEqual({ policyApproved: true });
     expect(result).toEqual({
       title: "New chat",
       answer: "A city produces two resources.",
