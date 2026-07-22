@@ -8,6 +8,7 @@ import {
 import { AgentError } from "./agent-error.js";
 import { piiRedactionMiddleware } from "./pii-redaction-middleware.js";
 import { policyBackstopMiddleware } from "./policy-backstop-middleware.js";
+import { promptInjectionScanMiddleware } from "./prompt-injection-scan-middleware.js";
 import { ruleContextPrompt } from "./prompts/rule-context-prompt.js";
 
 /**
@@ -25,6 +26,7 @@ export class RuleContextAgent extends Agent {
     context: string,
     agent: AgentRuntime = createLangChainAgentRuntime(model, [
       policyBackstopMiddleware(),
+      promptInjectionScanMiddleware(),
       ...piiRedactionMiddleware({ applyToInput: true, applyToOutput: false }),
     ]),
   ) {

@@ -8,6 +8,7 @@ const {
   createMiddleware,
   middlewareInstance,
   backstopInstance,
+  injectionScanInstance,
 } = vi.hoisted(() => ({
   createAgent: vi.fn(),
   invoke: vi.fn(),
@@ -15,6 +16,7 @@ const {
   createMiddleware: vi.fn(),
   middlewareInstance: { name: "pii" },
   backstopInstance: { name: "policy-backstop" },
+  injectionScanInstance: { name: "prompt-injection-scan" },
 }));
 
 vi.mock("langchain", () => ({
@@ -29,7 +31,9 @@ describe("RuleContextAgent default runtime", () => {
   it("redacts built-in PII types from the raw user question before it reaches the model", () => {
     const model = {} as ConfigurableModel;
     piiMiddleware.mockReturnValue(middlewareInstance);
-    createMiddleware.mockReturnValue(backstopInstance);
+    createMiddleware
+      .mockReturnValueOnce(backstopInstance)
+      .mockReturnValueOnce(injectionScanInstance);
     createAgent.mockReturnValue({ invoke });
 
     new RuleContextAgent("rule-context-agent", model, "context");
@@ -48,6 +52,7 @@ describe("RuleContextAgent default runtime", () => {
       model,
       middleware: [
         backstopInstance,
+        injectionScanInstance,
         middlewareInstance,
         middlewareInstance,
         middlewareInstance,
